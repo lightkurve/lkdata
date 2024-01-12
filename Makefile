@@ -27,3 +27,7 @@ mypy:
 # Generate a setup.py file from pyproject.toml
 setup.py: pyproject.toml
 	$(CMD) dephell deps convert
+
+# Check all the files against pre-commit hooks
+check:
+	$(CMD) pre-commit run

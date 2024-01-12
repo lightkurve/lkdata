@@ -12,7 +12,7 @@ BUILDDIR      = _build
 help:
 	@poetry run $(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-.PHONY: help Makefile stop-serve serve
+.PHONY: help Makefile stop-serve serve check
 
 html:
 	-@poetry run $(SPHINXBUILD) -M clean "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
