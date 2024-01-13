@@ -1,4 +1,4 @@
-# Secret
+# Lightkurve
 
 Must add to developer instructions;
 

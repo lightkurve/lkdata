@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "secret"
+name = "lightkurve"
 version = "0.1.0"
 description = "A friendly package for analysing TESS & Kepler time series data"
 authors = ["TESS Science Support Center <tesshelp@bigbang.gsfc.nasa.gov>"]
@@ -26,6 +26,7 @@ nbsphinx = "^0.9.3"
 ruff = "^0.1.13"
 mypy = "^1.8.0"
 pre-commit = "^3.6.0"
+pytest = "^7.4.4"
 
 [build-system]
 requires = ["poetry-core"]
