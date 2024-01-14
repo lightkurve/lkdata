@@ -1,0 +1,24 @@
+name: Run Tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - "main"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    needs: install-deps
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: 3.9
+
+    - name: Test with pytest
+      run: |
+        make pytest
