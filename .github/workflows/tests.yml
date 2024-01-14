@@ -1,5 +1,5 @@
 # Installs package, checks against ruff, runs tests
-name: pytest
+name: test
 
 on:
   pull_request:
