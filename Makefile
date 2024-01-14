@@ -18,7 +18,8 @@ lint:
 
 # Generate a unit test coverage report using `pytest-cov`
 coverage:
-	$(CMD) pytest --cov=$(PYMODULE) $(TESTS) --cov-report html
+#	$(CMD) pytest --cov=$(PYMODULE) $(TESTS) --cov-report html
+	$(CMD) coverage run -m pytest $(PYMODULE) $(TESTS)
 
 # Perform static type checking using `mypy`
 mypy:

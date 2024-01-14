@@ -24,7 +24,3 @@ repos:
     rev: 1.7.0  # Use the appropriate revision
     hooks:
     - id: bandit
--   repo: https://github.com/markdownlint/markdownlint
-    rev: v0.11.0  # Use the appropriate revision
-    hooks:
-    - id: markdownlint
