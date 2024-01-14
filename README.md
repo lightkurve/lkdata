@@ -1,6 +1,6 @@
 # Lightkurve
 
-![Coverage badge](https://raw.githubusercontent.com/tessgi/secret/python-coverage-comment-action-data/badge.svg)
+[![Coverage badge](https://github.com/tessgi/secret/raw/python-coverage-comment-action-data/badge.svg)](https://github.com/tessgi/secret/tree/python-coverage-comment-action-data)
 
 Must add to developer instructions;
 
