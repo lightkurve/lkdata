@@ -1,5 +1,7 @@
 # Lightkurve
 
+![Coverage badge](https://raw.githubusercontent.com/tessgi/secret/python-coverage-comment-action-data/badge.svg)
+
 Must add to developer instructions;
 
 - deprecation steps
