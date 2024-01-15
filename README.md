@@ -4,12 +4,11 @@
 
 | Name                                           |    Stmts |     Miss |   Cover |   Missing |
 |----------------------------------------------- | -------: | -------: | ------: | --------: |
-| src/lightkurve/\_\_init\_\_.py                 |       15 |        0 |    100% |           |
-| src/lightkurve/config/\_\_init\_\_.py          |       27 |       16 |     41% |29, 66-74, 78-92 |
+| src/lightkurve/\_\_init\_\_.py                 |       18 |        6 |     67% |     37-47 |
 | src/lightkurve/datacube.py                     |        0 |        0 |    100% |           |
 | src/lightkurve/lightcurve.py                   |        0 |        0 |    100% |           |
 | src/lightkurve/missions/\_\_init\_\_.py        |        2 |        0 |    100% |           |
-| src/lightkurve/missions/kepler/\_\_init\_\_.py |        9 |        0 |    100% |           |
+| src/lightkurve/missions/kepler/\_\_init\_\_.py |       10 |        0 |    100% |           |
 | src/lightkurve/missions/kepler/quality.py      |       27 |        0 |    100% |           |
 | src/lightkurve/missions/kepler/time.py         |        9 |        0 |    100% |           |
 | src/lightkurve/missions/kepler/utils.py        |       20 |       14 |     30% |18-23, 41-45, 52, 85, 89 |
@@ -26,7 +25,7 @@
 | tests/test\_package.py                         |        4 |        0 |    100% |           |
 | tests/test\_periodogram.py                     |        0 |        0 |    100% |           |
 | tests/test\_search.py                          |        0 |        0 |    100% |           |
-|                                      **TOTAL** |  **221** |   **59** | **73%** |           |
+|                                      **TOTAL** |  **198** |   **49** | **75%** |           |
 
 
 ## Setup coverage badge
