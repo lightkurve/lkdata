@@ -16,3 +16,4 @@ SEGMENT_NAME = "quarter"
 CATALOG_NAME = "KIC"
 INSTRUMENT_NAME = "Kepler"
 MISSION_NAME = "Kepler"
+NESTING_NAMES = ["quarter", "channel"]

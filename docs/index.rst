@@ -18,9 +18,10 @@ Documentation
     :maxdepth: 1
     :titlesonly:
 
-    What's new? <whats-new.ipynb>
-    Quickstart <quickstart.ipynb>
+    What's new? <whatsnew/index.rst>
+    Quickstart <quickstart.rst>
     Tutorial Gallery <auto_examples/index.html>
     API Reference <reference/index>
     About <about/index>
     Development <development/index>
+    Tutorials <auto_examples/index.rst>

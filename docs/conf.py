@@ -11,6 +11,10 @@ try:
     from sphinx_astropy.conf.v2 import *  # noqa: F403
 except ImportError:
     print("sphinx_astropy not found, default configuration will be used.")
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath("../../src"))
 
 
 project = "lightkurve"
@@ -27,8 +31,6 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
     "sphinx_automodapi.automodapi",
-    "sphinx_gallery.gen_gallery",
-    "nbsphinx",
     "numpydoc",
     "sphinx.ext.intersphinx",
 ]
@@ -45,6 +47,37 @@ html_theme_options = {
     "github_url": "https://github.com/lightkurve/lightkurve",
 }
 
+
+# -- Plot configuration -------------------------------------------------------
+plot_rcparams = {
+    "axes.labelsize": "large",
+    "figure.figsize": (6, 6),
+    "figure.subplot.hspace": 0.5,
+    "savefig.bbox": "tight",
+    "savefig.facecolor": "none",
+}
+plot_apply_rcparams = True
+plot_html_show_source_link = False
+plot_formats = ["png", "svg", "pdf"]
+# Don't use the default - which includes a numpy and matplotlib import
+plot_pre_code = ""
+
+# List of patterns, relative to source directory, that match files and
+# directories to ignore when looking for source files.
+# This patterns also effect to html_static_path and html_extra_path
+exclude_patterns = ["**/.ipynb_checkpoints"]
+
+# The name of the Pygments (syntax highlighting) style to use.
+pygments_style = "sphinx"
+
+# Raw files we want to copy using the sphinxcontrib-rawfiles extension:
+# - CNAME tells GitHub the domain name to use for hosting the docs
+# - .nojekyll prevents GitHub from hiding the `_static` dir
+rawfiles = ["CNAME", ".nojekyll"]
+
+# Make sure text marked up `like this` will be interpreted as Python objects
+default_role = "py:obj"
+
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3/", None),
     "numpy": ("https://docs.scipy.org/doc/numpy/", None),
@@ -54,10 +87,6 @@ intersphinx_mapping = {
     "astropy": ("https://docs.astropy.org/en/latest/", None),
 }
 
-sphinx_gallery_conf = {
-    "examples_dirs": "tutorials",  # path to your example scripts
-    "gallery_dirs": "auto_examples",  # path to where to save gallery generated output
-}
 
 # rst_epilog = """
 # .. |version| replace:: 0.1.0

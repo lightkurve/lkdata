@@ -6,6 +6,7 @@ import os
 
 PACKAGEDIR = os.path.abspath(os.path.dirname(__file__))
 MPLSTYLE = "{}/data/lightkurve.mplstyle".format(PACKAGEDIR)
+ROOTNAME = "lightkurve"
 
 # Bibtex entry detailing how to cite the package
 __citation__ = """@MISC{2018ascl.soft12013L,
@@ -28,39 +29,22 @@ archivePrefix = "ascl",
 
 
 import logging  # noqa: E402
-
-log = logging.getLogger(__name__)
-log.addHandler(logging.StreamHandler())
-
-from . import config as _config  # noqa: E402
+from rich.logging import RichHandler  # noqa: E402
 
 
-class Conf(_config.ConfigNamespace):
-    """
-    Configuration parameters for `lightkurve`.
+def get_logger():
+    """Configure and return a logger with RichHandler."""
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.WARN)
 
-    Refer to `astropy.config.ConfigNamespace` for API details.
-
-    Refer to `Astropy documentation <https://docs.astropy.org/en/stable/config/index.html#accessing-values>`_
-    for usage.
-
-    The attributes listed below are the available configuration parameters.
-
-    Attributes
-    ----------
-    cache_dir
-        Default cache directory for data files downloaded, etc. Defaults to ``~/.lightkurve/cache`` if not specified.
-    """
-
-    cache_dir = _config.ConfigItem(
-        None,
-        "Default cache directory for data files downloaded, etc.",
-        cfgtype="string",
-        module="lightkurve.config",
+    # Add RichHandler
+    rich_handler = RichHandler()
+    rich_handler.setFormatter(
+        logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     )
 
-
-conf = Conf()
+    logger.addHandler(rich_handler)
+    return logger
 
 
 from .lightcurve import *  # noqa: E402, F403
