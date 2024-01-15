@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "lightkurve"
-version = "0.1.0"
+version = "0.2.0"
 description = "A friendly package for analysing TESS & Kepler time series data"
 authors = ["TESS Science Support Center <tesshelp@bigbang.gsfc.nasa.gov>"]
 license = "MIT"
