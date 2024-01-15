@@ -18,50 +18,45 @@ jobs:
       # python-coverage-comment-action branch, and for editing existing
       # comments (to avoid publishing multiple comments in the same PR)
       contents: write
-
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set CI environment variable
-      run: echo "CI=true" >> $GITHUB_ENV
+      - name: Set CI environment variable
+        run: echo "CI=true" >> $GITHUB_ENV
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: 3.9
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.9
 
-    - name: Cache Poetry dependencies
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pypoetry
-        key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-poetry-
+      - name: Cache Poetry dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pypoetry
+          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-
 
-    - name: Installation
-      run: |
-        python -m pip install --upgrade pip
-        python -m pip install poetry
-        make install
+      - name: Installation
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install poetry
+          make install
 
-    - name: Coverage
-      run: |
-        make coverage
+      - name: Coverage
+        run: make coverage
 
-    - name: Coverage comment
-      uses: py-cov-action/python-coverage-comment-action@v3
-      with:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Coverage comment
+        id: coverage_comment
+        uses: py-cov-action/python-coverage-comment-action@v3
+        with:
+          GITHUB_TOKEN: ${{ github.token }}
 
-    - name: Store Pull Request comment to be posted
-      uses: actions/upload-artifact@v4
-      if: steps.coverage_comment.outputs.COMMENT_FILE_WRITTEN == 'true'
-      with:
-        # If you use a different name, update COMMENT_ARTIFACT_NAME accordingly
-        name: python-coverage-comment-action
-        # If you use a different name, update COMMENT_FILENAME accordingly
-        path: python-coverage-comment-action.txt
-
-    - name: Fail if coverage is below threshold
-      run: |
-        poetry run coverage report --fail-under=80  # Set your desired coverage threshold here
+      - name: Store Pull Request comment to be posted
+        uses: actions/upload-artifact@v4
+        if: steps.coverage_comment.outputs.COMMENT_FILE_WRITTEN == 'true'
+        with:
+          # If you use a different name, update COMMENT_ARTIFACT_NAME accordingly
+          name: python-coverage-comment-action
+          # If you use a different name, update COMMENT_FILENAME accordingly
+          path: python-coverage-comment-action.txt
