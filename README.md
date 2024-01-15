@@ -1,5 +1,9 @@
 # Lightkurve
 
+[![Installation](https://github.com/tessgi/secret/actions/workflows/install.yml/badge.svg?event=push)](https://github.com/tessgi/secret/actions/workflows/install.yml)
+[![ruff](https://github.com/tessgi/secret/actions/workflows/check.yml/badge.svg?event=push)](https://github.com/tessgi/secret/actions/workflows/check.yml)
+[![Tests](https://github.com/tessgi/secret/actions/workflows/test.yml/badge.svg?branch=main&event=push)](https://github.com/tessgi/secret/actions/workflows/test.yml)
+[![Coverage](https://github.com/tessgi/secret/actions/workflows/coverage.yml/badge.svg?event=push)](https://github.com/tessgi/secret/actions/workflows/coverage.yml)
 [![Coverage badge](https://github.com/tessgi/secret/raw/python-coverage-comment-action-data/badge.svg)](https://github.com/tessgi/secret/tree/python-coverage-comment-action-data)
 
 Must add to developer instructions;

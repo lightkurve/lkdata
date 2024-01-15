@@ -1,4 +1,4 @@
-name: Run tests
+name: Tests
 
 on:
   pull_request:
@@ -7,7 +7,7 @@ on:
       - "main"
 
 jobs:
-  install-deps:
+  test:
     runs-on: ubuntu-latest
 
     steps:
@@ -34,12 +34,6 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install poetry
         make install
-
-  test:
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v4
 
     - name: Set up Python
       uses: actions/setup-python@v5

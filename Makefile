@@ -5,7 +5,7 @@ PYMODULE:=src
 TESTS:=tests
 
 install:
-	poetry install
+	poetry install --with dev
 	poetry run pre-commit install
 
 # Run the unit tests using `pytest`
