@@ -8,11 +8,13 @@ from astroquery.vizier import Vizier
 from astropy.table import Table
 from typing import Union
 
-from . import CATALOG_DICTIONARY
+from .utils import CATALOG_DICTIONARY
 
 from .. import get_logger
 
 logger = get_logger()
+
+__all__ = ["query_KIC", "query_TIC", "query_EPIC", "query_Gaia", "query_skycatalog"]
 
 
 def query_KIC(
