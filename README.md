@@ -6,7 +6,7 @@
 |----------------------------------------------- | -------: | -------: | ------: | --------: |
 | src/lightkurve/\_\_init\_\_.py                 |       19 |        0 |    100% |           |
 | src/lightkurve/catalogs/\_\_init\_\_.py        |        1 |        0 |    100% |           |
-| src/lightkurve/catalogs/query.py               |       70 |       13 |     81% |49-50, 89-90, 129-130, 169-170, 215, 217, 219, 225-226 |
+| src/lightkurve/catalogs/query.py               |       70 |       13 |     81% |50-51, 90-91, 130-131, 170-171, 216, 218, 220, 226-227 |
 | src/lightkurve/catalogs/utils.py               |        1 |        0 |    100% |           |
 | src/lightkurve/datacube.py                     |        0 |        0 |    100% |           |
 | src/lightkurve/missions/\_\_init\_\_.py        |        2 |        0 |    100% |           |
