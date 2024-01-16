@@ -3,7 +3,7 @@ Catalogs Sub-package
 
 The `catalogs` sub-package enables users to work with catalogs from different missions.
 
-.. autoclass:: lightkurve.catalogs
+.. automodule:: lightkurve.catalogs.query
    :members:
    :undoc-members:
    :show-inheritance:

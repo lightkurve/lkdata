@@ -12,6 +12,7 @@ methods.
    datacube
    periodogram
    collections
+   catalogs
    missions
    utils
 

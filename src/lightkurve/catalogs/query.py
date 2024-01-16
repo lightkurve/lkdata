@@ -23,7 +23,7 @@ def query_KIC(
     radius: Union[float, u.Quantity] = u.Quantity(40, "arcsecond"),
     magnitude_limit: float = 18.0,
     equinox: Time = Time(2000, format="jyear", scale="tt"),
-):
+) -> Table:
     """Query the Kepler Input Catalog
 
     Parameters:
@@ -63,7 +63,7 @@ def query_TIC(
     radius: Union[float, u.Quantity] = u.Quantity(21 * 5, "arcsecond"),
     magnitude_limit: float = 16.0,
     equinox: Time = Time(2000, format="jyear", scale="tt"),
-):
+) -> Table:
     """Query the TESS Input Catalog
 
     Parameters:
@@ -103,7 +103,7 @@ def query_EPIC(
     radius: Union[float, u.Quantity] = u.Quantity(40, "arcsecond"),
     magnitude_limit: float = 18.0,
     equinox: Time = Time(2000, format="jyear", scale="tt"),
-):
+) -> Table:
     """Query the Ecliptic Plane Input Catalog
 
     Parameters:
@@ -143,7 +143,7 @@ def query_Gaia(
     radius: Union[float, u.Quantity] = u.Quantity(10, "arcsecond"),
     magnitude_limit: float = 21.0,
     equinox: Time = Time(2000, format="jyear", scale="tt"),
-):
+) -> Table:
     """Query the Ecliptic Plane Input Catalog
 
     Parameters:
@@ -184,7 +184,7 @@ def query_skycatalog(
     radius: Union[float, u.Quantity] = u.Quantity(100, "arcsecond"),
     magnitude_limit: float = 18.0,
     equinox: Time = Time(2000, format="jyear", scale="tt"),
-):
+) -> Table:
     """Function that returns an astropy table of sources in the region of interest
 
     Parameters:
