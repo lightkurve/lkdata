@@ -29,12 +29,12 @@ def query_KIC(
     coord : astropy.coordinates.SkyCoord
         Coordinates around which to do a radius query
     epoch: astropy.time.Time
-        The time of observation in JD and TT. Note that tess data is in btjd & tdb - so a user would have to specify in the Time object
-        For example you could put in `Time(np.mean(lc.time.value), scale='tdb', format='btjd')`
+        The time of observation in JD and TT. Note that Kepler data is in bkjd & tdb - so a user would have to specify in the Time object
+        For example you could put in `Time(np.mean(lc.time.value), scale='tdb', format='bkjd')`
     radius : float
         Radius in arcseconds to query
     magnitude_limit : float
-        A value to limit the results in based on the Tmag/Kepler mag/K2 mag or Gaia G mag. Default, 18.
+        A value to limit the results in based on the Kepler mag. Default, 18.
     equinox: astropy.time.Time
         The R.A and Dec. values taken from the catalogs is in J2000.
         The J2000. 0 epoch is precisely the Julian year 2000 in terrestrial time (tt).
@@ -69,12 +69,12 @@ def query_TIC(
     coord : astropy.coordinates.SkyCoord
         Coordinates around which to do a radius query
     epoch: astropy.time.Time
-        The time of observation in JD and TT. Note that tess data is in btjd & tdb - so a user would have to specify in the Time object
+        The time of observation in JD and TT. Note that TESS data is in btjd & tdb - so a user would have to specify in the Time object
         For example you could put in `Time(np.mean(lc.time.value), scale='tdb', format='btjd')`
     radius : float
         Radius in arcseconds to query
     magnitude_limit : float
-        A value to limit the results in based on the Tmag/Kepler mag/K2 mag or Gaia G mag. Default, 18.
+        A value to limit the results in based on the Tmag mag. Default, 16.
     equinox: astropy.time.Time
         The R.A and Dec. values taken from the catalogs is in J2000.
         The J2000. 0 epoch is precisely the Julian year 2000 in terrestrial time (tt).
@@ -109,12 +109,12 @@ def query_EPIC(
     coord : astropy.coordinates.SkyCoord
         Coordinates around which to do a radius query
     epoch: astropy.time.Time
-        The time of observation in JD and TT. Note that tess data is in btjd & tdb - so a user would have to specify in the Time object
-        For example you could put in `Time(np.mean(lc.time.value), scale='tdb', format='btjd')`
+        The time of observation in JD and TT. Note that K2 data is in bkjd & tdb - so a user would have to specify in the Time object
+        For example you could put in `Time(np.mean(lc.time.value), scale='tdb', format='bkjd')`
     radius : float
         Radius in arcseconds to query
     magnitude_limit : float
-        A value to limit the results in based on the Tmag/Kepler mag/K2 mag or Gaia G mag. Default, 18.
+        A value to limit the results in based on the K2 mag. Default, 18.
     equinox: astropy.time.Time
         The R.A and Dec. values taken from the catalogs is in J2000.
         The J2000. 0 epoch is precisely the Julian year 2000 in terrestrial time (tt).
@@ -149,12 +149,12 @@ def query_Gaia(
     coord : astropy.coordinates.SkyCoord
         Coordinates around which to do a radius query
     epoch: astropy.time.Time
-        The time of observation in JD and TT. Note that tess data is in btjd & tdb - so a user would have to specify in the Time object
-        For example you could put in `Time(np.mean(lc.time.value), scale='tdb', format='btjd')`
+        The time of observation in JD and TT. A user needs to specify the relativistic coordinate time scale in the Time object
+        For example you could put in `Time(np.mean(lc.time.value), scale='tdb', format='jd')`
     radius : float
         Radius in arcseconds to query
     magnitude_limit : float
-        A value to limit the results in based on the Tmag/Kepler mag/K2 mag or Gaia G mag. Default, 18.
+        A value to limit the results in based on the Gaia G mag. Default, 21.
     equinox: astropy.time.Time
         The R.A and Dec. values taken from the catalogs is in J2000.
         The J2000. 0 epoch is precisely the Julian year 2000 in terrestrial time (tt).
@@ -190,8 +190,8 @@ def query_skycatalog(
     coord : astropy.coordinates.SkyCoord
         Coordinates around which to do a radius query
     epoch: astropy.time.Time
-        The time of observation in JD and TT. Note that tess data is in btjd & tdb - so a user would have to specify in the Time object
-        For example you could put in `Time(np.mean(lc.time.value), scale='tdb', format='btjd')`
+        The time of observation in JD and TT.  A user needs to specify the relativistic coordinate time scale in the Time object
+        For example for TESS  you could put in `Time(np.mean(lc.time.value), scale='tdb', format='btjd')`
     catalog: str
         The catalog to query, either 'kepler', 'k2', or 'tess', 'gaia'
     radius : float
@@ -298,8 +298,8 @@ def _apply_propermotion(table: Table, equinox: Time, epoch: Time):
 
     Parameters:
     -----------
-    table :
-        astropy.table.Table which contains the coordinates of targets and proper motion values
+    table : astropy.table.Table
+        Table which contains the coordinates of targets and proper motion values
     equinox: astropy.time.Time
         The R.A and Dec. values taken from the catalogs is in J2000.
         The J2000. 0 epoch is precisely the Julian year 2000 in terrestrial time (tt).
