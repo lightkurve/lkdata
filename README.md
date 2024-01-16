@@ -6,7 +6,8 @@
 |----------------------------------------------- | -------: | -------: | ------: | --------: |
 | src/lightkurve/\_\_init\_\_.py                 |       19 |        0 |    100% |           |
 | src/lightkurve/catalogs/\_\_init\_\_.py        |        1 |        0 |    100% |           |
-| src/lightkurve/catalogs/query.py               |       69 |       13 |     81% |47-48, 87-88, 127-128, 167-168, 213, 215, 217, 223-224 |
+| src/lightkurve/catalogs/query.py               |       70 |       13 |     81% |49-50, 89-90, 129-130, 169-170, 215, 217, 219, 225-226 |
+| src/lightkurve/catalogs/utils.py               |        1 |        0 |    100% |           |
 | src/lightkurve/datacube.py                     |        0 |        0 |    100% |           |
 | src/lightkurve/missions/\_\_init\_\_.py        |        2 |        0 |    100% |           |
 | src/lightkurve/missions/kepler/\_\_init\_\_.py |       10 |        0 |    100% |           |
@@ -29,7 +30,7 @@
 | tests/test\_package.py                         |        4 |        0 |    100% |           |
 | tests/test\_periodogram.py                     |        0 |        0 |    100% |           |
 | tests/test\_search.py                          |        0 |        0 |    100% |           |
-|                                      **TOTAL** |  **310** |   **56** | **82%** |           |
+|                                      **TOTAL** |  **312** |   **56** | **82%** |           |
 
 
 ## Setup coverage badge
