@@ -48,6 +48,6 @@ def get_logger():
 
 
 from .version import __version__  # noqa: E402, F401
-from .lightcurve import *  # noqa: E402, F403
+from .timeseries import *  # noqa: E402, F403
 from .datacube import *  # noqa: F403, E402
 from .periodogram import *  # noqa: F403, E402
