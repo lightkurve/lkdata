@@ -11,12 +11,13 @@ from ..utils import LightkurveWarning
 class PRF(ABC):
     """Abstract PRF class for working with Point Spread Functions"""
 
-    @abstractmethod
     def __init__(
         self,
+        supersamp_prf: npt.ArrayLike
         target_locations: Union[List[Tuple], Tuple] = (5.5, 5.5),
         origin: Tuple = (0, 0),
         shape: Tuple = (11, 11),
+
     ):
         """
         A generic base class object for PRFs. Not to be used directly.
@@ -37,6 +38,8 @@ class PRF(ABC):
         self.origin_row, self.origin_column = origin
         self.shape = shape
         self.target_row, self.target_column = np.atleast_2d(target_locations)
+        self.col_coord, self.row_coord, self.interpolate = _prepare_prf(supersamp_prf)
+        
 
     def __repr__(self):
         return "PRF Base Class"
@@ -195,13 +198,13 @@ class PRF(ABC):
         Parameters
         ----------
         center_col, center_row : float
-                                        Column and row coordinates of the center
+        	Column and row coordinates of the center
         scale : float
-                                        Pixel scale stretch parameter, can be used to account for focus changes.
-                                        Values > 1 stretch the image, Values < 1 make the PRF more compact.
-                                        E.g. a scale value of 2 will double the PRF footprint.
+        	Pixel scale stretch parameter, can be used to account for focus changes.
+            Values > 1 stretch the image, Values < 1 make the PRF more compact.
+            E.g. a scale value of 2 will double the PRF footprint.
         rotation_angle : float
-                                        Rotation angle in radians
+            Rotation angle in radians
 
         Returns
         -------
@@ -424,13 +427,44 @@ class PRF(ABC):
             )
             return np.expand_dims(prf_model, axis=0)
 
-    def interpolate(self, row_grid, column_grid, dx=None, dy=None, grid=True):
-        raise NotImplementedError
+    #def interpolate(self, row_grid, column_grid, dx=None, dy=None, grid=True):
+    #    raise NotImplementedError
 
-    @abstractmethod
-    def _prepare_prf(self):
-        """Method to open PRF files for given mission"""
-        pass
+    def _prepare_prf(self, supersamp_prf: npt.ArrayLike, 
+    	crval1p: float, 
+    	crval2p: float, 
+    	cdelt1p: float, 
+    	cdelt2p: float),
+    	pixel_offset: float = 0.5:
+        """
+        
+        pixel_offset: 0.5 offset necessary for TESS and Kepler
+        """
+
+        PRFcol = np.arange(pixel_offset, np.shape(supersampled_prf)[1] + pixel_offset)
+        PRFrow = np.arange(pixel_offset, np.shape(supersampled_prf)[0] + pixel_offset)
+        PRFcol = (PRFcol - np.size(PRFcol) / 2) * cdelt1p
+        PRFrow = (PRFrow - np.size(PRFrow) / 2) * cdelt2p
+
+        # interpolate the calibrated PRF shape to the target position
+        rowdim, coldim = self.shape[0], self.shape[1]
+        ref_column = self.column + pixel_offset * coldim
+        ref_row = self.row + pixel_offset * rowdim
+
+
+        supersamp_prf /= np.nansum(supersamp_prf) * cdelt1p * cdelt2p
+
+        # location of the data image centered on the PRF image (in PRF pixel units)
+        col_coord = np.arange(self.column + pixel_offset, self.column + coldim + pixel_offset)
+        row_coord = np.arange(self.row + pixel_offset, self.row + rowdim + pixel_offset)
+        # x-axis correspond to row-axis in scipy.RectBivariate
+        # not to be confused with our convention, in which the
+        # x-axis correspond to the column-axis
+        interpolate = scipy.interpolate.RectBivariateSpline(
+            PRFrow, PRFcol, supersamp_prf
+        )
+
+        return col_coord, row_coord, interpolate
 
     @abstractmethod
     def _read_prf_calibration_file(self):
