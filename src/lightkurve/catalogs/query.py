@@ -23,11 +23,12 @@ def query_KIC(
     radius: Union[float, u.Quantity] = u.Quantity(40, "arcsecond"),
     magnitude_limit: float = 18.0,
     equinox: Time = Time(2000, format="jyear", scale="tt"),
-) -> Table:
-    """Query the Kepler Input Catalog
+):
+    """
+    Query the Kepler Input Catalog
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     coord : astropy.coordinates.SkyCoord
         Coordinates around which to do a radius query
     epoch: astropy.time.Time
@@ -41,7 +42,7 @@ def query_KIC(
         The R.A and Dec. values taken from the catalogs is in J2000.
         The J2000. 0 epoch is precisely the Julian year 2000 in terrestrial time (tt).
 
-    Returns:
+    Returns
     -------
     result : astropy.table.Table
         Returns an astropy.table of the sources within radius query corrected for proper motion
@@ -66,8 +67,8 @@ def query_TIC(
 ) -> Table:
     """Query the TESS Input Catalog
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     coord : astropy.coordinates.SkyCoord
         Coordinates around which to do a radius query
     epoch: astropy.time.Time
@@ -81,7 +82,7 @@ def query_TIC(
         The R.A and Dec. values taken from the catalogs is in J2000.
         The J2000. 0 epoch is precisely the Julian year 2000 in terrestrial time (tt).
 
-    Returns:
+    Returns
     -------
     result : astropy.table.Table
         Returns an astropy.table of the sources within radius query corrected for proper motion
@@ -106,8 +107,8 @@ def query_EPIC(
 ) -> Table:
     """Query the Ecliptic Plane Input Catalog
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     coord : astropy.coordinates.SkyCoord
         Coordinates around which to do a radius query
     epoch: astropy.time.Time
@@ -121,7 +122,7 @@ def query_EPIC(
         The R.A and Dec. values taken from the catalogs is in J2000.
         The J2000. 0 epoch is precisely the Julian year 2000 in terrestrial time (tt).
 
-    Returns:
+    Returns
     -------
     result : astropy.table.Table
         Returns an astropy.table of the sources within radius query corrected for proper motion
@@ -146,8 +147,8 @@ def query_Gaia(
 ) -> Table:
     """Query the Ecliptic Plane Input Catalog
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     coord : astropy.coordinates.SkyCoord
         Coordinates around which to do a radius query
     epoch: astropy.time.Time
@@ -161,7 +162,7 @@ def query_Gaia(
         The R.A and Dec. values taken from the catalogs is in J2000.
         The J2000. 0 epoch is precisely the Julian year 2000 in terrestrial time (tt).
 
-    Returns:
+    Returns
     -------
     result : astropy.table.Table
         Returns an astropy.table of the sources within radius query corrected for proper motion
@@ -187,8 +188,8 @@ def query_skycatalog(
 ) -> Table:
     """Function that returns an astropy table of sources in the region of interest
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     coord : astropy.coordinates.SkyCoord
         Coordinates around which to do a radius query
     epoch: astropy.time.Time
@@ -204,7 +205,7 @@ def query_skycatalog(
         The R.A and Dec. values taken from the catalogs is in J2000.
         The J2000. 0 epoch is precisely the Julian year 2000 in terrestrial time (tt).
 
-    Returns:
+    Returns
     -------
     result : astropy.table.Table
         Returns an astropy.table of the sources within radius query corrected for proper motion
@@ -298,8 +299,8 @@ def _apply_propermotion(table: Table, equinox: Time, epoch: Time):
     """
     Hidden function that returns an astropy table of sources with the proper motion correction applied
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     table : astropy.table.Table
         Table which contains the coordinates of targets and proper motion values
     equinox: astropy.time.Time
@@ -308,8 +309,8 @@ def _apply_propermotion(table: Table, equinox: Time, epoch: Time):
     epoch : astropy.time.Time
         Time of the observation - This is taken from the table R.A and Dec. values and re-formatted as an astropy.time.Time object
 
-    Returns:
-    ------
+    Returns
+    -------
     table : astropy.table.Table
         Returns an astropy table with ID, corrected RA, corrected Dec, and Mag(?Some ppl might find this benifical for contamination reasons?)
     """
