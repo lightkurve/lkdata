@@ -4,7 +4,9 @@
 
 | Name                                           |    Stmts |     Miss |   Cover |   Missing |
 |----------------------------------------------- | -------: | -------: | ------: | --------: |
-| src/lightkurve/\_\_init\_\_.py                 |       19 |        6 |     68% |     37-47 |
+| src/lightkurve/\_\_init\_\_.py                 |       19 |        0 |    100% |           |
+| src/lightkurve/catalogs/\_\_init\_\_.py        |        1 |        0 |    100% |           |
+| src/lightkurve/catalogs/query.py               |       69 |       13 |     81% |47-48, 87-88, 127-128, 167-168, 213, 215, 217, 223-224 |
 | src/lightkurve/datacube.py                     |        0 |        0 |    100% |           |
 | src/lightkurve/missions/\_\_init\_\_.py        |        2 |        0 |    100% |           |
 | src/lightkurve/missions/kepler/\_\_init\_\_.py |       10 |        0 |    100% |           |
@@ -19,6 +21,7 @@
 | src/lightkurve/timeseries.py                   |        0 |        0 |    100% |           |
 | src/lightkurve/version.py                      |        1 |        0 |    100% |           |
 | tests/\_\_init\_\_.py                          |        3 |        0 |    100% |           |
+| tests/catalogs/test\_query\_catalog.py         |       40 |        0 |    100% |           |
 | tests/conftest.py                              |       25 |        3 |     88% |39, 46, 61 |
 | tests/test\_collections.py                     |        0 |        0 |    100% |           |
 | tests/test\_datacube.py                        |        0 |        0 |    100% |           |
@@ -26,7 +29,7 @@
 | tests/test\_package.py                         |        4 |        0 |    100% |           |
 | tests/test\_periodogram.py                     |        0 |        0 |    100% |           |
 | tests/test\_search.py                          |        0 |        0 |    100% |           |
-|                                      **TOTAL** |  **200** |   **49** | **76%** |           |
+|                                      **TOTAL** |  **310** |   **56** | **82%** |           |
 
 
 ## Setup coverage badge
