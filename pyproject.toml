@@ -15,6 +15,7 @@ sphinx-gallery = "^0.15.0"
 nbformat = "^5.9.2"
 astropy-sphinx-theme = "^1.1"
 rich = "^13.7.0"
+astroquery = "^0.4.6"
 
 
 [tool.poetry.group.dev.dependencies]

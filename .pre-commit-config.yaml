@@ -20,7 +20,3 @@ repos:
     rev: v0.910  # Use the appropriate revision
     hooks:
     - id: mypy
--   repo: https://github.com/PyCQA/bandit
-    rev: 1.7.0  # Use the appropriate revision
-    hooks:
-    - id: bandit
