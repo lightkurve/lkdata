@@ -6,7 +6,6 @@
 |----------------------------------------------- | -------: | -------: | ------: | --------: |
 | src/lightkurve/\_\_init\_\_.py                 |       19 |        6 |     68% |     37-47 |
 | src/lightkurve/datacube.py                     |        0 |        0 |    100% |           |
-| src/lightkurve/lightcurve.py                   |        0 |        0 |    100% |           |
 | src/lightkurve/missions/\_\_init\_\_.py        |        2 |        0 |    100% |           |
 | src/lightkurve/missions/kepler/\_\_init\_\_.py |       10 |        0 |    100% |           |
 | src/lightkurve/missions/kepler/quality.py      |       27 |        0 |    100% |           |
@@ -17,6 +16,7 @@
 | src/lightkurve/missions/tess/quality.py        |       23 |        0 |    100% |           |
 | src/lightkurve/missions/tess/time.py           |        9 |        0 |    100% |           |
 | src/lightkurve/periodogram.py                  |        0 |        0 |    100% |           |
+| src/lightkurve/timeseries.py                   |        0 |        0 |    100% |           |
 | src/lightkurve/version.py                      |        1 |        0 |    100% |           |
 | tests/\_\_init\_\_.py                          |        3 |        0 |    100% |           |
 | tests/conftest.py                              |       25 |        3 |     88% |39, 46, 61 |
