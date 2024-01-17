@@ -28,9 +28,10 @@ class PRF(ABC):
         -----------
         target_locations : List[Tuple] or Tuple
                 row, column pixel locations for the Pixel Response Functions
-        origin: Tuple column value
-        row : int
+        origin: Tuple
+                row, column location of the origin position in the image
         shape   Tuple
+                row, column pixel size of the prf
         """
         # load PSF file
         # Initialize object
