@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-__all__ = ["StatsMixin", "MathMixin", "ErrorStatsMixin", "PlotMixins"]
+__all__ = ["StatsMixin", "MathMixin", "ErrorStatsMixin", "PlotMixin"]
 
 _AGG_ERROR_FUNCS = {
     "agg_mean": lambda x: (np.sum(x**2) ** 0.5) / len(x),
@@ -139,7 +139,7 @@ class MathMixin:
         return self._build_instance(self.to_numpy() % self._process_val(val))
 
 
-class PlotMixins:
+class PlotMixin:
     def plot(self, ax=None, **kwargs):
         if ax is None:
             _, ax = plt.subplots()
@@ -152,3 +152,48 @@ class PlotMixins:
                 data = self.to_numpy()
                 ax.plot(data, **kwargs)
         return ax
+
+
+class AggMixin:
+    def downsample(self, nframes=5, level=-1):
+        # Find the index to downsample on
+        level = self.index.names[level] if isinstance(level, int) else level
+        index = self.index.get_level_values(level=level)
+
+        # Find the average spacing of the index
+        dt = nframes * np.median(np.diff(index))
+        # Calculate what bin edges result in this spacing
+        bins = np.arange(index.min(), index.max() + 1 * dt, dt)
+        bin_edges_left = pd.cut(np.sort(index), bins, right=False)
+        # bin_edges_right = pd.cut(np.sort(index), bins, right=True)
+        # groupby these bin edges
+        gb = self.groupby(bin_edges_left, observed=False)
+
+        # Downsampling is explicitly a sum
+        new = gb.sum()
+        # We only accept cases where the number of points in a bin is the same as the number of frames we downsample to
+
+        count = gb[int(self.columns.get_level_values(0)[0])].count()
+        bin_mask = np.asarray(count == nframes)[:, 0]
+
+        # We have to create a new index. We'll just take the mean of each bin
+        new_index_left = (
+            self.index.to_frame()
+            .groupby(bin_edges_left, observed=False)
+            .mean()
+            .reset_index(drop=True)
+        )
+        new_index_right = (
+            self.index.to_frame()
+            .groupby(bin_edges_left, observed=False)
+            .mean()
+            .reset_index(drop=True)
+        )
+        new_index = (
+            ((new_index_left + new_index_right) / 2).set_index(self.index.names).index
+        )
+
+        new_obj = self._build_instance(
+            new[bin_mask].to_numpy(), index=new_index[bin_mask], columns=self.columns
+        )
+        return new_obj

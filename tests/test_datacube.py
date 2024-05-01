@@ -1,4 +1,4 @@
-from lightkurve import DataCube, TimeSeries
+from lightkurve import DataCube, DataFrame
 from lightkurve.mixins import STATS_METHOD_NAMES
 import numpy as np
 import pandas as pd
@@ -16,8 +16,8 @@ assert df.ntime == ntime
 assert df.nrow == nrow
 assert df.ncol == ncol
 
-assert df.asarray().shape == (ntime, nrow, ncol)
-assert np.allclose(df.asarray(), test_data)
+assert df.to_array().shape == (ntime, nrow, ncol)
+assert np.allclose(df.to_array(), test_data)
 
 # Should this be an image?
 assert isinstance(df[0], DataCube)
@@ -42,42 +42,42 @@ assert df[:, aperture].shape == (ntime, 9)
 
 # This should be a timeseries
 row, col = np.where(aperture)
-assert isinstance(df[:, row, col], TimeSeries)
+assert isinstance(df[:, row, col], DataFrame)
 assert df[:, row, col].ntime == ntime
 assert df[:, row, col].shape == (ntime, 9)
 
 # timeseries
-assert isinstance(df[:, [1, 2, 3], [1, 2, 3]], TimeSeries)
+assert isinstance(df[:, [1, 2, 3], [1, 2, 3]], DataFrame)
 assert df[:, [1, 2, 3], [1, 2, 3]].ntime == ntime
 assert df[:, [1, 2, 3], [1, 2, 3]].shape == (ntime, 3)
 
 # DataCube
-assert isinstance(df[:, 0, :], DataCube)
+assert isinstance(df[:, 0, :], DataFrame)
 assert df[:, 0, :].ntime == ntime
 assert df[:, 0, :].shape == (ntime, ncol)
 
 # DataCube
-assert isinstance(df[:, :, 0], DataCube)
+assert isinstance(df[:, :, 0], DataFrame)
 assert df[:, :, 0].ntime == ntime
 assert df[:, :, 0].shape == (ntime, nrow)
 
 # DataCube
-assert isinstance(df[:, 1, 0], DataCube)
+assert isinstance(df[:, 1, 0], DataFrame)
 assert df[:, 1, 0].ntime == ntime
 assert df[:, 1, 0].shape == (ntime, 1)
 
 # TimeSeries
-assert isinstance(df[:, :1, [1, 2]], TimeSeries)
+assert isinstance(df[:, :1, [1, 2]], DataFrame)
 assert df[:, :1, [1, 2]].ntime == ntime
 assert df[:, :1, [1, 2]].shape == (ntime, 2)
 
 # TimeSeries
-assert isinstance(df[:, [0, 1], [1, 2]], TimeSeries)
+assert isinstance(df[:, [0, 1], [1, 2]], DataFrame)
 assert df[:, [0, 1], [1, 2]].ntime == ntime
 assert df[:, [0, 1], [1, 2]].shape == (ntime, 2)
 
 for method_name in STATS_METHOD_NAMES:
-    assert getattr(df, method_name)(axis="time").shape == (nrow, ncol)
-    assert getattr(df[:, aperture], method_name)(axis="time").shape[0] == aperture.sum()
+    assert getattr(df, method_name)(axis=0).shape == (nrow, ncol)
+    assert getattr(df[:, aperture], method_name)(axis=0).shape[0] == aperture.sum()
 
 assert (df.mean() == df.mean(axis=0)).all()
