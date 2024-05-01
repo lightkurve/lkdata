@@ -43,12 +43,14 @@ CUM_METHOD_NAMES = ["cumsum", "cummin", "cummax", "cumprod"]
 class StatsMixin:
     """Defines a mixin class which will let us postprocess all our pandas stats"""
 
-    pass
+    @property
+    def _stats_type(self):
+        return "data"
 
 
 def _create_stats_method(method_name):
     def _method(self, *args, **kwargs):
-        pandas_method = getattr(super(pd.DataFrame, self), method_name)
+        pandas_method = getattr(super(self._pd_class, self), method_name)
         axis = kwargs.get("axis", 0)
         return self.stats_post_process(pandas_method(*args, **kwargs), axis=axis)
 
@@ -57,7 +59,7 @@ def _create_stats_method(method_name):
 
 def _create_cum_method(method_name):
     def _method(self, *args, **kwargs):
-        pandas_method = getattr(super(pd.DataFrame, self), method_name)
+        pandas_method = getattr(super(self._pd_class, self), method_name)
         new = pandas_method(*args, **kwargs)
         return self._build_instance(new.to_numpy())
 
@@ -72,71 +74,101 @@ for method_name in CUM_METHOD_NAMES:
 
 class ErrorStatsMixin:
     def _sum(self, axis=0):
-        return getattr(super(pd.DataFrame, self), "sum")(axis=axis).to_numpy()
+        return getattr(super(pd.DataFrame, self), "sum")(axis=axis)
 
     def _mean(self, axis=0):
-        return getattr(super(pd.DataFrame, self), "mean")(axis=axis).to_numpy()
+        return getattr(super(pd.DataFrame, self), "mean")(axis=axis)
 
     def _median(self, axis=0):
-        return getattr(super(pd.DataFrame, self), "median")(axis=axis).to_numpy()
+        return getattr(super(pd.DataFrame, self), "median")(axis=axis)
 
     def _cumsum(self, axis=0):
-        return getattr(super(pd.DataFrame, self), "cumsum")(axis=axis).to_numpy()
+        return getattr(super(pd.DataFrame, self), "cumsum")(axis=axis)
 
     def sum(self, axis=0):
         """Returns the standard error"""
-        if axis in [0, "time"]:
-            return (self**2)._sum(axis=axis).reshape(self.nrow, self.ncol) ** 0.5
-        else:
-            return (self**2)._sum(axis=axis) ** 0.5
+        return self.stats_post_process((self**2)._sum(axis=axis) ** 0.5, axis=axis)
 
     def std(self, axis=0):
         if axis in [0, "time"]:
             n = self.ntime
-            return (self._median(axis=axis) / (np.sqrt(2 * n))).reshape(
-                self.nrow, self.ncol
+            return self.stats_post_process(
+                (self._median(axis=axis) / (np.sqrt(2 * n))).reshape(
+                    self.nrow, self.ncol
+                ),
+                axis=axis,
             )
         else:
-            n = self.npixel
-            return self._median(axis=axis) / (np.sqrt(2 * n))
+            n = self.nseries
+            return self.stats_post_process(
+                self._median(axis=axis) / (np.sqrt(2 * n)), axis=axis
+            )
 
     def mean(self, axis=0):
         if axis in [0, "time"]:
             n = self.ntime
         else:
-            n = self.npixel
-        return self.sum(axis=axis) / n
+            n = self.nseries
+        return self.stats_post_process(self.sum(axis=axis) / n, axis=axis)
 
     def median(self, axis=0):
-        return self.mean(axis=axis)
+        return self.stats_post_process(self.mean(axis=axis), axis=axis)
 
     def cumsum(self, axis=0):
-        return (self**2)._cumsum(axis=axis) ** 0.5
+        return self.stats_post_process((self**2)._cumsum(axis=axis) ** 0.5, axis=axis)
+
+    @property
+    def _stats_type(self):
+        return "error"
 
 
 class MathMixin:
-    def _process_val(self, val):
-        if isinstance(val, (np.ndarray, int, float)):
+    def _process_math_val(self, val):
+        if isinstance(val, (np.ndarray, float)):
             return val
-        elif isinstance(val, (pd.DataFrame)):
+        elif isinstance(val, (int, np.int64)):
+            return float(val)
+        elif isinstance(val, (pd.DataFrame, pd.Series)):
             return val.to_numpy()
         else:
             raise TypeError(f"Can not perform math operations with type {type(val)}.")
 
+    def _get_math_kwargs(self):
+        if isinstance(self, pd.DataFrame):
+            kwargs = {"index": self.index, "columns": self.columns}
+        if isinstance(self, pd.Series):
+            kwargs = {"index": self.index}
+        return kwargs
+
     def __add__(self, val):
-        return self._build_instance(self.to_numpy() + self._process_val(val))
+        if self._stats_type == "error":
+            if isinstance(val, self.__class__):
+                return self._build_instance(
+                    (self.to_numpy() ** 2 + val.to_numpy() ** 2) ** 0.5,
+                    **self._get_math_kwargs(),
+                )
+        else:
+            return self._build_instance(
+                self.to_numpy() + self._process_math_val(val), **self._get_math_kwargs()
+            )
 
     def __sub__(self, val):
-        return self.__add__(val)
+        return self.__add__(-val)
 
     def __mul__(self, val):
-        return self._build_instance(self.to_numpy() * self._process_val(val))
+        return self._build_instance(
+            self.to_numpy() * self._process_math_val(val), **self._get_math_kwargs()
+        )
 
     def __pow__(self, val):
-        return self._build_instance(self.to_numpy() ** self._process_val(val))
+        return self._build_instance(
+            self.to_numpy() ** self._process_math_val(val), **self._get_math_kwargs()
+        )
 
     def __mod__(self, val):
-        return self._build_instance(self.to_numpy() % self._process_val(val))
+        return self._build_instance(
+            self.to_numpy() % self._process_math_val(val), **self._get_math_kwargs()
+        )
 
 
 class PlotMixin:
@@ -167,9 +199,13 @@ class AggMixin:
         bin_edges_left = pd.cut(np.sort(index), bins, right=False)
         # bin_edges_right = pd.cut(np.sort(index), bins, right=True)
         # groupby these bin edges
-        gb = self.groupby(bin_edges_left, observed=False)
 
         # Downsampling is explicitly a sum
+        if self._stats_type == "error":
+            gb = (self**2).groupby(bin_edges_left, observed=False)
+        else:
+            gb = self.groupby(bin_edges_left, observed=False)
+
         new = gb.sum()
         # We only accept cases where the number of points in a bin is the same as the number of frames we downsample to
 
@@ -196,4 +232,29 @@ class AggMixin:
         new_obj = self._build_instance(
             new[bin_mask].to_numpy(), index=new_index[bin_mask], columns=self.columns
         )
-        return new_obj
+        if self._stats_type == "error":
+            return new_obj**0.5
+        else:
+            return new_obj
+
+
+class ConvenienceMixins:
+    def _include_convenience_index(self):
+        INDEX_DICTS = {
+            level if level is not None else "index": np.asarray(
+                self.index.get_level_values(level=level)
+            )
+            for level in self.index.names
+        }
+        for key, index in INDEX_DICTS.items():
+            setattr(self, key, index)
+
+    def _include_convenience_columns(self):
+        COLUMN_DICTS = {
+            level if level is not None else "columns": np.asarray(
+                self.columns.get_level_values(level=level)
+            )
+            for level in self.columns.names
+        }
+        for key, index in COLUMN_DICTS.items():
+            setattr(self, key, index)

@@ -4,12 +4,21 @@ import pandas as pd
 import numpy as np
 import logging
 
-from .mixins import StatsMixin, MathMixin, ErrorStatsMixin, PlotMixin, AggMixin
+from .mixins import (
+    StatsMixin,
+    MathMixin,
+    ErrorStatsMixin,
+    PlotMixin,
+    AggMixin,
+    ConvenienceMixins,
+)
 
 log = logging.getLogger()
 
 
-class DataCube(StatsMixin, MathMixin, AggMixin, PlotMixin, pd.DataFrame):
+class DataCube(
+    StatsMixin, MathMixin, AggMixin, PlotMixin, ConvenienceMixins, pd.DataFrame
+):
     def __init__(
         self,
         data,
@@ -65,7 +74,7 @@ class DataCube(StatsMixin, MathMixin, AggMixin, PlotMixin, pd.DataFrame):
 
         def make_timeseries(result):
             # log.debug("Modified result for timeseries shape.")
-            return result.to_numpy()
+            return self._series_class(result)
 
         def stats_post_process(result, **kwargs):
             if kwargs.get("axis") in [0, "time"]:
@@ -76,6 +85,8 @@ class DataCube(StatsMixin, MathMixin, AggMixin, PlotMixin, pd.DataFrame):
                 return result
 
         self.stats_post_process = stats_post_process
+        self._include_convenience_index()
+        self._include_convenience_columns()
 
     @property
     def nseries(self):
@@ -84,7 +95,7 @@ class DataCube(StatsMixin, MathMixin, AggMixin, PlotMixin, pd.DataFrame):
     def __getitem__(self, key):
         # Simple slice in time, results in DataCube
         if isinstance(key, (slice, np.ndarray, list, range)):
-            return self.__class__.from_dataframe(
+            return self.__class__.from_pandas(
                 self.iloc[key],
                 nrow=self.nrow,
                 ncol=self.ncol,
@@ -94,7 +105,7 @@ class DataCube(StatsMixin, MathMixin, AggMixin, PlotMixin, pd.DataFrame):
 
         # Integer time, currently results in DataCube
         if isinstance(key, int):
-            return self.__class__.from_dataframe(
+            return self.__class__.from_pandas(
                 self.iloc[np.atleast_1d(key)],
                 nrow=self.nrow,
                 ncol=self.ncol,
@@ -112,7 +123,7 @@ class DataCube(StatsMixin, MathMixin, AggMixin, PlotMixin, pd.DataFrame):
                 raise ValueError(f"Can not parse time {key[0]}")
 
             if len(key) == 1:
-                return self.__class__.from_dataframe(
+                return self.__class__.from_pandas(
                     self.iloc[time],
                     nrow=self.nrow,
                     ncol=self.ncol,
@@ -136,7 +147,7 @@ class DataCube(StatsMixin, MathMixin, AggMixin, PlotMixin, pd.DataFrame):
         if not isinstance(row, (slice)) & isinstance(col, (slice)):
             return self[time].to_dataframe(row, col)
         nrow, ncol, series_index = self._convert_to_series_index(row, col)
-        return self.__class__.from_dataframe(
+        return self.__class__.from_pandas(
             self.iloc[time, series_index],
             nrow=nrow,
             ncol=ncol,
@@ -172,7 +183,7 @@ class DataCube(StatsMixin, MathMixin, AggMixin, PlotMixin, pd.DataFrame):
         return nrow, ncol, [r * self.ncol + c for r in row_indices for c in col_indices]
 
     def __repr__(self):
-        return f"DataCube {self.ntime, self.nrow, self.ncol}"
+        return f"📘 DataCube {self.ntime, self.nrow, self.ncol}"
 
     def __str__(self):
         return self.__repr__()
@@ -181,7 +192,7 @@ class DataCube(StatsMixin, MathMixin, AggMixin, PlotMixin, pd.DataFrame):
         return self.__repr__()
 
     @staticmethod
-    def from_dataframe(data, nrow, ncol, **kwargs):
+    def from_pandas(data, nrow, ncol, **kwargs):
         """Convert a pd.DataFrame to a DataCube"""
         return DataCube(
             data.to_numpy(), ntime=len(data), nrow=nrow, ncol=ncol, **kwargs
@@ -197,7 +208,7 @@ class DataCube(StatsMixin, MathMixin, AggMixin, PlotMixin, pd.DataFrame):
         else:
             col_indices = np.atleast_1d(col)
         series_index = np.asarray(row_indices) * self.ncol + np.asarray(col_indices)
-        return DataFrame(
+        return self._frame_class(
             self.iloc[:, series_index],
             index=self.index,
             columns=self.columns[series_index],
@@ -211,23 +222,64 @@ class DataCube(StatsMixin, MathMixin, AggMixin, PlotMixin, pd.DataFrame):
     def to_array(self):
         return self.to_numpy().reshape(self.ntime, self.nrow, self.ncol)
 
+    @property
+    def _frame_class(self):
+        return DataFrame
+
+    @property
+    def _series_class(self):
+        return DataSeries
+
+    @property
+    def _pd_class(self):
+        return pd.DataFrame
+
 
 class ErrorCube(ErrorStatsMixin, DataCube):
     def __repr__(self):
-        return f"ErrorCube {self.ntime, self.nrow, self.ncol}"
+        return f"📕 ErrorCube {self.ntime, self.nrow, self.ncol}"
+
+    @staticmethod
+    def from_pandas(data, nrow, ncol, **kwargs):
+        """Convert a pd.DataFrame to a DataCube"""
+        return ErrorCube(
+            data.to_numpy(), ntime=len(data), nrow=nrow, ncol=ncol, **kwargs
+        )
+
+    @property
+    def _frame_class(self):
+        return ErrorFrame
+
+    @property
+    def _series_class(self):
+        return ErrorSeries
 
 
-class DataFrame(StatsMixin, MathMixin, AggMixin, PlotMixin, pd.DataFrame):
+class DataFrame(
+    StatsMixin, MathMixin, AggMixin, PlotMixin, ConvenienceMixins, pd.DataFrame
+):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.__post_init__()
 
+    @property
+    def nseries(self):
+        return self.shape[1]
+
+    def __repr__(self):
+        return f"🟦 DataFrame {self.shape}\n"
+
+    def _repr_html_(self):
+        return self.__repr__() + super()._repr_html_()
+
+    def __post_init__(self):
         def make_pixelseries(result):
             # log.debug("Modified result for pixelseries shape.")
-            return result  # .to_numpy()
+            return self._series_class.from_pandas(result)
 
         def make_timeseries(result):
             # log.debug("Modified result for timeseries shape.")
-            return result  # .to_numpy()
+            return self._series_class.from_pandas(result)
 
         def stats_post_process(result, **kwargs):
             if kwargs.get("axis") in [0, "time"]:
@@ -238,15 +290,17 @@ class DataFrame(StatsMixin, MathMixin, AggMixin, PlotMixin, pd.DataFrame):
                 return result
 
         self.stats_post_process = stats_post_process
+        self._include_convenience_index()
+        self._include_convenience_columns()
 
     @property
     def ntime(self):
         return self.shape[0]
 
     @staticmethod
-    def from_dataframe(data, **kwargs):
+    def from_pandas(data, **kwargs):
         """Convert a pd.DataFrame to a DataFrame"""
-        return DataFrame(data.to_numpy(), **kwargs)
+        return DataFrame(data, **kwargs)
 
     def _build_instance(self, new, **kwargs):
         return self.__class__(new, **kwargs)
@@ -254,6 +308,74 @@ class DataFrame(StatsMixin, MathMixin, AggMixin, PlotMixin, pd.DataFrame):
     def to_array(self):
         return self.to_numpy()
 
+    @property
+    def _series_class(self):
+        return DataSeries
+
+    @property
+    def _pd_class(self):
+        return pd.DataFrame
+
 
 class ErrorFrame(ErrorStatsMixin, DataFrame):
-    pass
+    def __repr__(self):
+        return f"🟥 ErrorFrame {self.shape}\n"
+
+    @property
+    def _series_class(self):
+        return ErrorSeries
+
+    @staticmethod
+    def from_pandas(data, **kwargs):
+        """Convert a pd.DataFrame to a DataFrame"""
+        return ErrorFrame(data, **kwargs)
+
+
+class DataSeries(
+    StatsMixin, MathMixin, AggMixin, PlotMixin, ConvenienceMixins, pd.Series
+):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.__post_init__()
+
+    def _lk_repr(self):
+        return f"📉 DataSeries {self.shape}\n"
+
+    def __repr__(self):
+        return self._lk_repr() + super().__repr__()
+
+    def __post_init__(self):
+        def stats_post_process(result, **kwargs):
+            return result
+
+        self.stats_post_process = stats_post_process
+        self._include_convenience_index()
+
+    @property
+    def ntime(self):
+        return self.shape[0]
+
+    @staticmethod
+    def from_pandas(data, **kwargs):
+        """Convert a pd.DataFrame to a DataFrame"""
+        return DataSeries(data, **kwargs)
+
+    def _build_instance(self, new, **kwargs):
+        return self.__class__(new, **kwargs)
+
+    def to_array(self):
+        return self.to_numpy()
+
+    @property
+    def _pd_class(self):
+        return pd.Series
+
+
+class ErrorSeries(ErrorStatsMixin, DataSeries):
+    def _lk_repr(self):
+        return f"📈 ErrorSeries {self.shape}\n"
+
+    @staticmethod
+    def from_pandas(data, **kwargs):
+        """Convert a pd.DataFrame to a DataFrame"""
+        return ErrorSeries(data, **kwargs)
