@@ -34,6 +34,7 @@ coverage = {version = "^7.4.0", extras = ["toml"]}
 bump2version = "^1.0.1"
 sphinx-autodoc-typehints = "^1.25.2"
 jupyter = "^1.0.0"
+line-profiler = "^4.1.2"
 
 
 [build-system]

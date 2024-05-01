@@ -1,5 +1,5 @@
 from lightkurve import DataCube, TimeSeries
-from lightkurve.datacube import METHOD_NAMES
+from lightkurve.mixins import STATS_METHOD_NAMES
 import numpy as np
 import pandas as pd
 
@@ -76,6 +76,8 @@ assert isinstance(df[:, [0, 1], [1, 2]], TimeSeries)
 assert df[:, [0, 1], [1, 2]].ntime == ntime
 assert df[:, [0, 1], [1, 2]].shape == (ntime, 2)
 
-for method_name in METHOD_NAMES:
+for method_name in STATS_METHOD_NAMES:
     assert getattr(df, method_name)(axis="time").shape == (nrow, ncol)
     assert getattr(df[:, aperture], method_name)(axis="time").shape[0] == aperture.sum()
+
+assert (df.mean() == df.mean(axis=0)).all()
