@@ -247,6 +247,8 @@ class ConvenienceMixins:
             for level in self.index.names
         }
         for key, index in INDEX_DICTS.items():
+            if key not in self._metadata:
+                self._metadata.append(key)
             setattr(self, key, index)
 
     def _include_convenience_columns(self):
@@ -257,4 +259,6 @@ class ConvenienceMixins:
             for level in self.columns.names
         }
         for key, index in COLUMN_DICTS.items():
+            if key not in self._metadata:
+                self._metadata.append(key)
             setattr(self, key, index)
