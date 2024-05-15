@@ -237,6 +237,184 @@ class AggMixin:
         else:
             return new_obj
 
+    def _expand_frame(self, row_factor, col_factor):
+        """Expands a frame maintaining relative values.
+
+        For an element (m, n) in the original frame with a value C, the
+        corresponding (m_0...m_rf, n_0...n_cf) values will be C/(rf*cf),
+        where rf is the row_factor and cf is the col_factor.
+        """
+        data = self.to_array()
+        frame_size = data.shape[0] * data.shape[1]
+        # Flatten to tile columns
+        expanded = np.tile(data.reshape(frame_size, 1), (1, col_factor))
+        # Reshape to new columns
+        expanded = expanded.reshape(data.shape[0], data.shape[1] * col_factor)
+        # Tile rows
+        expanded = np.tile(expanded, (1, row_factor))
+        # Reshape to expanded frame
+        expanded = expanded.reshape(
+            data.shape[0] * row_factor, data.shape[1] * col_factor
+        )
+        return expanded / (row_factor * col_factor)
+
+    def _expand_cube_frames(self, row_factor, col_factor):
+        """Expands each frame of a cube maintaining relative values.
+
+        For an element (m, n) in the original frame with a value C, the
+        corresponding (m_0...m_rf, n_0...n_cf) values will be C/(rf*cf),
+        where rf is the row_factor and cf is the col_factor.
+        """
+        data = self.to_array()
+        frame_size = data.shape[1] * data.shape[2]
+        # Flatten to tile columns
+        expanded = np.tile(
+            data.reshape(data.shape[0], frame_size, 1), (1, 1, col_factor)
+        )
+        # Reshape to new columns
+        expanded = expanded.reshape(
+            data.shape[0], data.shape[1], data.shape[2] * col_factor
+        )
+        # Tile rows
+        expanded = np.tile(expanded, (1, 1, row_factor))
+        # Reshape to expanded frame
+        expanded = expanded.reshape(
+            data.shape[0], data.shape[1] * row_factor, data.shape[2] * col_factor
+        )
+        return expanded / (row_factor * col_factor)
+
+    def spatial_aggregate(self, nrows, ncols):
+        data = self.to_array()
+        assert len(data.shape) in [2, 3], "data must be a DataFrame or a DataCube"
+        if len(data.shape) == 2:
+            expanded_data = self._expand_frame(nrows, ncols)
+            dim1 = int(expanded_data.shape[0] / nrows)
+            dim2 = int(expanded_data.shape[1] / ncols)
+            down_res_data = (
+                expanded_data.reshape(nrows, dim1, ncols, dim2).sum(axis=1).sum(axis=2)
+            )
+            new_row_inds = (
+                np.tile(self.index.values.reshape(data.shape[0], 1), (1, nrows))
+                .reshape(nrows, data.shape[0])
+                .mean(axis=1)
+            )
+            new_col_inds = (
+                np.tile(self.columns.values.reshape(data.shape[1], 1), (1, ncols))
+                .reshape(ncols, data.shape[1])
+                .mean(axis=1)
+            )
+
+            down_res_frame = self._build_instance(
+                down_res_data, index=new_row_inds, columns=new_col_inds
+            )
+            return down_res_frame
+
+        else:
+            dim0 = data.shape[0]
+            expanded_data = self._expand_cube_frames(nrows, ncols)
+            dim1 = int(expanded_data.shape[1] / nrows)
+            dim2 = int(expanded_data.shape[2] / ncols)
+            down_res_data = (
+                expanded_data.reshape(dim0, nrows, dim1, ncols, dim2)
+                .sum(axis=2)
+                .sum(axis=3)
+            )
+
+            time_indices = {
+                name: self.index.to_frame()[name]
+                for name in self.index.names
+                if name != "cadence"
+            }
+            new_row_inds = (
+                np.tile(self.row[:: self.nrow].reshape(self.nrow, 1), (1, nrows))
+                .reshape(nrows, self.nrow)
+                .mean(axis=1)
+            )
+            new_col_inds = (
+                np.tile(self.column[: self.ncol].reshape(self.ncol, 1), (1, ncols))
+                .reshape(ncols, self.ncol)
+                .mean(axis=1)
+            )
+            old_nrow = self.nrow
+            old_ncol = self.ncol
+            self.nrow = nrows
+            self.ncol = ncols
+            down_res_cube = self._build_instance(
+                down_res_data,
+                time_indices=time_indices,
+                row_indices={"row": new_row_inds},
+                col_indices={"column": new_col_inds},
+            )
+            self.nrow = old_nrow
+            self.ncol = old_ncol
+            return down_res_cube
+
+    # def down_res_flux(self, factor, crop="centered"):
+    #     """Decrease the resolution of frames by a given factor
+    #     """
+    #     assert isinstance(factor, int) or isinstance(factor, list), "Factor must be int or list [row factor, column factor]"
+    #     flux_array = self.to_array()
+    #     if isinstance(factor, int):
+    #         row_factor = col_factor = factor
+
+    #     elif isinstance(factor, list):
+    #         row_factor = factor[0]
+    #         col_factor = factor[1]
+
+    #     row_remainder = flux_array.shape[1] % row_factor
+    #     if row_remainder != 0:
+    #         if crop == "end":
+    #             flux_array = flux_array[:, :-row_remainder+1, :]
+    #         elif crop == "front":
+    #             flux_array = flux_array[:, row_remainder-1:, :]
+    #         elif crop == "centered":
+    #             if row_remainder % 2 == 0:
+    #                 flux_array = flux_array[:, row_remainder/2-1:-row_remainder/2+1]
+    #             else:
+    #                 flux_array = flux_array[:, row_remainder/2-1:-row_remainder/2]  # can't perfectly center, dropping last row
+
+    #     col_remainder = self.shape[2] % col_factor
+    #     if col_remainder != 0:
+    #         if crop == "end":
+    #             flux_array = flux_array[:, :, :-col_remainder+1]
+    #         elif crop == "front":
+    #             flux_array = flux_array[:, :, col_remainder-1:]
+    #         elif crop == "centered":
+    #             if col_remainder % 2 == 0:
+    #                 flux_array = flux_array[:, :, col_remainder/2-1:-col_remainder/2+1]
+    #             else:
+    #                 flux_array = flux_array[:, :, col_remainder/2-1:-col_remainder/2]  # can't perfectly center, dropping last column
+
+    #     if isinstance(self, DataFrame):
+    #         # to handle DataFrames
+    #         new_flux_array = flux_array.reshape(flux_array.shape[1], row_factor,
+    #                                             flux_array.shape[2], col_factor
+    #                                             ).sum(axis=1).sum(axis=2)
+
+    #         return new_flux_array
+    #     elif isinstance(self, DataCube):
+    #         # to handle DataCubes
+    #         new_rows = self.row.reshape(nrows, row_factor).mean(axis=1)
+    #         new_cols = self.col.reshape(ncols, col_factor).mean(axis=1)
+    #         new_flux_array = flux_array.reshape(flux_array.shape[0],
+    #                                             flux_array.shape[1], row_factor,
+    #                                             flux_array.shape[2], col_factor
+    #                                             ).sum(axis=1).sum(axis=2)
+    #         new_flux = self._build_instance(
+    #             new_flux_array,
+    #             index = self.index.to_frame(),
+    #             columns = new_cols,
+    #             rows = new_rows
+    #         )
+    #         DataCube(new_flux_array,
+    #                             self.time,
+    #                             new_rows,
+    #                             new_cols)
+    #         pass
+    #     else:
+    #         pass
+    #     pass
+
 
 class ConvenienceMixins:
     def _include_convenience_index(self):
@@ -247,7 +425,7 @@ class ConvenienceMixins:
             for level in self.index.names
         }
         for key, index in INDEX_DICTS.items():
-            if key not in self._metadata:
+            if (key not in self._metadata) and (key != "index"):
                 self._metadata.append(key)
             setattr(self, key, index)
 
@@ -259,6 +437,6 @@ class ConvenienceMixins:
             for level in self.columns.names
         }
         for key, index in COLUMN_DICTS.items():
-            if key not in self._metadata:
+            if (key not in self._metadata) and (key != "columns"):
                 self._metadata.append(key)
             setattr(self, key, index)

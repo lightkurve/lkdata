@@ -7,6 +7,7 @@ import os
 PACKAGEDIR = os.path.abspath(os.path.dirname(__file__))
 MPLSTYLE = "{}/data/lightkurve.mplstyle".format(PACKAGEDIR)
 ROOTNAME = "lightkurve"
+TESTDATA = "{}/data/tess-s0001-4-2_84.291190_-80.469170_5x5_astrocut.fits"
 
 # Bibtex entry detailing how to cite the package
 __citation__ = """@MISC{2018ascl.soft12013L,
