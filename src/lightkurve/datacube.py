@@ -190,7 +190,15 @@ class DataCube(
         return self.__repr__()
 
     def _repr_html_(self):
-        return self.__repr__()
+        out = "\n"
+        with np.printoptions(linewidth=79, edgeitems=2, threshold=100):
+            for time_index in self.index.names:
+                out += f"{time_index.ljust(16)}:\t{self.__getattr__(time_index)}\n"
+            for loc in self.columns.names:
+                if loc != "series":
+                    out += f"{loc.ljust(16)}:\t{np.unique(self.__getattr__(loc))}\n"
+            out += "type".ljust(16) + f":\t{self.__class__}\n"
+            return print(self.__repr__(), "\n", out)
 
     @staticmethod
     def from_pandas(data, nrow, ncol, **kwargs):
@@ -219,6 +227,9 @@ class DataCube(
         return self.__class__(
             new, ntime=len(new), nrow=self.nrow, ncol=self.ncol, **kwargs
         )
+
+    def _build_ds_instance(self, new, **kwargs):
+        return self.__class__(new, ntime=len(new), **kwargs)
 
     def to_array(self):
         return self.to_numpy().reshape(self.ntime, self.nrow, self.ncol)
