@@ -379,7 +379,7 @@ class AggMixin:
                 if name != "cadence"
             }
             new_row_inds = (
-                np.tile(self.row[:: self.nrow].reshape(self.nrow, 1), (1, nrows))
+                np.tile(self.row[:: self.ncol].reshape(self.nrow, 1), (1, nrows))
                 .reshape(nrows, self.nrow)
                 .mean(axis=1)
             )

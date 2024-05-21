@@ -82,6 +82,24 @@ for method_name in STATS_METHOD_NAMES:
 
 assert (df.mean() == df.mean(axis=0)).all()
 
+# Example usage
+ntime, nrow, ncol = 200, 10, 14
+test_data = np.ones((ntime, nrow, ncol))
+test_data = np.ones((ntime, nrow, ncol))
+row, col = np.arange(test_data.shape[1]), np.arange(test_data.shape[2])
+df = DataCube(test_data)
+# Time downsampling
+assert (df.downsample(2).to_array() == 2).all()
+assert df.spatial_downsample(2).to_array.shape == (200, 5, 7)
+assert (df.spatial_downsample(2).to_array() == 4).all()
+assert (df.spatial_aggregate(5, 7).to_array().round() == 4).all()
+assert df[:, :, :-1].spatial_downsample(2).to_array().shape == (200, 5, 6)
+assert (
+    df[:, :, :-1].spatial_downsample(2).to_array()
+    == df[:, :, :-2].spatial_downsample(2).to_array
+).all()
+assert df[:, :-1, :].spatial_downsample(2).to_array().shape == (200, 4, 7)
+
 
 def make_test_data():
     hdulist = fits.open(TESTDATA)
@@ -117,11 +135,21 @@ flux, flux_err, aper, bkg_aper, time_mask = make_test_data()
 assert isinstance(flux, DataCube)
 assert isinstance(flux_err, ErrorCube)
 
-assert flux.to_array().shape == (1282, 5, 5)
-assert flux_err.to_array().shape == (1282, 5, 5)
+assert flux.to_array().shape == (50, 6, 6)
+assert flux_err.to_array().shape == (50, 6, 6)
 
-assert flux.downsample(5).to_array().shape == (254, 5, 5)
-assert flux_err.downsample(5).to_array().shape == (254, 5, 5)
+assert flux.downsample(5).to_array().shape == (8, 6, 6)
+assert flux_err.downsample(5).to_array().shape == (8, 6, 6)
 
 assert isinstance(flux[:, aper], DataFrame)
 assert isinstance(flux_err[:, aper], ErrorFrame)
+
+assert isinstance(flux[:, aper].sum(axis=1), DataSeries)
+assert isinstance(flux_err[:, aper].sum(axis=1), DataSeries)
+
+assert flux.spatial_downsample(2).to_array().shape == (50, 3, 3)
+assert flux.spatial_downsample(2).to_array()[0, 0, 0] == flux[0, :2, :2].sum().sum()
+assert flux.spatial_downsample(2).to_array()[0, -1, -1] == flux[0, -2:, -2:].sum().sum()
+assert flux.spatial_downsample(2).sum().sum() == flux.sum().sum()
+assert flux[:, :-1].spatial_downsample(2).sum().sum() == flux[:, :-2].sum().sum()
+assert flux[:, :, :-1].spatial_downsample(2).sum().sum() == flux[:, :, :-2].sum().sum()

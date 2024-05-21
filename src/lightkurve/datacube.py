@@ -183,15 +183,14 @@ class DataCube(
             ncol = len(col)
         return nrow, ncol, [r * self.ncol + c for r in row_indices for c in col_indices]
 
-    def _single_cadence_frame(self, cadence):
-        df = pd.DataFrame(
+    def single_cadence_frame(self, cadence):
+        indices = [f"{i[0]} {i[1]}" for i in zip(self.index.names, self.index[0])]
+        str_index = "; ".join(indices)
+        return pd.DataFrame(
             self.to_array()[cadence],
-            index=self.row[:: self.nrow],
-            columns=self.column[: self.ncol],
-        )
-        df.index.name = "row"
-        df.columns.name = "column"
-        return df
+            index=pd.Series(self.row[:: self.nrow], name="row"),
+            columns=pd.Series(self.column[: self.ncol], name="column"),
+        ).style.set_caption(str_index)
 
     def __repr__(self):
         return f"📘 DataCube {self.ntime, self.nrow, self.ncol}"
