@@ -238,16 +238,18 @@ class AggMixin:
             return new_obj
 
     def spatial_downsample(self, factor=2):
+        row = self.__getattribute__(self.columns.names[1])
+        col = self.__getattribute__(self.columns.names[2])
         # Find the average spacing of the index
-        dr = factor * np.median(np.diff(np.sort(np.unique(self.row))))
-        dc = factor * np.median(np.diff(np.sort(np.unique(self.column))))
+        dr = factor * np.median(np.diff(np.sort(np.unique(row))))
+        dc = factor * np.median(np.diff(np.sort(np.unique(col))))
         flux = self
         # Calculate what bin edges result in this spacing
-        bins_row = np.arange(self.row.min(), self.row.max() + 1 * dr, dr)
-        bin_edges_left_row = pd.cut(np.sort(self.row), bins_row, right=False)
+        bins_row = np.arange(row.min(), row.max() + 1 * dr, dr)
+        bin_edges_left_row = pd.cut(np.sort(row), bins_row, right=False)
 
-        bins_col = np.arange(self.column.min(), self.column.max() + 1 * dc, dc)
-        bin_edges_left_col = pd.cut(self.column, bins_col, right=False)
+        bins_col = np.arange(col.min(), col.max() + 1 * dc, dc)
+        bin_edges_left_col = pd.cut(col, bins_col, right=False)
         if self._stats_type == "error":
             gb = (self**2).T.groupby(
                 [bin_edges_left_row, bin_edges_left_col], observed=False
@@ -280,8 +282,8 @@ class AggMixin:
 
         new_obj = self._build_ds_instance(
             new[bin_mask].T.to_numpy(),
-            nrow=len(new_index.get_level_values("row").unique()),
-            ncol=len(new_index.get_level_values("column").unique()),
+            nrow=len(new_index.get_level_values(self.columns.names[1]).unique()),
+            ncol=len(new_index.get_level_values(self.columns.names[2]).unique()),
             index=flux.index,
             columns=new_index[bin_mask],
         )
@@ -298,6 +300,8 @@ class AggMixin:
         where rf is the row_factor and cf is the col_factor.
         """
         data = self.to_array()
+        if self._stats_type == "error":
+            data = data**2
         frame_size = data.shape[0] * data.shape[1]
         # Flatten to tile columns
         expanded = np.tile(data.reshape(frame_size, 1), (1, col_factor))
@@ -309,6 +313,8 @@ class AggMixin:
         expanded = expanded.reshape(
             data.shape[0] * row_factor, data.shape[1] * col_factor
         )
+        if self._stats_type == "error":
+            return (expanded / (row_factor * col_factor)) ** 0.5
         return expanded / (row_factor * col_factor)
 
     def _expand_cube_frames(self, row_factor, col_factor):
@@ -319,6 +325,8 @@ class AggMixin:
         where rf is the row_factor and cf is the col_factor.
         """
         data = self.to_array()
+        if self._stats_type == "error":
+            data = data**2
         frame_size = data.shape[1] * data.shape[2]
         # Flatten to tile columns
         expanded = np.tile(
@@ -334,18 +342,26 @@ class AggMixin:
         expanded = expanded.reshape(
             data.shape[0], data.shape[1] * row_factor, data.shape[2] * col_factor
         )
+        if self._stats_type == "error":
+            return (expanded / (row_factor * col_factor)) ** 0.5
         return expanded / (row_factor * col_factor)
 
     def spatial_aggregate(self, nrows, ncols):
         data = self.to_array()
+        row = self.__getattribute__(self.columns.names[1])
+        col = self.__getattribute__(self.columns.names[2])
         assert len(data.shape) in [2, 3], "data must be a DataFrame or a DataCube"
         if len(data.shape) == 2:
             expanded_data = self._expand_frame(nrows, ncols)
             dim1 = int(expanded_data.shape[0] / nrows)
             dim2 = int(expanded_data.shape[1] / ncols)
+            if self._stats_type == "error":
+                expanded_data = expanded_data**2
             down_res_data = (
                 expanded_data.reshape(nrows, dim1, ncols, dim2).sum(axis=1).sum(axis=2)
             )
+            if self._stats_type == "error":
+                down_res_data = down_res_data**0.5
             new_row_inds = (
                 np.tile(self.index.values.reshape(data.shape[0], 1), (1, nrows))
                 .reshape(nrows, data.shape[0])
@@ -365,6 +381,8 @@ class AggMixin:
         else:
             dim0 = data.shape[0]
             expanded_data = self._expand_cube_frames(nrows, ncols)
+            if self._stats_type == "error":
+                expanded_data = expanded_data**2
             dim1 = int(expanded_data.shape[1] / nrows)
             dim2 = int(expanded_data.shape[2] / ncols)
             down_res_data = (
@@ -372,19 +390,20 @@ class AggMixin:
                 .sum(axis=2)
                 .sum(axis=3)
             )
-
+            if self._stats_type == "error":
+                down_res_data = down_res_data**0.5
             time_indices = {
                 name: self.index.to_frame()[name]
                 for name in self.index.names
                 if name != "cadence"
             }
             new_row_inds = (
-                np.tile(self.row[:: self.ncol].reshape(self.nrow, 1), (1, nrows))
+                np.tile(row[:: self.ncol].reshape(self.nrow, 1), (1, nrows))
                 .reshape(nrows, self.nrow)
                 .mean(axis=1)
             )
             new_col_inds = (
-                np.tile(self.column[: self.ncol].reshape(self.ncol, 1), (1, ncols))
+                np.tile(col[: self.ncol].reshape(self.ncol, 1), (1, ncols))
                 .reshape(ncols, self.ncol)
                 .mean(axis=1)
             )

@@ -42,12 +42,12 @@ assert df[:, aperture].shape == (ntime, 9)
 
 # This should be a timeseries
 row, col = np.where(aperture)
-assert isinstance(df[:, row, col], DataSeries)
+assert isinstance(df[:, row, col], DataFrame)
 assert df[:, row, col].ntime == ntime
 assert df[:, row, col].shape == (ntime, 9)
 
 # timeseries
-assert isinstance(df[:, [1, 2, 3], [1, 2, 3]], DataSeries)
+assert isinstance(df[:, [1, 2, 3], [1, 2, 3]], DataFrame)
 assert df[:, [1, 2, 3], [1, 2, 3]].ntime == ntime
 assert df[:, [1, 2, 3], [1, 2, 3]].shape == (ntime, 3)
 
@@ -88,9 +88,10 @@ test_data = np.ones((ntime, nrow, ncol))
 test_data = np.ones((ntime, nrow, ncol))
 row, col = np.arange(test_data.shape[1]), np.arange(test_data.shape[2])
 df = DataCube(test_data)
-# Time downsampling
+df_err = ErrorCube(test_data)
+
 assert (df.downsample(2).to_array() == 2).all()
-assert df.spatial_downsample(2).to_array.shape == (200, 5, 7)
+assert df.spatial_downsample(2).to_array().shape == (200, 5, 7)
 assert (df.spatial_downsample(2).to_array() == 4).all()
 assert (df.spatial_aggregate(5, 7).to_array().round() == 4).all()
 assert df[:, :, :-1].spatial_downsample(2).to_array().shape == (200, 5, 6)
@@ -99,6 +100,17 @@ assert (
     == df[:, :, :-2].spatial_downsample(2).to_array
 ).all()
 assert df[:, :-1, :].spatial_downsample(2).to_array().shape == (200, 4, 7)
+
+assert (df_err.downsample(4).to_array() == 2).all()
+assert df_err.spatial_downsample(2).to_array.shape == (200, 5, 7)
+assert (df_err.spatial_downsample(2).to_array() == 2).all()
+assert (df_err.spatial_aggregate(5, 7).to_array().round() == 2).all()  #
+assert df_err[:, :, :-1].spatial_downsample(2).to_array().shape == (200, 5, 6)
+assert (
+    df_err[:, :, :-1].spatial_downsample(2).to_array()
+    == df_err[:, :, :-2].spatial_downsample(2).to_array
+).all()
+assert df_err[:, :-1, :].spatial_downsample(2).to_array().shape == (200, 4, 7)
 
 
 def make_test_data():
@@ -153,3 +165,22 @@ assert flux.spatial_downsample(2).to_array()[0, -1, -1] == flux[0, -2:, -2:].sum
 assert flux.spatial_downsample(2).sum().sum() == flux.sum().sum()
 assert flux[:, :-1].spatial_downsample(2).sum().sum() == flux[:, :-2].sum().sum()
 assert flux[:, :, :-1].spatial_downsample(2).sum().sum() == flux[:, :, :-2].sum().sum()
+
+assert flux_err.spatial_downsample(2).to_array().shape == (50, 3, 3)
+assert (
+    flux_err.spatial_downsample(2).to_array()[0, 0, 0]
+    == ((flux_err[0, :2, :2] ** 2).sum().sum()) ** 0.5
+)
+assert (
+    flux_err.spatial_downsample(2).to_array()[0, -1, -1]
+    == ((flux_err[0, -2:, -2:] ** 2).sum().sum()) ** 0.5
+)
+assert (flux_err.spatial_downsample(2) ** 2).sum().sum().round() == (
+    flux_err**2
+).sum().sum().round()
+assert (flux_err[:, :-1].spatial_downsample(2) ** 2).sum().sum().round() == (
+    flux_err[:, :-2] ** 2
+).sum().sum().round()
+assert (flux_err[:, :, :-1].spatial_downsample(2) ** 2).sum().sum().round() == (
+    flux_err[:, :, :-2] ** 2
+).sum().sum().round()

@@ -49,6 +49,10 @@ class DataCube(
                 names=["cadence", *list(time_indices.keys())],
             )
         if columns is None:
+            if row_indices == {}:
+                row_indices["row"] = np.arange(nrow)
+            if col_indices == {}:
+                col_indices["column"] = np.arange(ncol)
             columns = pd.MultiIndex.from_arrays(
                 [
                     np.arange(nrow * ncol).ravel(),
@@ -183,14 +187,24 @@ class DataCube(
             ncol = len(col)
         return nrow, ncol, [r * self.ncol + c for r in row_indices for c in col_indices]
 
-    def single_cadence_frame(self, cadence):
-        indices = [f"{i[0]} {i[1]}" for i in zip(self.index.names, self.index[0])]
+    def _single_cadence_frame(self, cadence):
+        if isinstance(self.index, pd.MultiIndex):
+            indices = [
+                f"{i[0]} {i[1]}" for i in zip(self.index.names, self.index[cadence])
+            ]
+        else:
+            indices = [
+                f"{i[0]} {i[1]}" for i in zip(self.index.names, [self.index[cadence]])
+            ]
         str_index = "; ".join(indices)
-        return pd.DataFrame(
+        row = self.__getattr__(self.columns.names[1])
+        col = self.__getattr__(self.columns.names[2])
+        out = pd.DataFrame(
             self.to_array()[cadence],
-            index=pd.Series(self.row[:: self.nrow], name="row"),
-            columns=pd.Series(self.column[: self.ncol], name="column"),
+            index=pd.Series(row[:: self.ncol], name=self.columns.names[1]),
+            columns=pd.Series(col[: self.ncol], name=self.columns.names[2]),
         ).style.set_caption(str_index)
+        return out
 
     def __repr__(self):
         return f"📘 DataCube {self.ntime, self.nrow, self.ncol}"
@@ -199,6 +213,20 @@ class DataCube(
         return self.__repr__()
 
     def _repr_html_(self):
+        out0 = self._single_cadence_frame(0)
+        outF = self._single_cadence_frame(self.shape[0] - 1)
+        hidden_frames = f"[{self.shape[0]-2} frames hidden]"
+        return f"""
+        {self.__repr__()}
+        {out0.to_html(max_rows=10, max_columns=10)}
+        ...<br>
+        {hidden_frames}<br>
+        ...<br>
+        {outF.to_html(max_rows=10, max_columns=10)}
+        """
+
+    @property
+    def header(self):
         out = "\n"
         with np.printoptions(linewidth=79, edgeitems=2, threshold=100):
             for time_index in self.index.names:
