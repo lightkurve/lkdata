@@ -53,3 +53,4 @@ from .datacube import *  # noqa: F403, E402
 from .dataframe import *  # noqa: F403, E402
 from .dataseries import *  # noqa: F403, E402
 from .periodogram import *  # noqa: F403, E402
+from .time import *  # noqa: F403, E402
