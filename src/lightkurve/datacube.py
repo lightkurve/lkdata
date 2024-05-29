@@ -214,16 +214,19 @@ class DataCube(
 
     def _repr_html_(self):
         out0 = self._single_cadence_frame(0)
-        outF = self._single_cadence_frame(self.shape[0] - 1)
-        hidden_frames = f"[{self.shape[0]-2} frames hidden]"
-        return f"""
-        {self.__repr__()}
-        {out0.to_html(max_rows=10, max_columns=10)}
-        ...<br>
-        {hidden_frames}<br>
-        ...<br>
-        {outF.to_html(max_rows=10, max_columns=10)}
-        """
+        if self.shape[0] > 1:
+            hidden_frames = f"[+{self.shape[0]-1} cadences]"
+            return f"""
+            {self.__repr__()}
+            {out0.to_html(max_rows=10, max_columns=10)}
+            ...<br>
+            {hidden_frames}<br>
+            """
+        else:
+            return f"""
+            {self.__repr__()}
+            {out0.to_html(max_rows=10, max_columns=10)}
+            """
 
     @property
     def header(self):
@@ -234,7 +237,6 @@ class DataCube(
             for loc in self.columns.names:
                 if loc != "series":
                     out += f"{loc.ljust(16)}:\t{np.unique(self.__getattr__(loc))}\n"
-            out += "type".ljust(16) + f":\t{self.__class__}\n"
             return print(self.__repr__(), "\n", out)
 
     @staticmethod
