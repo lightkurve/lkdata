@@ -229,15 +229,16 @@ class DataCube(
             """
 
     @property
-    def header(self):
+    def meta(self):
         out = "\n"
+        max_name_len = max(map(len, self.columns.names + self.index.names))
         with np.printoptions(linewidth=79, edgeitems=2, threshold=100):
             for time_index in self.index.names:
-                out += f"{time_index.ljust(16)}:\t{self.__getattr__(time_index)}\n"
+                out += f"{time_index.ljust(max_name_len+1)}:\t{self.__getattr__(time_index)}\n"
             for loc in self.columns.names:
                 if loc != "series":
-                    out += f"{loc.ljust(16)}:\t{np.unique(self.__getattr__(loc))}\n"
-            return print(self.__repr__(), "\n", out)
+                    out += f"{loc.ljust(max_name_len+1)}:\t{np.unique(self.__getattr__(loc))}\n"
+            print(self.__repr__(), "\n", out)
 
     @staticmethod
     def from_pandas(data, nrow, ncol, **kwargs):
