@@ -217,22 +217,15 @@ class AggMixin:
         count = gb[int(self.columns.get_level_values(0)[0])].count()
         bin_mask = np.asarray(count == nframes)[:, 0]
 
-        # We have to create a new index. We'll just take the mean of each bin
+        # We have to create a new index. We'll take the min of each bin
         new_index_left = (
             self.index.to_frame()
             .groupby(bin_edges_left, observed=False)
-            .mean()
+            .min()
             .reset_index(drop=True)
         )
-        new_index_right = (
-            self.index.to_frame()
-            .groupby(bin_edges_left, observed=False)
-            .mean()
-            .reset_index(drop=True)
-        )
-        new_index = (
-            ((new_index_left + new_index_right) / 2).set_index(self.index.names).index
-        )
+
+        new_index = new_index_left.set_index(self.index.names).index
 
         new_obj = self._build_instance(
             new[bin_mask].to_numpy(), index=new_index[bin_mask], columns=self.columns
@@ -243,18 +236,20 @@ class AggMixin:
             return new_obj
 
     def spatial_downsample(self, factor=2):
-        row = self.__getattribute__(self.columns.names[1])
-        col = self.__getattribute__(self.columns.names[2])
+        row_name = self.columns.names[1]
+        col_name = self.columns.names[2]
+        row = self.__getattribute__(row_name)
+        col = self.__getattribute__(col_name)
         # Find the average spacing of the index
         dr = factor * np.median(np.diff(np.sort(np.unique(row))))
         dc = factor * np.median(np.diff(np.sort(np.unique(col))))
         flux = self
         # Calculate what bin edges result in this spacing
-        bins_row = np.arange(row.min(), row.max() + 1 * dr, dr)
+        bins_row = np.arange(row.min(), row.max() + 1, dr)
         bin_edges_left_row = pd.cut(np.sort(row), bins_row, right=False)
-
-        bins_col = np.arange(col.min(), col.max() + 1 * dc, dc)
+        bins_col = np.arange(col.min(), col.max() + 1, dc)
         bin_edges_left_col = pd.cut(col, bins_col, right=False)
+
         if self._stats_type == "error":
             gb = (self**2).T.groupby(
                 [bin_edges_left_row, bin_edges_left_col], observed=False
@@ -268,28 +263,20 @@ class AggMixin:
         count = gb[int(flux.index.get_level_values(0)[0])].count()
         bin_mask = np.asarray(count == factor**2)[:, 0]
 
-        # We have to create a new index. We'll just take the mean of each bin
+        # We have to create a new index. We'll just take the min of each bin
         new_index_left = (
             self.columns.to_frame()
             .groupby([bin_edges_left_row, bin_edges_left_col], observed=False)
-            .mean()
+            .min()
             .reset_index(drop=True)
-        )
-        new_index_right = (
-            self.columns.to_frame()
-            .groupby([bin_edges_left_row, bin_edges_left_col], observed=False)
-            .mean()
-            .reset_index(drop=True)
-        )
-        new_index = (
-            ((new_index_left + new_index_right) / 2).set_index(self.columns.names).index
         )
 
+        new_index = new_index_left.set_index(self.columns.names).index
         new_obj = self._build_ds_instance(
             new[bin_mask].T.to_numpy(),
-            nrow=len(new_index.get_level_values(self.columns.names[1]).unique()),
-            ncol=len(new_index.get_level_values(self.columns.names[2]).unique()),
-            index=flux.index,
+            nrow=len(new_index.get_level_values(row_name).unique()),
+            ncol=len(new_index.get_level_values(col_name).unique()),
+            index=self.index,
             columns=new_index[bin_mask],
         )
         if self._stats_type == "error":
