@@ -198,9 +198,9 @@ class AggMixin:
         index = self.index.get_level_values(level=level)
 
         # Find the average spacing of the index
-        dt = nframes * np.median(np.diff(index))
+        dt = np.median(np.diff(index))
         # Calculate what bin edges result in this spacing
-        bins = np.arange(index.min(), index.max() + 1 * dt, dt)
+        bins = np.arange(index.min(), index.max() + (nframes - 1) * dt, dt)
         bin_edges_left = pd.cut(np.sort(index), bins, right=False)
         # bin_edges_right = pd.cut(np.sort(index), bins, right=True)
         # groupby these bin edges
@@ -240,14 +240,20 @@ class AggMixin:
         col_name = self.columns.names[2]
         row = self.__getattribute__(row_name)
         col = self.__getattribute__(col_name)
+
+        if row.dtype == int and col.dtype == int:
+            indexed = True
+        else:
+            indexed = False
+
         # Find the average spacing of the index
-        dr = factor * np.median(np.diff(np.sort(np.unique(row))))
-        dc = factor * np.median(np.diff(np.sort(np.unique(col))))
-        flux = self
+        dr = np.median(np.diff(np.sort(np.unique(row)))) * factor
+        dc = np.median(np.diff(np.sort(np.unique(col)))) * factor
+
         # Calculate what bin edges result in this spacing
-        bins_row = np.arange(row.min(), row.max() + 1, dr)
+        bins_row = np.arange(row.min(), row.max() + dr, dr)
         bin_edges_left_row = pd.cut(np.sort(row), bins_row, right=False)
-        bins_col = np.arange(col.min(), col.max() + 1, dc)
+        bins_col = np.arange(col.min(), col.max() + dc, dc)
         bin_edges_left_col = pd.cut(col, bins_col, right=False)
 
         if self._stats_type == "error":
@@ -260,22 +266,30 @@ class AggMixin:
             )
         new = gb.sum()
 
-        count = gb[int(flux.index.get_level_values(0)[0])].count()
+        count = gb[int(self.index.get_level_values(0)[0])].count()
         bin_mask = np.asarray(count == factor**2)[:, 0]
-
-        # We have to create a new index. We'll just take the min of each bin
-        new_index_left = (
-            self.columns.to_frame()
-            .groupby([bin_edges_left_row, bin_edges_left_col], observed=False)
-            .min()
-            .reset_index(drop=True)
-        )
+        if indexed:
+            # We have to create a new index. We'll just take the min of each bin
+            new_index_left = (
+                self.columns.to_frame()
+                .groupby([bin_edges_left_row, bin_edges_left_col], observed=False)
+                .min()
+                .reset_index(drop=True)
+            )
+        else:
+            # We have to create a new index. We'll just take the mean of each bin
+            new_index_left = (
+                self.columns.to_frame()
+                .groupby([bin_edges_left_row, bin_edges_left_col], observed=False)
+                .mean()
+                .reset_index(drop=True)
+            )
 
         new_index = new_index_left.set_index(self.columns.names).index
         new_obj = self._build_ds_instance(
             new[bin_mask].T.to_numpy(),
-            nrow=len(new_index.get_level_values(row_name).unique()),
-            ncol=len(new_index.get_level_values(col_name).unique()),
+            nrow=len(new_index[bin_mask].get_level_values(row_name).unique()),
+            ncol=len(new_index[bin_mask].get_level_values(col_name).unique()),
             index=self.index,
             columns=new_index[bin_mask],
         )
