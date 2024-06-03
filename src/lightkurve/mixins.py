@@ -196,7 +196,10 @@ class AggMixin:
         # Find the index to downsample on
         level = self.index.names[level] if isinstance(level, int) else level
         index = self.index.get_level_values(level=level)
-
+        if index.dtype == int:
+            indexed = True
+        else:
+            indexed = False
         # Find the average spacing of the index
         dt = np.median(np.diff(index))
         # Calculate what bin edges result in this spacing
@@ -218,12 +221,13 @@ class AggMixin:
         bin_mask = np.asarray(count == nframes)[:, 0]
 
         # We have to create a new index. We'll take the min of each bin
-        new_index_left = (
-            self.index.to_frame()
-            .groupby(bin_edges_left, observed=False)
-            .min()
-            .reset_index(drop=True)
-        )
+        new_index_left = self.index.to_frame().groupby(bin_edges_left, observed=False)
+        if indexed:
+            # if the old index was cadence based, use minimum cadence of bin for new index
+            new_index_left = new_index_left.min().reset_index(drop=True)
+        else:
+            # if the old index was time based, use the mean of the bin for the new index
+            new_index_left = new_index_left.mean().reset_index(drop=True)
 
         new_index = new_index_left.set_index(self.index.names).index
 
@@ -268,22 +272,15 @@ class AggMixin:
 
         count = gb[int(self.index.get_level_values(0)[0])].count()
         bin_mask = np.asarray(count == factor**2)[:, 0]
+        new_index_left = self.columns.to_frame().groupby(
+            [bin_edges_left_row, bin_edges_left_col], observed=False
+        )
         if indexed:
-            # We have to create a new index. We'll just take the min of each bin
-            new_index_left = (
-                self.columns.to_frame()
-                .groupby([bin_edges_left_row, bin_edges_left_col], observed=False)
-                .min()
-                .reset_index(drop=True)
-            )
+            # If the old indices weren't positional, use min index for each bin for new index
+            new_index_left = new_index_left.min().reset_index(drop=True)
         else:
-            # We have to create a new index. We'll just take the mean of each bin
-            new_index_left = (
-                self.columns.to_frame()
-                .groupby([bin_edges_left_row, bin_edges_left_col], observed=False)
-                .mean()
-                .reset_index(drop=True)
-            )
+            # If old indices were positional, use mean of bin for new index
+            new_index_left = new_index_left.mean().reset_index(drop=True)
 
         new_index = new_index_left.set_index(self.columns.names).index
         new_obj = self._build_ds_instance(
