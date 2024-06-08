@@ -1,11 +1,7 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import warnings
 
-from astropy import units as u
-from astropy.units import Quantity
-from astropy.time import Time
 
 __all__ = ["StatsMixin", "MathMixin", "ErrorStatsMixin", "PlotMixin"]
 
@@ -516,118 +512,142 @@ class ConvenienceMixins:
                 self._metadata.append(key)
             setattr(self, key, index)
 
-    def fold(
-        self,
-        period=None,
-        epoch_time=None,
-        epoch_phase=0,
-        wrap_phase=None,
-        normalize_phase=False,
-    ):
-        """Returns a `FoldedLightCurve` object folded on a period and epoch.
-
-        This method is identical to AstroPy's `~astropy.timeseries.TimeSeries.fold()`
-        method, except it returns a `FoldedLightCurve` object which offers
-        convenient plotting methods.
-
-        Parameters
-        ----------
-        period : float `~astropy.units.Quantity`
-            The period to use for folding.  If a ``float`` is passed we'll
-            assume it is in units of days.
-        epoch_time : `~astropy.time.Time`
-            The time to use as the reference epoch, at which the relative time
-            offset / phase will be ``epoch_phase``. Defaults to the first time
-            in the time series.
-        epoch_phase : float or `~astropy.units.Quantity`
-            Phase of ``epoch_time``. If ``normalize_phase`` is `True`, this
-            should be a dimensionless value, while if ``normalize_phase`` is
-            ``False``, this should be a `~astropy.units.Quantity` with time
-            units. Defaults to 0.
-        wrap_phase : float or `~astropy.units.Quantity`
-            The value of the phase above which values are wrapped back by one
-            period. If ``normalize_phase`` is `True`, this should be a
-            dimensionless value, while if ``normalize_phase`` is ``False``,
-            this should be a `~astropy.units.Quantity` with time units.
-            Defaults to half the period, so that the resulting time series goes
-            from ``-period / 2`` to ``period / 2`` (if ``normalize_phase`` is
-            `False`) or -0.5 to 0.5 (if ``normalize_phase`` is `True`).
-        normalize_phase : bool
-            If `False` phase is returned as `~astropy.time.TimeDelta`,
-            otherwise as a dimensionless `~astropy.units.Quantity`.
-
-        Returns
-        -------
-        folded_lightcurve : `FoldedLightCurve`
-            The folded light curve object in which the ``time`` column
-            holds the phase values.
-        """
-        # Lightkurve v1.x assumed that `period` was given in days if no unit
-        # was specified. We maintain this behavior for backwards-compatibility.
-        if period is not None and not isinstance(period, Quantity):
-            period *= u.day
-        if epoch_time is not None and not isinstance(epoch_time, Time):
-            epoch_time = Time(
-                epoch_time, format=self.time.format, scale=self.time.scale
-            )
-        if (
-            epoch_phase is not None
-            and not isinstance(epoch_phase, Quantity)
-            and not normalize_phase
-        ):
-            epoch_phase *= u.day
-        if wrap_phase is not None and not isinstance(wrap_phase, Quantity):
-            wrap_phase *= u.day
-
-        # Warn if `epoch_time` appears to use the wrong format
-        if epoch_time is not None and epoch_time.value > 2450000:
-            if self.time.format == "bkjd":
-                warnings.warn(
-                    "`epoch_time` appears to be given in JD, "
-                    "however the light curve time uses BKJD "
-                    "(i.e. JD - 2454833).",
-                    # LightkurveWarning,
-                )
-            elif self.time.format == "btjd":
-                warnings.warn(
-                    "`epoch_time` appears to be given in JD, "
-                    "however the light curve time uses BTJD "
-                    "(i.e. JD - 2457000).",
-                    # LightkurveWarning,
-                )
-
-        ts = super().fold(
-            period=period,
-            epoch_time=epoch_time,
-            epoch_phase=epoch_phase,
-            wrap_phase=wrap_phase,
-            normalize_phase=normalize_phase,
+    def fold(self, period, t0=None, level=1, inplace=False, name=None):
+        if name is None:
+            name = "phase"
+        if name in self.index.names:
+            self.index = self.index.droplevel(name)
+        time = self.index.get_level_values(level)
+        if t0 is not None:
+            time = time - t0
+        else:
+            time = time - time.min()
+        phase = time % period / period
+        indices = self.index.to_frame()
+        indices[name] = phase
+        if inplace:
+            indices.set_index(name, append=True, inplace=True)
+            self.index = indices.index
+            return
+        del indices["cadence"]
+        folded_cube = self._build_instance(
+            self.to_array(),
+            time_indices=indices.reset_index(drop=True).to_dict("list"),
         )
+        return folded_cube
 
-        # The folded time would pass the `TimeSeries` validation check if
-        # `normalize_phase=True`, so creating a `FoldedLightCurve` object
-        # requires the following three-step workaround:
-        # 1. Give the folded light curve a valid time column again
-        with ts._delay_required_column_checks():
-            folded_time = ts.time.copy()
-            ts.remove_column("time")
-            ts.add_column(self.time, name="time", index=0)
-        # 2. Create the folded object
-        lc = FoldedLightCurve(data=ts)  # noqa: F821
-        # 3. Restore the folded time
-        with lc._delay_required_column_checks():
-            lc.remove_column("time")
-            lc.add_column(folded_time, name="time", index=0)
+    # def fold_old(
+    #     self,
+    #     period=None,
+    #     epoch_time=None,
+    #     epoch_phase=0,
+    #     wrap_phase=None,
+    #     normalize_phase=False,
+    # ):
+    #     """Returns a `FoldedLightCurve` object folded on a period and epoch.
 
-        # Add extra column and meta data specific to FoldedLightCurve
-        lc.add_column(
-            self.time.copy(), name="time_original", index=len(self._required_columns)
-        )
-        lc.meta["PERIOD"] = period
-        lc.meta["EPOCH_TIME"] = epoch_time
-        lc.meta["EPOCH_PHASE"] = epoch_phase
-        lc.meta["WRAP_PHASE"] = wrap_phase
-        lc.meta["NORMALIZE_PHASE"] = normalize_phase
-        lc.sort("time")
+    #     This method is identical to AstroPy's `~astropy.timeseries.TimeSeries.fold()`
+    #     method, except it returns a `FoldedLightCurve` object which offers
+    #     convenient plotting methods.
 
-        return lc
+    #     Parameters
+    #     ----------
+    #     period : float `~astropy.units.Quantity`
+    #         The period to use for folding.  If a ``float`` is passed we'll
+    #         assume it is in units of days.
+    #     epoch_time : `~astropy.time.Time`
+    #         The time to use as the reference epoch, at which the relative time
+    #         offset / phase will be ``epoch_phase``. Defaults to the first time
+    #         in the time series.
+    #     epoch_phase : float or `~astropy.units.Quantity`
+    #         Phase of ``epoch_time``. If ``normalize_phase`` is `True`, this
+    #         should be a dimensionless value, while if ``normalize_phase`` is
+    #         ``False``, this should be a `~astropy.units.Quantity` with time
+    #         units. Defaults to 0.
+    #     wrap_phase : float or `~astropy.units.Quantity`
+    #         The value of the phase above which values are wrapped back by one
+    #         period. If ``normalize_phase`` is `True`, this should be a
+    #         dimensionless value, while if ``normalize_phase`` is ``False``,
+    #         this should be a `~astropy.units.Quantity` with time units.
+    #         Defaults to half the period, so that the resulting time series goes
+    #         from ``-period / 2`` to ``period / 2`` (if ``normalize_phase`` is
+    #         `False`) or -0.5 to 0.5 (if ``normalize_phase`` is `True`).
+    #     normalize_phase : bool
+    #         If `False` phase is returned as `~astropy.time.TimeDelta`,
+    #         otherwise as a dimensionless `~astropy.units.Quantity`.
+
+    #     Returns
+    #     -------
+    #     folded_lightcurve : `FoldedLightCurve`
+    #         The folded light curve object in which the ``time`` column
+    #         holds the phase values.
+    #     """
+    #     # Lightkurve v1.x assumed that `period` was given in days if no unit
+    #     # was specified. We maintain this behavior for backwards-compatibility.
+    #     if period is not None and not isinstance(period, Quantity):
+    #         period *= u.day
+    #     if epoch_time is not None and not isinstance(epoch_time, Time):
+    #         epoch_time = Time(
+    #             epoch_time, format=self.time.format, scale=self.time.scale
+    #         )
+    #     if (
+    #         epoch_phase is not None
+    #         and not isinstance(epoch_phase, Quantity)
+    #         and not normalize_phase
+    #     ):
+    #         epoch_phase *= u.day
+    #     if wrap_phase is not None and not isinstance(wrap_phase, Quantity):
+    #         wrap_phase *= u.day
+
+    #     # Warn if `epoch_time` appears to use the wrong format
+    #     if epoch_time is not None and epoch_time.value > 2450000:
+    #         if self.time.format == "bkjd":
+    #             warnings.warn(
+    #                 "`epoch_time` appears to be given in JD, "
+    #                 "however the light curve time uses BKJD "
+    #                 "(i.e. JD - 2454833).",
+    #                 # LightkurveWarning,
+    #             )
+    #         elif self.time.format == "btjd":
+    #             warnings.warn(
+    #                 "`epoch_time` appears to be given in JD, "
+    #                 "however the light curve time uses BTJD "
+    #                 "(i.e. JD - 2457000).",
+    #                 # LightkurveWarning,
+    #             )
+
+    #     ts = super().fold(
+    #         period=period,
+    #         epoch_time=epoch_time,
+    #         epoch_phase=epoch_phase,
+    #         wrap_phase=wrap_phase,
+    #         normalize_phase=normalize_phase,
+    #     )
+
+    #     # The folded time would pass the `TimeSeries` validation check if
+    #     # `normalize_phase=True`, so creating a `FoldedLightCurve` object
+    #     # requires the following three-step workaround:
+    #     # 1. Give the folded light curve a valid time column again
+    #     with ts._delay_required_column_checks():
+    #         folded_time = ts.time.copy()
+    #         ts.remove_column("time")
+    #         ts.add_column(self.time, name="time", index=0)
+    #     # 2. Create the folded object
+    #     lc = FoldedLightCurve(data=ts)  # noqa: F821
+    #     # 3. Restore the folded time
+    #     with lc._delay_required_column_checks():
+    #         lc.remove_column("time")
+    #         lc.add_column(folded_time, name="time", index=0)
+
+    #     # Add extra column and meta data specific to FoldedLightCurve
+    #     lc.add_column(
+    #         self.time.copy(), name="time_original", index=len(self._required_columns)
+    #     )
+    #     lc.meta["PERIOD"] = period
+    #     lc.meta["EPOCH_TIME"] = epoch_time
+    #     lc.meta["EPOCH_PHASE"] = epoch_phase
+    #     lc.meta["WRAP_PHASE"] = wrap_phase
+    #     lc.meta["NORMALIZE_PHASE"] = normalize_phase
+    #     lc.sort("time")
+
+    #     return lc
