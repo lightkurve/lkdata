@@ -235,7 +235,41 @@ class AggMixin:
         else:
             return new_obj
 
-    def spatial_downsample(self, factor=2):
+    def spatial_downsample(self, factor=None, row_factor=None, col_factor=None):
+        """Spatially downsamples a DataCube or a DataFrame by a given factor.
+
+        Parameters
+        ----------
+        factor : int or tuple
+            Factor by which to decrease the spatial resolution in each dimension.
+
+
+        Returns
+        -------
+        new_obj : lightkurve DataCube or DataFrame
+            A spatially downsampled object of the same type.
+
+
+        Notes
+        -----
+        If `factor` is an int, this will be applied to both rows and columns.
+
+
+        Examples
+        --------
+
+        """
+        assert isinstance(factor, int) or isinstance(
+            factor, tuple
+        ), "`factor` must be an integer or a tuple of (row_factor, col_factor)"
+
+        if isinstance(factor, int):
+            row_factor = factor
+            col_factor = factor
+        else:
+            row_factor = factor[0]
+            col_factor = factor[1]
+
         row_name = self.columns.names[1]
         col_name = self.columns.names[2]
         row = self.__getattribute__(row_name)
@@ -247,13 +281,13 @@ class AggMixin:
             indexed = False
 
         # Find the average spacing of the index
-        dr = np.median(np.diff(np.sort(np.unique(row)))) * factor
-        dc = np.median(np.diff(np.sort(np.unique(col)))) * factor
+        dr = np.median(np.diff(np.sort(np.unique(row)))) * row_factor
+        dc = np.median(np.diff(np.sort(np.unique(col)))) * col_factor
 
         # Calculate what bin edges result in this spacing
-        bins_row = np.arange(row.min(), row.max() + dr, dr)
+        bins_row = np.arange(row.min(), row.max() + dr + 1, dr)
         bin_edges_left_row = pd.cut(np.sort(row), bins_row, right=False)
-        bins_col = np.arange(col.min(), col.max() + dc, dc)
+        bins_col = np.arange(col.min(), col.max() + dc + 1, dc)
         bin_edges_left_col = pd.cut(col, bins_col, right=False)
 
         if self._stats_type == "error":
@@ -267,7 +301,7 @@ class AggMixin:
         new = gb.sum()
 
         count = gb[int(self.index.get_level_values(0)[0])].count()
-        bin_mask = np.asarray(count == factor**2)[:, 0]
+        bin_mask = np.asarray(count == row_factor * col_factor)[:, 0]
         new_index_left = self.columns.to_frame().groupby(
             [bin_edges_left_row, bin_edges_left_col], observed=False
         )
@@ -420,72 +454,6 @@ class AggMixin:
             self.ncol = old_ncol
             return down_res_cube
 
-    # def down_res_flux(self, factor, crop="centered"):
-    #     """Decrease the resolution of frames by a given factor
-    #     """
-    #     assert isinstance(factor, int) or isinstance(factor, list), "Factor must be int or list [row factor, column factor]"
-    #     flux_array = self.to_array()
-    #     if isinstance(factor, int):
-    #         row_factor = col_factor = factor
-
-    #     elif isinstance(factor, list):
-    #         row_factor = factor[0]
-    #         col_factor = factor[1]
-
-    #     row_remainder = flux_array.shape[1] % row_factor
-    #     if row_remainder != 0:
-    #         if crop == "end":
-    #             flux_array = flux_array[:, :-row_remainder+1, :]
-    #         elif crop == "front":
-    #             flux_array = flux_array[:, row_remainder-1:, :]
-    #         elif crop == "centered":
-    #             if row_remainder % 2 == 0:
-    #                 flux_array = flux_array[:, row_remainder/2-1:-row_remainder/2+1]
-    #             else:
-    #                 flux_array = flux_array[:, row_remainder/2-1:-row_remainder/2]  # can't perfectly center, dropping last row
-
-    #     col_remainder = self.shape[2] % col_factor
-    #     if col_remainder != 0:
-    #         if crop == "end":
-    #             flux_array = flux_array[:, :, :-col_remainder+1]
-    #         elif crop == "front":
-    #             flux_array = flux_array[:, :, col_remainder-1:]
-    #         elif crop == "centered":
-    #             if col_remainder % 2 == 0:
-    #                 flux_array = flux_array[:, :, col_remainder/2-1:-col_remainder/2+1]
-    #             else:
-    #                 flux_array = flux_array[:, :, col_remainder/2-1:-col_remainder/2]  # can't perfectly center, dropping last column
-
-    #     if isinstance(self, DataFrame):
-    #         # to handle DataFrames
-    #         new_flux_array = flux_array.reshape(flux_array.shape[1], row_factor,
-    #                                             flux_array.shape[2], col_factor
-    #                                             ).sum(axis=1).sum(axis=2)
-
-    #         return new_flux_array
-    #     elif isinstance(self, DataCube):
-    #         # to handle DataCubes
-    #         new_rows = self.row.reshape(nrows, row_factor).mean(axis=1)
-    #         new_cols = self.col.reshape(ncols, col_factor).mean(axis=1)
-    #         new_flux_array = flux_array.reshape(flux_array.shape[0],
-    #                                             flux_array.shape[1], row_factor,
-    #                                             flux_array.shape[2], col_factor
-    #                                             ).sum(axis=1).sum(axis=2)
-    #         new_flux = self._build_instance(
-    #             new_flux_array,
-    #             index = self.index.to_frame(),
-    #             columns = new_cols,
-    #             rows = new_rows
-    #         )
-    #         DataCube(new_flux_array,
-    #                             self.time,
-    #                             new_rows,
-    #                             new_cols)
-    #         pass
-    #     else:
-    #         pass
-    #     pass
-
 
 class ConvenienceMixins:
     def _include_convenience_index(self):
@@ -535,119 +503,3 @@ class ConvenienceMixins:
             time_indices=indices.reset_index(drop=True).to_dict("list"),
         )
         return folded_cube
-
-    # def fold_old(
-    #     self,
-    #     period=None,
-    #     epoch_time=None,
-    #     epoch_phase=0,
-    #     wrap_phase=None,
-    #     normalize_phase=False,
-    # ):
-    #     """Returns a `FoldedLightCurve` object folded on a period and epoch.
-
-    #     This method is identical to AstroPy's `~astropy.timeseries.TimeSeries.fold()`
-    #     method, except it returns a `FoldedLightCurve` object which offers
-    #     convenient plotting methods.
-
-    #     Parameters
-    #     ----------
-    #     period : float `~astropy.units.Quantity`
-    #         The period to use for folding.  If a ``float`` is passed we'll
-    #         assume it is in units of days.
-    #     epoch_time : `~astropy.time.Time`
-    #         The time to use as the reference epoch, at which the relative time
-    #         offset / phase will be ``epoch_phase``. Defaults to the first time
-    #         in the time series.
-    #     epoch_phase : float or `~astropy.units.Quantity`
-    #         Phase of ``epoch_time``. If ``normalize_phase`` is `True`, this
-    #         should be a dimensionless value, while if ``normalize_phase`` is
-    #         ``False``, this should be a `~astropy.units.Quantity` with time
-    #         units. Defaults to 0.
-    #     wrap_phase : float or `~astropy.units.Quantity`
-    #         The value of the phase above which values are wrapped back by one
-    #         period. If ``normalize_phase`` is `True`, this should be a
-    #         dimensionless value, while if ``normalize_phase`` is ``False``,
-    #         this should be a `~astropy.units.Quantity` with time units.
-    #         Defaults to half the period, so that the resulting time series goes
-    #         from ``-period / 2`` to ``period / 2`` (if ``normalize_phase`` is
-    #         `False`) or -0.5 to 0.5 (if ``normalize_phase`` is `True`).
-    #     normalize_phase : bool
-    #         If `False` phase is returned as `~astropy.time.TimeDelta`,
-    #         otherwise as a dimensionless `~astropy.units.Quantity`.
-
-    #     Returns
-    #     -------
-    #     folded_lightcurve : `FoldedLightCurve`
-    #         The folded light curve object in which the ``time`` column
-    #         holds the phase values.
-    #     """
-    #     # Lightkurve v1.x assumed that `period` was given in days if no unit
-    #     # was specified. We maintain this behavior for backwards-compatibility.
-    #     if period is not None and not isinstance(period, Quantity):
-    #         period *= u.day
-    #     if epoch_time is not None and not isinstance(epoch_time, Time):
-    #         epoch_time = Time(
-    #             epoch_time, format=self.time.format, scale=self.time.scale
-    #         )
-    #     if (
-    #         epoch_phase is not None
-    #         and not isinstance(epoch_phase, Quantity)
-    #         and not normalize_phase
-    #     ):
-    #         epoch_phase *= u.day
-    #     if wrap_phase is not None and not isinstance(wrap_phase, Quantity):
-    #         wrap_phase *= u.day
-
-    #     # Warn if `epoch_time` appears to use the wrong format
-    #     if epoch_time is not None and epoch_time.value > 2450000:
-    #         if self.time.format == "bkjd":
-    #             warnings.warn(
-    #                 "`epoch_time` appears to be given in JD, "
-    #                 "however the light curve time uses BKJD "
-    #                 "(i.e. JD - 2454833).",
-    #                 # LightkurveWarning,
-    #             )
-    #         elif self.time.format == "btjd":
-    #             warnings.warn(
-    #                 "`epoch_time` appears to be given in JD, "
-    #                 "however the light curve time uses BTJD "
-    #                 "(i.e. JD - 2457000).",
-    #                 # LightkurveWarning,
-    #             )
-
-    #     ts = super().fold(
-    #         period=period,
-    #         epoch_time=epoch_time,
-    #         epoch_phase=epoch_phase,
-    #         wrap_phase=wrap_phase,
-    #         normalize_phase=normalize_phase,
-    #     )
-
-    #     # The folded time would pass the `TimeSeries` validation check if
-    #     # `normalize_phase=True`, so creating a `FoldedLightCurve` object
-    #     # requires the following three-step workaround:
-    #     # 1. Give the folded light curve a valid time column again
-    #     with ts._delay_required_column_checks():
-    #         folded_time = ts.time.copy()
-    #         ts.remove_column("time")
-    #         ts.add_column(self.time, name="time", index=0)
-    #     # 2. Create the folded object
-    #     lc = FoldedLightCurve(data=ts)  # noqa: F821
-    #     # 3. Restore the folded time
-    #     with lc._delay_required_column_checks():
-    #         lc.remove_column("time")
-    #         lc.add_column(folded_time, name="time", index=0)
-
-    #     # Add extra column and meta data specific to FoldedLightCurve
-    #     lc.add_column(
-    #         self.time.copy(), name="time_original", index=len(self._required_columns)
-    #     )
-    #     lc.meta["PERIOD"] = period
-    #     lc.meta["EPOCH_TIME"] = epoch_time
-    #     lc.meta["EPOCH_PHASE"] = epoch_phase
-    #     lc.meta["WRAP_PHASE"] = wrap_phase
-    #     lc.meta["NORMALIZE_PHASE"] = normalize_phase
-    #     lc.sort("time")
-
-    #     return lc
