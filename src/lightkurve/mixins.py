@@ -190,17 +190,25 @@ class PlotMixin:
 class AggMixin:
     def downsample(self, nframes=5, level=-1):
         # Find the index to downsample on
-        level = self.index.names[level] if isinstance(level, int) else level
         index = self.index.get_level_values(level=level)
+        precision = np.finfo(index.dtype).precision
         if index.dtype == int:
             indexed = True
         else:
             indexed = False
         # Find the average spacing of the index
-        dt = np.median(np.diff(index))
+        dt = np.median(np.diff(index)).round(precision) * nframes
+        nbins = int(np.ceil((index.max() - index.min()) / dt) + 1)
         # Calculate what bin edges result in this spacing
-        bins = np.arange(index.min(), index.max() + (nframes - 1) * dt, dt)
-        bin_edges_left = pd.cut(np.sort(index), bins, right=False)
+        bins = np.arange(index.min(), index.min() + nbins * dt, dt)
+        # Original:
+        # dt = np.median(np.diff(index))
+        # bins = np.arange(index.min(),
+        #          index.max()+(nframes-1)*dt,
+        #          nframes*dt)
+
+        bin_edges_left = pd.cut(np.sort(index), bins.round(precision), right=False)
+
         # bin_edges_right = pd.cut(np.sort(index), bins, right=True)
         # groupby these bin edges
 
@@ -212,7 +220,6 @@ class AggMixin:
 
         new = gb.sum()
         # We only accept cases where the number of points in a bin is the same as the number of frames we downsample to
-
         count = gb[int(self.columns.get_level_values(0)[0])].count()
         bin_mask = np.asarray(count == nframes)[:, 0]
 
@@ -226,7 +233,6 @@ class AggMixin:
             new_index_left = new_index_left.mean().reset_index(drop=True)
 
         new_index = new_index_left.set_index(self.index.names).index
-
         new_obj = self._build_instance(
             new[bin_mask].to_numpy(), index=new_index[bin_mask], columns=self.columns
         )
@@ -281,13 +287,26 @@ class AggMixin:
             indexed = False
 
         # Find the average spacing of the index
-        dr = np.median(np.diff(np.sort(np.unique(row)))) * row_factor
-        dc = np.median(np.diff(np.sort(np.unique(col)))) * col_factor
+        dr = np.median(np.diff(np.sort(np.unique(row))))
+        dc = np.median(np.diff(np.sort(np.unique(col))))
 
         # Calculate what bin edges result in this spacing
-        bins_row = np.arange(row.min(), row.max() + dr + 1, dr)
+        if indexed:
+            bins_row = np.arange(
+                row.min(), row.max() + 1 + row_factor * dr, row_factor * dr
+            )
+            bins_col = np.arange(
+                col.min(), col.max() + 1 + col_factor * dc, col_factor * dc
+            )
+        else:
+            bins_row = np.arange(
+                row.min(), row.max() + (row_factor - 1) * dr, row_factor * dr
+            )
+            bins_col = np.arange(
+                col.min(), col.max() + (col_factor - 1) * dc, col_factor * dc
+            )
+
         bin_edges_left_row = pd.cut(np.sort(row), bins_row, right=False)
-        bins_col = np.arange(col.min(), col.max() + dc + 1, dc)
         bin_edges_left_col = pd.cut(col, bins_col, right=False)
 
         if self._stats_type == "error":
@@ -496,6 +515,8 @@ class ConvenienceMixins:
         if inplace:
             indices.set_index(name, append=True, inplace=True)
             self.index = indices.index
+            self._metadata.append(name)
+            setattr(self, name, self.index.get_level_values(level=name))
             return
         del indices["cadence"]
         folded_cube = self._build_instance(
