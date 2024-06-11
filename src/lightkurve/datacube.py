@@ -1,6 +1,7 @@
 """Classes and tools for working with 3 dimensional data."""
 import logging
 import pandas as pd
+from pandas.io.formats.style import Styler
 import numpy as np
 
 from .dataframe import DataFrame, ErrorFrame
@@ -188,22 +189,56 @@ class DataCube(
         return nrow, ncol, [r * self.ncol + c for r in row_indices for c in col_indices]
 
     def _single_cadence_frame(self, cadence):
+        """Create a stylized single cadence frame of a datacube"""
         if isinstance(self.index, pd.MultiIndex):
-            indices = [
-                f"{i[0]} {i[1]}" for i in zip(self.index.names, self.index[cadence])
-            ]
+            indices = []
+            for i in zip(self.index.names, self.index[cadence]):
+                if isinstance(i[1], int) or isinstance(i[1], np.int_):
+                    strlabel = f"{i[0]}: {i[1]}"
+                else:
+                    strlabel = f"{i[0]}: {i[1]:0.3f}"
+                indices += [strlabel]
         else:
             indices = [
                 f"{i[0]} {i[1]}" for i in zip(self.index.names, [self.index[cadence]])
             ]
-        str_index = "; ".join(indices)
+        str_index = "<br>" + "<br>".join(indices)
         row = self.__getattr__(self.columns.names[1])
         col = self.__getattr__(self.columns.names[2])
-        out = pd.DataFrame(
+        df = pd.DataFrame(
             self.to_array()[cadence],
             index=pd.Series(row[:: self.ncol], name=self.columns.names[1]),
-            columns=pd.Series(col[: self.ncol], name=self.columns.names[2]),
-        ).style.set_caption(str_index)
+            columns=pd.MultiIndex.from_product(
+                [[self.columns.names[2]], pd.Series(col[: self.ncol])]
+            ),
+        )
+        out = Styler(df, uuid_len=0, cell_ids=False).set_caption(str_index)
+        if self._stats_type == "error":
+            out.format(precision=3)
+        else:
+            out.format(precision=0, thousands=",")
+
+        out.background_gradient(
+            axis=None,
+            vmin=self.to_array()[cadence].min(),
+            vmax=self.to_array()[cadence].max(),
+            cmap="gray",
+        )
+
+        out.set_table_styles(
+            [
+                {
+                    "selector": "caption",
+                    "props": "caption-side: bottom; font-size:1em; font-weight: bold;",
+                },
+                {"selector": "th", "props": "text-align: center;"},
+                {
+                    "selector": "td",
+                    "props": "width: 30px; height: 30px; font-size: 6pt; text-align: center;",
+                },
+                {"selector": ":hover", "props": ""},
+            ]
+        )
         return out
 
     def __repr__(self):
