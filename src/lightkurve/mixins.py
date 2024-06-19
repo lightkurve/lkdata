@@ -499,11 +499,15 @@ class ConvenienceMixins:
                 self._metadata.append(key)
             setattr(self, key, index)
 
-    def fold(self, period, t0=None, level=1, inplace=False, name=None):
-        if name is None:
-            name = "phase"
-        if name in self.index.names:
-            self.index = self.index.droplevel(name)
+    def fold(self, period, t0=None, level=1, inplace=False, label=None):
+        """ """
+        if label is None:
+            label = "phase"
+        if label in self.index.names:
+            self.index = self.index.droplevel(label)
+        if len(self.index.names) == 1:
+            # Cadence is typically level 0 and times levels 1+
+            level = 0
         time = self.index.get_level_values(level)
         if t0 is not None:
             time = time - t0
@@ -511,12 +515,12 @@ class ConvenienceMixins:
             time = time - time.min()
         phase = time % period / period
         indices = self.index.to_frame()
-        indices[name] = phase
+        indices[label] = phase
         if inplace:
-            indices.set_index(name, append=True, inplace=True)
+            indices.set_index(label, append=True, inplace=True)
             self.index = indices.index
-            self._metadata.append(name)
-            setattr(self, name, self.index.get_level_values(level=name))
+            self._metadata.append(label)
+            setattr(self, label, self.index.get_level_values(level=label))
             return
         del indices["cadence"]
         folded_cube = self._build_instance(
