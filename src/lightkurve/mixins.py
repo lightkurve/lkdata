@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-
+from copy import deepcopy
 
 __all__ = ["StatsMixin", "MathMixin", "ErrorStatsMixin", "PlotMixin"]
 
@@ -501,30 +501,38 @@ class ConvenienceMixins:
 
     def fold(self, period, t0=None, level=1, inplace=False, label=None):
         """ """
+        index = deepcopy(self.index)
+        if len(self.index.names) == 1:
+            # Cadence is typically level 0 and datetimes levels 1+
+            level = 0
         if label is None:
             label = "phase"
-        if label in self.index.names:
-            self.index = self.index.droplevel(label)
-        if len(self.index.names) == 1:
-            # Cadence is typically level 0 and times levels 1+
-            level = 0
-        time = self.index.get_level_values(level)
+        if label in index.names:
+            index = index.droplevel(label)
+
+        time = index.get_level_values(level)
         if t0 is not None:
             time = time - t0
         else:
             time = time - time.min()
+
         phase = time % period / period
-        indices = self.index.to_frame()
+        indices = index.to_frame()
         indices[label] = phase
+
         if inplace:
             indices.set_index(label, append=True, inplace=True)
             self.index = indices.index
             self._metadata.append(label)
             setattr(self, label, self.index.get_level_values(level=label))
             return
+
         del indices["cadence"]
+
         folded_cube = self._build_instance(
             self.to_array(),
             time_indices=indices.reset_index(drop=True).to_dict("list"),
+            columns=self.columns,
         )
+
         return folded_cube
