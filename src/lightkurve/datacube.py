@@ -14,6 +14,7 @@ from .mixins import (
     AggMixin,
     ConvenienceMixins,
 )
+from .meta import CubeMeta
 
 log = logging.getLogger()
 
@@ -32,6 +33,7 @@ class DataCube(
         col_indices={},
         index=None,
         columns=None,
+        **kwargs,
     ):
         if data.ndim == 2:
             if (nrow is None) | (ncol is None):
@@ -93,6 +95,7 @@ class DataCube(
         self.stats_post_process = stats_post_process
         self._include_convenience_index()
         self._include_convenience_columns()
+        self._include_convenience_meta(kwargs)
 
     @property
     def nseries(self):
@@ -265,15 +268,7 @@ class DataCube(
 
     @property
     def meta(self):
-        out = "\n"
-        max_name_len = max(map(len, self.columns.names + self.index.names))
-        with np.printoptions(linewidth=79, edgeitems=2, threshold=100):
-            for time_index in self.index.names:
-                out += f"{time_index.ljust(max_name_len+1)}:\t{self.__getattr__(time_index)}\n"
-            for loc in self.columns.names:
-                if loc != "series":
-                    out += f"{loc.ljust(max_name_len+1)}:\t{np.unique(self.__getattr__(loc))}\n"
-            print(self.__repr__(), "\n", out)
+        return CubeMeta(self)
 
     @staticmethod
     def from_pandas(data, nrow, ncol, **kwargs):
@@ -320,6 +315,15 @@ class DataCube(
     @property
     def _pd_class(self):
         return pd.DataFrame
+
+    # @property
+    # def loc(self):
+    #     """
+    #     Return a TableLoc object that can be used for retrieving
+    #     rows by index in a given data range. Note that both loc
+    #     and iloc work only with single-column indices.
+    #     """
+    #     return TableLoc(self)
 
 
 class ErrorCube(ErrorStatsMixin, DataCube):

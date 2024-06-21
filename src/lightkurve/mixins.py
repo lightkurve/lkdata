@@ -499,6 +499,12 @@ class ConvenienceMixins:
                 self._metadata.append(key)
             setattr(self, key, index)
 
+    def _include_convenience_meta(self, kwargs):
+        for key, value in kwargs.items():
+            if key not in self._metadata:
+                self._metadata.append(key)
+            setattr(self, key, value)
+
     def fold(self, period, t0=None, level=1, inplace=False, label=None):
         """ """
         index = deepcopy(self.index)
