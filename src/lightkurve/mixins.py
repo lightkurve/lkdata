@@ -188,26 +188,39 @@ class PlotMixin:
 
 
 class AggMixin:
+    def _set_precision(self, func):
+        """np.array wrapper to strictly enforce precision."""
+
+        def wrap(*args, **kwargs):
+            arr = func(*args, **kwargs)
+            npdtype = type(arr[0])
+            precision = np.finfo(npdtype).precision
+            return arr.round(precision)
+
+        return wrap
+
     def downsample(self, nframes=5, level=-1):
+        round = self._set_precision(np.array)
         # Find the index to downsample on
         index = self.index.get_level_values(level=level)
-        precision = np.finfo(index.dtype).precision
-        if index.dtype == int:
-            indexed = True
-        else:
-            indexed = False
+        try:
+            index = round(index)
+        except ValueError:
+            pass
+
         # Find the average spacing of the index
-        dt = np.median(np.diff(index)).round(precision) * nframes
+        dt = np.median(np.diff(index)) * nframes
         nbins = int(np.ceil((index.max() - index.min()) / dt) + 1)
         # Calculate what bin edges result in this spacing
         bins = np.arange(index.min(), index.min() + nbins * dt, dt)
+        bins = round(bins)
         # Original:
         # dt = np.median(np.diff(index))
         # bins = np.arange(index.min(),
         #          index.max()+(nframes-1)*dt,
         #          nframes*dt)
 
-        bin_edges_left = pd.cut(np.sort(index), bins.round(precision), right=False)
+        bin_edges_left = pd.cut(np.sort(index), bins, right=False)
 
         # bin_edges_right = pd.cut(np.sort(index), bins, right=True)
         # groupby these bin edges
@@ -223,16 +236,45 @@ class AggMixin:
         count = gb[int(self.columns.get_level_values(0)[0])].count()
         bin_mask = np.asarray(count == nframes)[:, 0]
 
-        # We have to create a new index. We'll take the min of each bin
+        # We have to create a new index. We'll take the mean of each bin
         new_index_left = self.index.to_frame().groupby(bin_edges_left, observed=False)
-        if indexed:
-            # if the old index was cadence based, use minimum cadence of bin for new index
-            new_index_left = new_index_left.min().reset_index(drop=True)
-        else:
-            # if the old index was time based, use the mean of the bin for the new index
-            new_index_left = new_index_left.mean().reset_index(drop=True)
 
-        new_index = new_index_left.set_index(self.index.names).index
+        if "cadences" in self.index.names:
+
+            def repack(vals):
+                unpackvals = [
+                    list(
+                        np.array(
+                            v.replace("[", "").replace("]", "").split(" "), dtype=int
+                        )
+                    )
+                    for v in vals
+                ]
+                allvals = []
+                for val in unpackvals:
+                    allvals += val
+                return str(allvals)
+
+            cadences = new_index_left["cadences"].apply(repack).values
+            new_index_left = (
+                self.index.to_frame()
+                .drop(["cadences"], axis=1)
+                .groupby(bin_edges_left, observed=False)
+            )
+            self.index = self.index.droplevel("cadences")
+        elif "cadence" in self.index.names:
+            cadences = (
+                new_index_left["cadence"].apply(lambda val: str(np.unique(val))).values
+            )
+        # if the old index was time based, use the mean of the bin for the new index
+        new_index_left = new_index_left.mean().reset_index(drop=True)
+        index_names = list(self.index.names)
+        if ("cadence" in new_index_left) or ("mid_cadence" in new_index_left):
+            new_index_left["cadences"] = cadences
+            index_names.append("cadences")
+        new_index = new_index_left.set_index(index_names).index
+        if "cadence" in new_index.names:
+            new_index = new_index.rename({"cadence": "mid_cadence"})
         new_obj = self._build_instance(
             new[bin_mask].to_numpy(), index=new_index[bin_mask], columns=self.columns
         )
@@ -275,7 +317,7 @@ class AggMixin:
         else:
             row_factor = factor[0]
             col_factor = factor[1]
-
+        round = self._set_precision(np.array)
         row_name = self.columns.names[1]
         col_name = self.columns.names[2]
         row = self.__getattribute__(row_name)
@@ -285,10 +327,14 @@ class AggMixin:
             indexed = True
         else:
             indexed = False
+            row = round(row)
+            col = round(col)
 
         # Find the average spacing of the index
         dr = np.median(np.diff(np.sort(np.unique(row))))
+        dr = round(dr)
         dc = np.median(np.diff(np.sort(np.unique(col))))
+        dc = round(dc)
 
         # Calculate what bin edges result in this spacing
         if indexed:
@@ -344,6 +390,36 @@ class AggMixin:
         else:
             return new_obj
 
+    def _expand(self, row_factor, col_factor):
+        """Expands each frame of a cube maintaining relative values.
+
+        For an element (m, n) in the original frame with a value C, the
+        corresponding (m_0...m_rf, n_0...n_cf) values will be C/(rf*cf),
+        where rf is the row_factor and cf is the col_factor.
+        """
+
+        data = self.to_array()
+        if self._stats_type == "error":
+            data = data**2
+        frame_size = data.shape[1] * data.shape[2]
+        # Flatten to tile columns
+        expanded = np.tile(
+            data.reshape(data.shape[0], frame_size, 1), (1, 1, col_factor)
+        )
+        # Reshape to new columns
+        expanded = expanded.reshape(
+            data.shape[0], data.shape[1], data.shape[2] * col_factor
+        )
+        # Tile rows
+        expanded = np.tile(expanded, (1, 1, row_factor))
+        # Reshape to expanded frame
+        expanded = expanded.reshape(
+            data.shape[0], data.shape[1] * row_factor, data.shape[2] * col_factor
+        )
+        if self._stats_type == "error":
+            return (expanded / (row_factor * col_factor)) ** 0.5
+        return expanded / (row_factor * col_factor)
+
     def _expand_frame(self, row_factor, col_factor):
         """Expands a frame maintaining relative values.
 
@@ -397,6 +473,9 @@ class AggMixin:
         if self._stats_type == "error":
             return (expanded / (row_factor * col_factor)) ** 0.5
         return expanded / (row_factor * col_factor)
+
+    def super_sample(self, nrows, ncols):
+        pass
 
     def spatial_aggregate(self, nrows, ncols):
         data = self.to_array()

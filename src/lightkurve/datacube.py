@@ -51,6 +51,7 @@ class DataCube(
                 [np.arange(ntime), *list(time_indices.values())],
                 names=["cadence", *list(time_indices.keys())],
             )
+
         if columns is None:
             if row_indices == {}:
                 row_indices["row"] = np.arange(nrow)
@@ -193,10 +194,13 @@ class DataCube(
 
     def _single_cadence_frame(self, cadence):
         """Create a stylized single cadence frame of a datacube"""
+        cadence = int(np.floor(cadence))
         if isinstance(self.index, pd.MultiIndex):
             indices = []
             for i in zip(self.index.names, self.index[cadence]):
-                if isinstance(i[1], int) or isinstance(i[1], np.int_):
+                if i[0] == "cadence":
+                    strlabel = f"{i[0]}: {int(np.floor(i[1]))}"
+                elif i[0] == "cadences":
                     strlabel = f"{i[0]}: {i[1]}"
                 else:
                     strlabel = f"{i[0]}: {i[1]:0.3f}"

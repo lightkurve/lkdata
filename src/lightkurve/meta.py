@@ -20,7 +20,7 @@ class CubeMeta(BaseMeta):
             if loc != "series":
                 self._meta[loc] = np.unique(cube.__getattr__(loc))
         for key in cube._metadata:
-            if key not in cube.index.names + cube.columns.names:
+            if (key not in cube.index.names + cube.columns.names) and (key[0] != "_"):
                 self._meta[key] = getattr(cube, key)
 
     def __repr__(self):
