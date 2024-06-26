@@ -22,3 +22,6 @@ def download_large_file(url):
             show_progress=True,
         )
     logger.info(f"Downloaded {url} to large file cache.")
+
+
+from .fits import *  # noqa: F403, E402

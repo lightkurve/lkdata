@@ -62,7 +62,7 @@ def _create_cum_method(method_name):
     def _method(self, *args, **kwargs):
         pandas_method = getattr(super(self._pd_class, self), method_name)
         new = pandas_method(*args, **kwargs)
-        return self._build_instance(new.to_numpy())
+        return self._build_instance(new.to_numpy(), nrow=self.nrow, ncol=self.ncol)
 
     return _method
 
@@ -146,11 +146,16 @@ class MathMixin:
             if isinstance(val, self.__class__):
                 return self._build_instance(
                     (self.to_numpy() ** 2 + val.to_numpy() ** 2) ** 0.5,
+                    nrow=self.nrow,
+                    ncol=self.ncol,
                     **self._get_math_kwargs(),
                 )
         else:
             return self._build_instance(
-                self.to_numpy() + self._process_math_val(val), **self._get_math_kwargs()
+                self.to_numpy() + self._process_math_val(val),
+                nrow=self.nrow,
+                ncol=self.ncol,
+                **self._get_math_kwargs(),
             )
 
     def __sub__(self, val):
@@ -158,17 +163,26 @@ class MathMixin:
 
     def __mul__(self, val):
         return self._build_instance(
-            self.to_numpy() * self._process_math_val(val), **self._get_math_kwargs()
+            self.to_numpy() * self._process_math_val(val),
+            nrow=self.nrow,
+            ncol=self.ncol,
+            **self._get_math_kwargs(),
         )
 
     def __pow__(self, val):
         return self._build_instance(
-            self.to_numpy() ** self._process_math_val(val), **self._get_math_kwargs()
+            self.to_numpy() ** self._process_math_val(val),
+            nrow=self.nrow,
+            ncol=self.ncol,
+            **self._get_math_kwargs(),
         )
 
     def __mod__(self, val):
         return self._build_instance(
-            self.to_numpy() % self._process_math_val(val), **self._get_math_kwargs()
+            self.to_numpy() % self._process_math_val(val),
+            nrow=self.nrow,
+            ncol=self.ncol,
+            **self._get_math_kwargs(),
         )
 
 
@@ -283,7 +297,14 @@ class AggMixin:
         else:
             return new_obj
 
-    def spatial_downsample(self, factor=None, row_factor=None, col_factor=None):
+    def spatial_downsample(
+        self,
+        factor=None,
+        row_factor=None,
+        col_factor=None,
+        row_name=None,
+        col_name=None,
+    ):
         """Spatially downsamples a DataCube or a DataFrame by a given factor.
 
         Parameters
@@ -318,8 +339,8 @@ class AggMixin:
             row_factor = factor[0]
             col_factor = factor[1]
         round = self._set_precision(np.array)
-        row_name = self.columns.names[1]
-        col_name = self.columns.names[2]
+        row_name = row_name or self.columns.names[1]
+        col_name = col_name or self.columns.names[2]
         row = self.__getattribute__(row_name)
         col = self.__getattribute__(col_name)
 
@@ -332,9 +353,7 @@ class AggMixin:
 
         # Find the average spacing of the index
         dr = np.median(np.diff(np.sort(np.unique(row))))
-        dr = round(dr)
         dc = np.median(np.diff(np.sort(np.unique(col))))
-        dc = round(dc)
 
         # Calculate what bin edges result in this spacing
         if indexed:
@@ -378,7 +397,7 @@ class AggMixin:
             new_index_left = new_index_left.mean().reset_index(drop=True)
 
         new_index = new_index_left.set_index(self.columns.names).index
-        new_obj = self._build_ds_instance(
+        new_obj = self._build_instance(
             new[bin_mask].T.to_numpy(),
             nrow=len(new_index[bin_mask].get_level_values(row_name).unique()),
             ncol=len(new_index[bin_mask].get_level_values(col_name).unique()),
@@ -578,7 +597,7 @@ class ConvenienceMixins:
                 self._metadata.append(key)
             setattr(self, key, index)
 
-    def _include_convenience_meta(self, kwargs):
+    def _include_convenience_meta(self, **kwargs):
         for key, value in kwargs.items():
             if key not in self._metadata:
                 self._metadata.append(key)
@@ -619,5 +638,5 @@ class ConvenienceMixins:
             time_indices=indices.reset_index(drop=True).to_dict("list"),
             columns=self.columns,
         )
-
+        # folded_cube is just a datacube
         return folded_cube

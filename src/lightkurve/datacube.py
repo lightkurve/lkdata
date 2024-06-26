@@ -33,8 +33,10 @@ class DataCube(
         col_indices={},
         index=None,
         columns=None,
+        exposure_time=None,
         **kwargs,
     ):
+        self._metadata = []
         if data.ndim == 2:
             if (nrow is None) | (ncol is None):
                 raise ValueError("Must set `nrow` and `ncol`.")
@@ -96,7 +98,9 @@ class DataCube(
         self.stats_post_process = stats_post_process
         self._include_convenience_index()
         self._include_convenience_columns()
-        self._include_convenience_meta(kwargs)
+        kwargs["exposure_time"] = exposure_time
+        self._include_convenience_meta(**kwargs)
+        self._repr_html_ = self._repr_html_
 
     @property
     def nseries(self):
@@ -219,20 +223,20 @@ class DataCube(
                 [[self.columns.names[2]], pd.Series(col[: self.ncol])]
             ),
         )
-        out = Styler(df, uuid_len=0, cell_ids=False).set_caption(str_index)
+        out = Styler(df).set_caption(str_index)
         if self._stats_type == "error":
-            out.format(precision=3)
+            out = out.format(precision=3)
         else:
-            out.format(precision=0, thousands=",")
+            out = out.format(precision=0, thousands=",")
 
-        out.background_gradient(
+        out = out.background_gradient(
             axis=None,
             vmin=self.to_array()[cadence].min(),
             vmax=self.to_array()[cadence].max(),
             cmap="gray",
         )
 
-        out.set_table_styles(
+        out = out.set_table_styles(
             [
                 {
                     "selector": "caption",
@@ -297,13 +301,13 @@ class DataCube(
             columns=self.columns[series_index],
         )
 
-    def _build_instance(self, new, **kwargs):
-        return self.__class__(
-            new, ntime=len(new), nrow=self.nrow, ncol=self.ncol, **kwargs
-        )
+    @classmethod
+    def _build_instance(cls, new, **kwargs):
+        return cls(new, ntime=len(new), **kwargs)
 
-    def _build_ds_instance(self, new, **kwargs):
-        return self.__class__(new, ntime=len(new), **kwargs)
+    @classmethod
+    def _build_ds_instance(cls, new, **kwargs):
+        return cls(new, ntime=len(new), **kwargs)
 
     def to_array(self):
         return self.to_numpy().reshape(self.ntime, self.nrow, self.ncol)
