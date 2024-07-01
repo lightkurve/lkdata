@@ -25,9 +25,18 @@ class CubeMeta(BaseMeta):
 
     def __repr__(self):
         _meta = self._meta
-        out = "\nDataCube Attributes, accessible via `object.key`\n"
+        out = "\nAttributes accessible via `object.key`\n"
+        out += "Only displaying unique values.\n"
         max_name_len = max(map(len, self._meta.keys()))
         with np.printoptions(linewidth=79, edgeitems=2, threshold=20):
             for key in self._meta:
                 out += f"\t{key.ljust(max_name_len+1)}:\t{self._meta[key]}\n"
-            return self.cube.__repr__() + "\n" + out
+            return out
+
+    def _is_valid_operand(self, other):
+        return hasattr(other, "_meta")
+
+    def __eq__(self, other):
+        if not self._is_valid_operand(other):
+            return NotImplemented
+        return self._meta == other._meta

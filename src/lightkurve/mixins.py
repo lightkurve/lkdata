@@ -290,7 +290,11 @@ class AggMixin:
         if "cadence" in new_index.names:
             new_index = new_index.rename({"cadence": "mid_cadence"})
         new_obj = self._build_instance(
-            new[bin_mask].to_numpy(), index=new_index[bin_mask], columns=self.columns
+            new[bin_mask].to_numpy(),
+            index=new_index[bin_mask],
+            columns=self.columns,
+            nrow=self.nrow,
+            ncol=self.ncol,
         )
         if self._stats_type == "error":
             return new_obj**0.5
