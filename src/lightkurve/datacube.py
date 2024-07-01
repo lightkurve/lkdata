@@ -339,23 +339,28 @@ class DataCube(
 
     # @property
     # def loc(self):
-    #     """
-    #     Return a TableLoc object that can be used for retrieving
-    #     rows by index in a given data range. Note that both loc
-    #     and iloc work only with single-column indices.
-    #     """
-    #     return TableLoc(self)
+    #     return self.loc
+
+    # @loc.getter
+    # def loc(self):
+    #     idx = pd.IndexSlice
+    #     return self.loc[:, idx]
 
 
 class FluxCube:
     def __init__(self, data, error, **kwargs):
         self.data = DataCube(data, **kwargs)
         self.error = ErrorCube(error, **kwargs)
+        self.kwargs = kwargs
 
     @staticmethod
     def applyfunc(obj, func, *args, **kwargs):
         func = getattr(obj, func)
         return func(*args, **kwargs)
+
+    @classmethod
+    def _build_fc_instance(cls, newdata, newerror, **kwargs):
+        return cls(newdata, newerror, **kwargs)
 
     def __getattr__(self, attr, *args, **kwargs):
         if "_repr_" in attr:
@@ -366,13 +371,23 @@ class FluxCube:
             if callable(data_attr):
 
                 def func(*args, **kwargs):
-                    return (data_attr(*args, **kwargs), error_attr(*args, **kwargs))
+                    data_ret = data_attr(*args, **kwargs)
+                    error_ret = error_attr(*args, **kwargs)
+                    if isinstance(data_ret, self.data.__class__):
+                        new = self._build_fc_instance(
+                            data_ret.to_array(), error_ret.to_array(), **data_ret.meta
+                        )
+                        return new
+                    else:
+                        return (data_attr(*args, **kwargs), error_attr(*args, **kwargs))
 
                 return func
 
             elif hasattr(data_attr, "__iter__"):
                 if all(data_attr == error_attr):
                     return data_attr
+                else:
+                    return (data_attr, error_attr)
             elif data_attr == error_attr:
                 return data_attr
             return (data_attr, error_attr)
@@ -380,71 +395,10 @@ class FluxCube:
     def __repr__(self):
         return f"{self.data.__repr__()}, {self.error.__repr__()}"
 
-    def _single_cadence_frame(self, cadence):
-        """Create a stylized single cadence frame of a datacube"""
-        cadence = int(np.floor(cadence))
-        if isinstance(self.index, pd.MultiIndex):
-            indices = []
-            for i in zip(self.index.names, self.index[cadence]):
-                if i[0] == "cadence":
-                    strlabel = f"{i[0]}: {int(np.floor(i[1]))}"
-                elif i[0] == "cadences":
-                    strlabel = f"{i[0]}: {i[1]}"
-                else:
-                    strlabel = f"{i[0]}: {i[1]:0.3f}"
-                indices += [strlabel]
-        else:
-            indices = [
-                f"{i[0]} {i[1]}" for i in zip(self.index.names, [self.index[cadence]])
-            ]
-        str_index = "<br>" + "<br>".join(indices)
-        row = self.__getattr__(self.columns.names[1])
-        col = self.__getattr__(self.columns.names[2])
-        df = pd.DataFrame(
-            self.data.to_array()[cadence],
-            index=pd.Series(row[:: self.ncol], name=self.columns.names[1]),
-            columns=pd.MultiIndex.from_product(
-                [[self.columns.names[2]], pd.Series(col[: self.ncol])]
-            ),
-        )
-        out = Styler(df).set_caption(str_index)
-        out = out.format(precision=0, thousands=",")
-
-        out = out.background_gradient(
-            axis=None,
-            vmin=self.to_array()[cadence].min(),
-            vmax=self.to_array()[cadence].max(),
-            cmap="gray",
-        )
-        df = pd.DataFrame(
-            self.error.to_array()[cadence],
-            index=pd.Series(row[:: self.ncol], name=self.columns.names[1]),
-            columns=pd.MultiIndex.from_product(
-                [[self.columns.names[2]], pd.Series(col[: self.ncol])]
-            ),
-        )
-        out_err = Styler(df).set_caption(str_index)
-        out_err = out_err.format(precision=3)
-
-        out = out + out_err
-        out = out.set_table_styles(
-            [
-                {
-                    "selector": "caption",
-                    "props": "caption-side: bottom; font-size:1em; font-weight: bold;",
-                },
-                {"selector": "th", "props": "text-align: center;"},
-                {
-                    "selector": "td",
-                    "props": "width: 30px; height: 30px; font-size: 6pt; text-align: center;",
-                },
-                {"selector": ":hover", "props": ""},
-            ]
-        )
-        return out
-
     def _repr_html_(self):
-        return self._single_cadence_frame(0)
+        return self.data._repr_html_().replace(
+            self.data.__repr__(), self.data.__repr__() + ", " + self.error.__repr__()
+        )
 
 
 class ErrorCube(ErrorStatsMixin, DataCube):
