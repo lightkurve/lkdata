@@ -98,9 +98,7 @@ class DataCube(
         self.stats_post_process = stats_post_process
         self._include_convenience_index()
         self._include_convenience_columns()
-        kwargs["exposure_time"] = exposure_time
-        self._include_convenience_meta(**kwargs)
-        self._repr_html_ = self._repr_html_
+        self._include_convenience_meta(exposure_time=exposure_time, **kwargs)
 
     @property
     def nseries(self):

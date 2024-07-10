@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import re
 import matplotlib.pyplot as plt
 from copy import deepcopy
 
@@ -257,12 +258,7 @@ class AggMixin:
 
             def repack(vals):
                 unpackvals = [
-                    list(
-                        np.array(
-                            v.replace("[", "").replace("]", "").split(" "), dtype=int
-                        )
-                    )
-                    for v in vals
+                    list(np.array(re.findall(r"(\d+)", v), dtype=int)) for v in vals
                 ]
                 allvals = []
                 for val in unpackvals:
@@ -288,6 +284,9 @@ class AggMixin:
             index_names.append("cadences")
         new_index = new_index_left.set_index(index_names).index
         if "cadence" in new_index.names:
+            new_index.set_levels(
+                new_index.get_level_values("cadence").astype(int), level="cadence"
+            )
             new_index = new_index.rename({"cadence": "mid_cadence"})
         new_obj = self._build_instance(
             new[bin_mask].to_numpy(),
