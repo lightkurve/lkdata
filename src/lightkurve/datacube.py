@@ -3,6 +3,7 @@ import logging
 import pandas as pd
 from pandas.io.formats.style import Styler
 import numpy as np
+from abc import ABC
 
 from .dataframe import DataFrame, ErrorFrame
 from .dataseries import DataSeries, ErrorSeries
@@ -19,65 +20,112 @@ from .meta import CubeMeta
 log = logging.getLogger()
 
 
+class Cube(ABC, pd.DataFrame):
+    ntime = None
+    nrow = None
+    ncol = None
+
+    def __init__(
+        self,
+        data: np.ndarray,
+        time_indices: dict = None,
+        row_indices: dict = None,
+        col_indices: dict = None,
+        **kwargs,
+    ):
+        data = self._preprocess_data(data)
+
+        if "index" in time_indices.keys():
+            arrays = [*list(time_indices.values())]
+            names = [*list(time_indices.keys())]
+        else:
+            arrays = [np.arange(self.ntime), *list(time_indices.values())]
+            names = ["index", *list(time_indices.keys())]
+        index = pd.MultiIndex.from_arrays(arrays, names=names)
+
+        columns = pd.MultiIndex.from_arrays(
+            arrays=[
+                np.arange(self.nrow * self.ncol).ravel(),
+                *[
+                    (
+                        value[:, None]
+                        * np.ones((self.nrow, self.ncol), dtype=value.dtype)
+                    ).ravel()
+                    for value in row_indices.values()
+                ],
+                *[
+                    (value * np.ones((self.nrow, self.ncol), dtype=value.dtype)).ravel()
+                    for value in col_indices.values()
+                ],
+            ],
+            names=[
+                "series",
+                *list(row_indices.keys()),
+                *list(col_indices.keys()),
+            ],
+        )
+        assert data.shape[0] == self.ntime, "data shape doesn't match given time"
+        assert (
+            data.shape[1] == self.nrow * self.ncol
+        ), "data shape doesn't match given rows and columns"
+        super().__init__(data, index=index, columns=columns)
+
+    def _preprocess_data(self, data):
+        data = np.array(data)
+        if data.ndim == 2:
+            if (self.nrow is None) | (self.ncol is None):
+                raise ValueError(
+                    """
+                Must set `nrow` and `ncol` when giving data as a 2D array.
+                """
+                )
+        elif data.ndim == 3:
+            self._set_dim("ntime", data.shape[0])
+            self._set_dim("nrow", data.shape[1])
+            self._set_dim("ncol", data.shape[2])
+            data = np.hstack(data.transpose([1, 0, 2]))
+        else:
+            raise ValueError()
+        return data
+
+    def _set_dim(self, attr, val):
+        if getattr(self, attr, None) is None:
+            setattr(self, attr, val)
+        elif getattr(self, attr) != val:
+            raise ValueError(f"Given {attr} does not match given data shape {val}")
+
+
 class DataCube(
-    StatsMixin, MathMixin, AggMixin, PlotMixin, ConvenienceMixins, pd.DataFrame
+    Cube,
+    StatsMixin,
+    MathMixin,
+    AggMixin,
+    PlotMixin,
+    ConvenienceMixins,
 ):
     def __init__(
         self,
         data,
-        ntime=None,
-        nrow=None,
-        ncol=None,
-        time_indices={},
-        row_indices={},
-        col_indices={},
+        ntime: int = None,
+        nrow: int = None,
+        ncol: int = None,
+        time_indices=None,
+        row_indices=None,
+        col_indices=None,
         index=None,
         columns=None,
         exposure_time=None,
         **kwargs,
     ):
         self._metadata = []
-        if data.ndim == 2:
-            if (nrow is None) | (ncol is None):
-                raise ValueError("Must set `nrow` and `ncol`.")
-        elif data.ndim == 3:
-            ntime = data.shape[0] if ntime is None else ntime
-            nrow = data.shape[1] if nrow is None else nrow
-            ncol = data.shape[2] if ncol is None else ncol
-            data = np.vstack(data.transpose([1, 2, 0])).T
-        else:
-            raise ValueError()
-
-        if index is None:
-            index = pd.MultiIndex.from_arrays(
-                [np.arange(ntime), *list(time_indices.values())],
-                names=["cadence", *list(time_indices.keys())],
-            )
-
-        if columns is None:
-            if row_indices == {}:
-                row_indices["row"] = np.arange(nrow)
-            if col_indices == {}:
-                col_indices["column"] = np.arange(ncol)
-            columns = pd.MultiIndex.from_arrays(
-                [
-                    np.arange(nrow * ncol).ravel(),
-                    *[
-                        (
-                            value[:, None] * np.ones((nrow, ncol), dtype=value.dtype)
-                        ).ravel()
-                        for value in row_indices.values()
-                    ],
-                    *[
-                        (value * np.ones((nrow, ncol), dtype=value.dtype)).ravel()
-                        for value in col_indices.values()
-                    ],
-                ],
-                names=["series", *list(row_indices.keys()), *list(col_indices.keys())],
-            )
-
-        super().__init__(data, index=index, columns=columns)
         self.ntime, self.nrow, self.ncol = ntime, nrow, ncol
+
+        if columns is not None:
+            row_indices, col_indices = self._parse_columns(columns)
+        if index is not None:
+            time_indices = self._parse_index(index)
+
+        super().__init__(data, time_indices, row_indices, col_indices)
 
         def make_image(result):
             # log.debug("Modified result for image shape.")
@@ -99,6 +147,32 @@ class DataCube(
         self._include_convenience_index()
         self._include_convenience_columns()
         self._include_convenience_meta(exposure_time=exposure_time, **kwargs)
+
+    @staticmethod
+    def _parse_index(index):
+        time_names = index.names
+        time_indices = {name: index.get_level_values(name) for name in time_names}
+        return time_indices
+
+    @staticmethod
+    def _parse_columns(columns):
+        row_names = []
+        col_names = []
+        for name in columns.names:
+            if "row" in name:
+                row_names.append(name)
+            elif "col" in name:
+                col_names.append(name)
+        if (len(row_names) == 0) or (len(col_names) == 0):
+            raise ValueError(
+                """
+            row and column indices cannot be inferred from a pandas.MultiIndex,
+            specify the rows and columns in the row_indices and col_indices dicts.
+            """
+            )
+        row_indices = {name: columns.get_level_values(name) for name in row_names}
+        col_indices = {name: columns.get_level_values(name) for name in col_names}
+        return row_indices, col_indices
 
     @property
     def nseries(self):
@@ -200,10 +274,10 @@ class DataCube(
         if isinstance(self.index, pd.MultiIndex):
             indices = []
             for i in zip(self.index.names, self.index[cadence]):
-                if i[0] == "cadence":
-                    strlabel = f"{i[0]}: {int(np.floor(i[1]))}"
-                elif i[0] == "cadences":
+                if i[0] == "cadences":
                     strlabel = f"{i[0]}: {i[1]}"
+                elif "cadence" in i[0]:
+                    strlabel = f"{i[0]}: {int(np.floor(i[1]))}"
                 else:
                     strlabel = f"{i[0]}: {i[1]:0.3f}"
                 indices += [strlabel]
@@ -262,14 +336,14 @@ class DataCube(
             hidden_frames = f"[+{self.shape[0]-1} cadences]"
             return f"""
             {self.__repr__()}
-            {out0.to_html(max_rows=10, max_columns=10)}
+            {out0.to_html(max_rows=11, max_columns=11)}
             ...<br>
             {hidden_frames}<br>
             """
         else:
             return f"""
             {self.__repr__()}
-            {out0.to_html(max_rows=10, max_columns=10)}
+            {out0.to_html(max_rows=11, max_columns=11)}
             """
 
     @property
@@ -345,6 +419,31 @@ class DataCube(
     #     return self.loc[:, idx]
 
 
+class ErrorCube(ErrorStatsMixin, DataCube):
+    def __repr__(self):
+        return f"📕 ErrorCube {self.ntime, self.nrow, self.ncol}"
+
+    @staticmethod
+    def from_pandas(data, nrow, ncol, **kwargs):
+        """Convert a pd.DataFrame to a DataCube"""
+        return ErrorCube(
+            data.to_numpy(), ntime=len(data), nrow=nrow, ncol=ncol, **kwargs
+        )
+
+    @property
+    def _frame_class(self):
+        return ErrorFrame
+
+    @property
+    def _series_class(self):
+        return ErrorSeries
+
+
+class MaskedCube(DataCube):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
 class FluxCube:
     def __init__(self, data, error, **kwargs):
         self.data = DataCube(data, **kwargs)
@@ -397,23 +496,3 @@ class FluxCube:
         return self.data._repr_html_().replace(
             self.data.__repr__(), self.data.__repr__() + ", " + self.error.__repr__()
         )
-
-
-class ErrorCube(ErrorStatsMixin, DataCube):
-    def __repr__(self):
-        return f"📕 ErrorCube {self.ntime, self.nrow, self.ncol}"
-
-    @staticmethod
-    def from_pandas(data, nrow, ncol, **kwargs):
-        """Convert a pd.DataFrame to a DataCube"""
-        return ErrorCube(
-            data.to_numpy(), ntime=len(data), nrow=nrow, ncol=ncol, **kwargs
-        )
-
-    @property
-    def _frame_class(self):
-        return ErrorFrame
-
-    @property
-    def _series_class(self):
-        return ErrorSeries
