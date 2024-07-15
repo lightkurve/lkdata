@@ -45,36 +45,35 @@ CUM_METHOD_NAMES = ["cumsum", "cummin", "cummax", "cumprod"]
 class StatsMixin:
     """Defines a mixin class which will let us postprocess all our pandas stats"""
 
-    @property
-    def _stats_type(self):
-        return "data"
+    _stats_type = "data"
 
+    def __init__(self):
+        for method_name in STATS_METHOD_NAMES:
 
-def _create_stats_method(method_name):
-    def _method(self, *args, **kwargs):
-        pandas_method = getattr(super(self._pd_class, self), method_name)
-        axis = kwargs.get("axis", 0)
-        return self.stats_post_process(pandas_method(*args, **kwargs), axis=axis)
+            def _method(self, *args, **kwargs):
+                pandas_method = getattr(super(self._pd_class, self), method_name)
+                axis = kwargs.get("axis", 0)
+                return self.stats_post_process(
+                    pandas_method(*args, **kwargs), axis=axis
+                )
 
-    return _method
+            setattr(self, method_name, _method(method_name))
 
+        for method_name in CUM_METHOD_NAMES:
 
-def _create_cum_method(method_name):
-    def _method(self, *args, **kwargs):
-        pandas_method = getattr(super(self._pd_class, self), method_name)
-        new = pandas_method(*args, **kwargs)
-        return self._build_instance(new.to_numpy(), nrow=self.nrow, ncol=self.ncol)
+            def _method(self, *args, **kwargs):
+                pandas_method = getattr(super(self._pd_class, self), method_name)
+                new_data = pandas_method(*args, **kwargs)
+                return self._build_instance(
+                    new_data.to_numpy(), nrow=self.nrow, ncol=self.ncol
+                )
 
-    return _method
-
-
-for method_name in STATS_METHOD_NAMES:
-    setattr(StatsMixin, method_name, _create_stats_method(method_name))
-for method_name in CUM_METHOD_NAMES:
-    setattr(StatsMixin, method_name, _create_cum_method(method_name))
+            setattr(self, method_name, _method(method_name))
 
 
 class ErrorStatsMixin:
+    _stats_type = "error"
+
     def _sum(self, axis=0):
         return getattr(super(pd.DataFrame, self), "sum")(axis=axis)
 
@@ -119,10 +118,6 @@ class ErrorStatsMixin:
     def cumsum(self, axis=0):
         return self.stats_post_process((self**2)._cumsum(axis=axis) ** 0.5, axis=axis)
 
-    @property
-    def _stats_type(self):
-        return "error"
-
 
 class MathMixin:
     def _process_math_val(self, val):
@@ -136,10 +131,11 @@ class MathMixin:
             raise TypeError(f"Can not perform math operations with type {type(val)}.")
 
     def _get_math_kwargs(self):
+        if not (isinstance(self, pd.DataFrame) or isinstance(self, pd.Series)):
+            raise TypeError(f"Unsupported type {type(self)}")
+        kwargs = {"index": self.index}
         if isinstance(self, pd.DataFrame):
-            kwargs = {"index": self.index, "columns": self.columns}
-        if isinstance(self, pd.Series):
-            kwargs = {"index": self.index}
+            kwargs["columns"] = self.columns
         return kwargs
 
     def __add__(self, val):
@@ -586,7 +582,7 @@ class ConvenienceMixins:
         for key, index in INDEX_DICTS.items():
             if (key not in self._metadata) and (key != "index"):
                 self._metadata.append(key)
-            setattr(self, key, index)
+                setattr(self, key, index)
 
     def _include_convenience_columns(self):
         COLUMN_DICTS = {
@@ -598,7 +594,7 @@ class ConvenienceMixins:
         for key, index in COLUMN_DICTS.items():
             if (key not in self._metadata) and (key != "columns"):
                 self._metadata.append(key)
-            setattr(self, key, index)
+                setattr(self, key, index)
 
     def _include_convenience_meta(self, **kwargs):
         for key, value in kwargs.items():

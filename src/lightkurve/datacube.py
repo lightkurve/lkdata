@@ -21,6 +21,8 @@ log = logging.getLogger()
 
 
 class Cube(ABC, pd.DataFrame):
+    """Abstract dataclass for cube-like data with time, row, and column axes"""
+
     ntime = None
     nrow = None
     ncol = None
@@ -35,12 +37,12 @@ class Cube(ABC, pd.DataFrame):
     ):
         data = self._preprocess_data(data)
 
-        if "index" in time_indices.keys():
+        if "time_index" in time_indices.keys():
             arrays = [*list(time_indices.values())]
             names = [*list(time_indices.keys())]
         else:
             arrays = [np.arange(self.ntime), *list(time_indices.values())]
-            names = ["index", *list(time_indices.keys())]
+            names = ["time_index", *list(time_indices.keys())]
         index = pd.MultiIndex.from_arrays(arrays, names=names)
 
         columns = pd.MultiIndex.from_arrays(
@@ -127,23 +129,6 @@ class DataCube(
 
         super().__init__(data, time_indices, row_indices, col_indices)
 
-        def make_image(result):
-            # log.debug("Modified result for image shape.")
-            return result.to_numpy().reshape(self.nrow, self.ncol)
-
-        def make_timeseries(result):
-            # log.debug("Modified result for timeseries shape.")
-            return self._series_class(result)
-
-        def stats_post_process(result, **kwargs):
-            if kwargs.get("axis") in [0, "time"]:
-                return make_image(result)
-            elif kwargs.get("axis") in [1, "series"]:
-                return make_timeseries(result)
-            else:
-                return result
-
-        self.stats_post_process = stats_post_process
         self._include_convenience_index()
         self._include_convenience_columns()
         self._include_convenience_meta(exposure_time=exposure_time, **kwargs)
@@ -173,6 +158,14 @@ class DataCube(
         row_indices = {name: columns.get_level_values(name) for name in row_names}
         col_indices = {name: columns.get_level_values(name) for name in col_names}
         return row_indices, col_indices
+
+    def stats_post_process(self, result, **kwargs):
+        if kwargs.get("axis") in [0, "time"]:
+            return result.to_numpy().reshape(self.nrow, self.ncol)
+        elif kwargs.get("axis") in [1, "series"]:
+            return self._series_class(result)
+        else:
+            return result
 
     @property
     def nseries(self):
@@ -335,14 +328,14 @@ class DataCube(
         if self.shape[0] > 1:
             hidden_frames = f"[+{self.shape[0]-1} cadences]"
             return f"""
-            {self.__repr__()}
+            {repr(self)}
             {out0.to_html(max_rows=11, max_columns=11)}
             ...<br>
             {hidden_frames}<br>
             """
         else:
             return f"""
-            {self.__repr__()}
+            {repr(self)}
             {out0.to_html(max_rows=11, max_columns=11)}
             """
 
