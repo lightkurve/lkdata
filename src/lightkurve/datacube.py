@@ -26,6 +26,8 @@ class Cube(ABC, pd.DataFrame):
     ntime = None
     nrow = None
     ncol = None
+    row_names = None
+    col_names = None
 
     def __init__(
         self,
@@ -36,7 +38,8 @@ class Cube(ABC, pd.DataFrame):
         **kwargs,
     ):
         data = self._preprocess_data(data)
-
+        if time_indices is None:
+            time_indices = {"time_index": np.arange(self.ntime)}
         if "time_index" in time_indices.keys():
             arrays = [*list(time_indices.values())]
             names = [*list(time_indices.keys())]
@@ -44,7 +47,12 @@ class Cube(ABC, pd.DataFrame):
             arrays = [np.arange(self.ntime), *list(time_indices.values())]
             names = ["time_index", *list(time_indices.keys())]
         index = pd.MultiIndex.from_arrays(arrays, names=names)
-
+        if row_indices is None:
+            row_indices = {"row": np.arange(self.nrow)}
+        if col_indices is None:
+            col_indices = {"col": np.arange(self.ncol)}
+        self.row_names = list(row_indices.keys())
+        self.col_names = list(col_indices.keys())
         columns = pd.MultiIndex.from_arrays(
             arrays=[
                 np.arange(self.nrow * self.ncol).ravel(),
@@ -66,6 +74,7 @@ class Cube(ABC, pd.DataFrame):
                 *list(col_indices.keys()),
             ],
         )
+
         assert data.shape[0] == self.ntime, "data shape doesn't match given time"
         assert (
             data.shape[1] == self.nrow * self.ncol
@@ -122,7 +131,12 @@ class DataCube(
         self._metadata = []
         self.ntime, self.nrow, self.ncol = ntime, nrow, ncol
 
+        # prefer existing index and columns, if available
         if columns is not None:
+            if row_indices is not None:
+                self.row_names = list(row_indices.keys())
+            if col_indices is not None:
+                self.col_names = list(col_indices.keys())
             row_indices, col_indices = self._parse_columns(columns)
         if index is not None:
             time_indices = self._parse_index(index)
@@ -139,14 +153,14 @@ class DataCube(
         time_indices = {name: index.get_level_values(name) for name in time_names}
         return time_indices
 
-    @staticmethod
-    def _parse_columns(columns):
-        row_names = []
-        col_names = []
+    def _parse_columns(self, columns):
+        row_names = getattr(self, "row_names", [])
+        col_names = getattr(self, "col_names", [])
+
         for name in columns.names:
-            if "row" in name:
+            if ("row" in name) and (name not in row_names):
                 row_names.append(name)
-            elif "col" in name:
+            elif ("col" in name) and (name not in col_names):
                 col_names.append(name)
         if (len(row_names) == 0) or (len(col_names) == 0):
             raise ValueError(
@@ -155,8 +169,14 @@ class DataCube(
             specify the rows and columns in the row_indices and col_indices dicts.
             """
             )
-        row_indices = {name: columns.get_level_values(name) for name in row_names}
-        col_indices = {name: columns.get_level_values(name) for name in col_names}
+        self.row_names = row_names
+        self.col_names = col_names
+        row_indices = {
+            name: np.unique(columns.get_level_values(name)) for name in row_names
+        }
+        col_indices = {
+            name: np.unique(columns.get_level_values(name)) for name in col_names
+        }
         return row_indices, col_indices
 
     def stats_post_process(self, result, **kwargs):
@@ -180,6 +200,8 @@ class DataCube(
                 ncol=self.ncol,
                 index=self.index[key],
                 columns=self.columns,
+                row_indices={name: None for name in self.row_names},
+                col_indices={name: None for name in self.col_names},
             )
 
         # Integer time, currently results in DataCube

@@ -29,13 +29,18 @@ class CubeMeta(dict):
                 out += f"\t{key.ljust(max_name_len+1)}:\t{self[key]}\n"
             return out
 
+    def _isallequal(self, obj1, obj2):
+        if hasattr(obj1, "__len__"):
+            if isinstance(obj1, dict) and isinstance(obj2, dict):
+                obj1 = obj1.values()
+                obj2 = obj2.values()
+            for i, j in zip(obj1, obj2):
+                if not self._isallequal(i, j):
+                    return False
+                else:
+                    return True
+        else:
+            return obj1 == obj2
+
     def __eq__(self, other):
-        if self.keys() != other.keys():
-            return False
-        eq = []
-        for key in self.keys():
-            try:
-                eq.append(all(self[key] == other[key]))
-            except TypeError:
-                eq.append(self[key] == other[key])
-        return eq
+        return self._isallequal(self, other)
