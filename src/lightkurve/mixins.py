@@ -47,28 +47,29 @@ class StatsMixin:
 
     _stats_type = "data"
 
-    def __init__(self):
-        for method_name in STATS_METHOD_NAMES:
 
-            def _method(self, *args, **kwargs):
-                pandas_method = getattr(super(self._pd_class, self), method_name)
-                axis = kwargs.get("axis", 0)
-                return self.stats_post_process(
-                    pandas_method(*args, **kwargs), axis=axis
-                )
+def _create_stats_method(method_name):
+    def _method(self, *args, **kwargs):
+        pandas_method = getattr(super(self._pd_class, self), method_name)
+        axis = kwargs.get("axis", 0)
+        return self.stats_post_process(pandas_method(*args, **kwargs), axis=axis)
 
-            setattr(self, method_name, _method(method_name))
+    return _method
 
-        for method_name in CUM_METHOD_NAMES:
 
-            def _method(self, *args, **kwargs):
-                pandas_method = getattr(super(self._pd_class, self), method_name)
-                new_data = pandas_method(*args, **kwargs)
-                return self._build_instance(
-                    new_data.to_numpy(), nrow=self.nrow, ncol=self.ncol
-                )
+def _create_cum_method(method_name):
+    def _method(self, *args, **kwargs):
+        pandas_method = getattr(super(self._pd_class, self), method_name)
+        new = pandas_method(*args, **kwargs)
+        return self._build_instance(new.to_numpy())
 
-            setattr(self, method_name, _method(method_name))
+    return _method
+
+
+for method_name in STATS_METHOD_NAMES:
+    setattr(StatsMixin, method_name, _create_stats_method(method_name))
+for method_name in CUM_METHOD_NAMES:
+    setattr(StatsMixin, method_name, _create_cum_method(method_name))
 
 
 class ErrorStatsMixin:

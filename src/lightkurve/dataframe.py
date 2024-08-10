@@ -20,7 +20,7 @@ class DataFrame(
     StatsMixin, MathMixin, AggMixin, PlotMixin, ConvenienceMixins, pd.DataFrame
 ):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__()
         self.__post_init__()
 
     @property

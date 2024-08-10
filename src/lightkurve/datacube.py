@@ -154,8 +154,8 @@ class DataCube(
         return time_indices
 
     def _parse_columns(self, columns):
-        row_names = getattr(self, "row_names", [])
-        col_names = getattr(self, "col_names", [])
+        row_names = getattr(self, "row_names", []) or []
+        col_names = getattr(self, "col_names", []) or []
 
         for name in columns.names:
             if ("row" in name) and (name not in row_names):
