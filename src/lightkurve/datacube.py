@@ -1,9 +1,9 @@
 """Classes and tools for working with 3 dimensional data."""
 import logging
+from abc import ABC
 import pandas as pd
 from pandas.io.formats.style import Styler
 import numpy as np
-from abc import ABC
 
 from .dataframe import DataFrame, ErrorFrame
 from .dataseries import DataSeries, ErrorSeries
@@ -20,7 +20,7 @@ from .meta import CubeMeta
 log = logging.getLogger()
 
 
-class Cube(ABC, pd.DataFrame):
+class Cube(ABC, pd.DataFrame, MathMixin, PlotMixin, AggMixin, ConvenienceMixins):
     """Abstract dataclass for cube-like data with time, row, and column axes"""
 
     ntime = None
@@ -31,58 +31,34 @@ class Cube(ABC, pd.DataFrame):
 
     def __init__(
         self,
-        data: np.ndarray,
-        time_indices: dict = None,
-        row_indices: dict = None,
-        col_indices: dict = None,
+        data: list | np.ndarray,
+        time_indices: dict | list = None,
+        row_indices: dict | list = None,
+        col_indices: dict | list = None,
+        index: pd.MultiIndex = None,
+        columns: pd.MultiIndex = None,
+        ntime: int = None,
+        nrow: int = None,
+        ncol: int = None,
+        exposure_time: float = None,
         **kwargs,
     ):
-        data = self._preprocess_data(data)
-        if time_indices is None:
-            time_indices = {"time_index": np.arange(self.ntime)}
-        if "time_index" in time_indices.keys():
-            arrays = [*list(time_indices.values())]
-            names = [*list(time_indices.keys())]
-        else:
-            arrays = [np.arange(self.ntime), *list(time_indices.values())]
-            names = ["time_index", *list(time_indices.keys())]
-        index = pd.MultiIndex.from_arrays(arrays, names=names)
-        if row_indices is None:
-            row_indices = {"row": np.arange(self.nrow)}
-        if col_indices is None:
-            col_indices = {"col": np.arange(self.ncol)}
-        self.row_names = list(row_indices.keys())
-        self.col_names = list(col_indices.keys())
-        columns = pd.MultiIndex.from_arrays(
-            arrays=[
-                np.arange(self.nrow * self.ncol).ravel(),
-                *[
-                    (
-                        value[:, None]
-                        * np.ones((self.nrow, self.ncol), dtype=value.dtype)
-                    ).ravel()
-                    for value in row_indices.values()
-                ],
-                *[
-                    (value * np.ones((self.nrow, self.ncol), dtype=value.dtype)).ravel()
-                    for value in col_indices.values()
-                ],
-            ],
-            names=[
-                "series",
-                *list(row_indices.keys()),
-                *list(col_indices.keys()),
-            ],
-        )
+        self._metadata = []
+        self.ntime, self.nrow, self.ncol = ntime, nrow, ncol
 
-        assert data.shape[0] == self.ntime, "data shape doesn't match given time"
-        assert (
-            data.shape[1] == self.nrow * self.ncol
-        ), "data shape doesn't match given rows and columns"
+        data = self._preprocess_data(data)
+
+        index = self._parse_index(index, time_indices)
+        columns = self._parse_columns(columns, row_indices, col_indices)
+
         super().__init__(data, index=index, columns=columns)
+        self._include_convenience_index()
+        self._include_convenience_columns()
+        self._include_convenience_meta(exposure_time=exposure_time, **kwargs)
 
     def _preprocess_data(self, data):
         data = np.array(data)
+        log.info("data.ndim = %s, data.shape= %s", data.ndim, data.shape)
         if data.ndim == 2:
             if (self.nrow is None) | (self.ncol is None):
                 raise ValueError(
@@ -96,7 +72,7 @@ class Cube(ABC, pd.DataFrame):
             self._set_dim("ncol", data.shape[2])
             data = np.hstack(data.transpose([1, 0, 2]))
         else:
-            raise ValueError()
+            raise ValueError("""Dimension of given data not interpretable as a cube""")
         return data
 
     def _set_dim(self, attr, val):
@@ -105,79 +81,83 @@ class Cube(ABC, pd.DataFrame):
         elif getattr(self, attr) != val:
             raise ValueError(f"Given {attr} does not match given data shape {val}")
 
+    def _parse_index(self, index: pd.MultiIndex, time_indices: dict):
+        """Retrieve time_indices from a pd.MultiIndex"""
 
-class DataCube(
-    Cube,
-    StatsMixin,
-    MathMixin,
-    AggMixin,
-    PlotMixin,
-    ConvenienceMixins,
-):
-    def __init__(
-        self,
-        data,
-        ntime: int = None,
-        nrow: int = None,
-        ncol: int = None,
-        time_indices=None,
-        row_indices=None,
-        col_indices=None,
-        index=None,
-        columns=None,
-        exposure_time=None,
-        **kwargs,
-    ):
-        self._metadata = []
-        self.ntime, self.nrow, self.ncol = ntime, nrow, ncol
-
-        # prefer existing index and columns, if available
-        if columns is not None:
-            if row_indices is not None:
-                self.row_names = list(row_indices.keys())
-            if col_indices is not None:
-                self.col_names = list(col_indices.keys())
-            row_indices, col_indices = self._parse_columns(columns)
         if index is not None:
-            time_indices = self._parse_index(index)
+            # prefer existing index, if available
+            time_names = index.names
+            time_indices = {name: index.get_level_values(name) for name in time_names}
+        elif not time_indices:
+            time_indices = {"time_index": np.arange(self.ntime)}
 
-        super().__init__(data, time_indices, row_indices, col_indices)
+        if "time_index" in time_indices.keys():
+            arrays = [*list(time_indices.values())]
+            names = [*list(time_indices.keys())]
+        else:
+            arrays = [np.arange(self.ntime), *list(time_indices.values())]
+            names = ["time_index", *list(time_indices.keys())]
 
-        self._include_convenience_index()
-        self._include_convenience_columns()
-        self._include_convenience_meta(exposure_time=exposure_time, **kwargs)
+        index = pd.MultiIndex.from_arrays(arrays, names=names)
+        return index
 
-    @staticmethod
-    def _parse_index(index):
-        time_names = index.names
-        time_indices = {name: index.get_level_values(name) for name in time_names}
-        return time_indices
+    def _parse_columns(
+        self,
+        columns: pd.MultiIndex,
+        row_indices: dict,
+        col_indices: dict,
+    ):
+        # prefer existing columns, if available
+        if columns is not None:
+            if row_indices:
+                self.row_names = list(row_indices.keys())
+            if col_indices:
+                self.col_names = list(col_indices.keys())
 
-    def _parse_columns(self, columns):
-        row_names = getattr(self, "row_names", []) or []
-        col_names = getattr(self, "col_names", []) or []
+            row_names = getattr(self, "row_names") or []
+            col_names = getattr(self, "col_names") or []
 
-        for name in columns.names:
-            if ("row" in name) and (name not in row_names):
-                row_names.append(name)
-            elif ("col" in name) and (name not in col_names):
-                col_names.append(name)
-        if (len(row_names) == 0) or (len(col_names) == 0):
-            raise ValueError(
+            for name in columns.names:
+                if ("row" in name) and (name not in row_names):
+                    row_names.append(name)
+                elif ("col" in name) and (name not in col_names):
+                    col_names.append(name)
+            if (len(row_names) == 0) or (len(col_names) == 0):
+                raise ValueError(
+                    """
+                row and column indices cannot be inferred from a pandas.MultiIndex,
+                specify the rows and columns in the row_indices and col_indices dicts.
                 """
-            row and column indices cannot be inferred from a pandas.MultiIndex,
-            specify the rows and columns in the row_indices and col_indices dicts.
-            """
-            )
-        self.row_names = row_names
-        self.col_names = col_names
-        row_indices = {
-            name: np.unique(columns.get_level_values(name)) for name in row_names
-        }
-        col_indices = {
-            name: np.unique(columns.get_level_values(name)) for name in col_names
-        }
-        return row_indices, col_indices
+                )
+
+            row_indices = {
+                name: np.unique(columns.get_level_values(name)) for name in row_names
+            }
+            col_indices = {
+                name: np.unique(columns.get_level_values(name)) for name in col_names
+            }
+
+        if not row_indices:
+            row_indices = {"row": np.arange(self.nrow)}
+        if not col_indices:
+            col_indices = {"col": np.arange(self.ncol)}
+
+        self.row_names = list(row_indices.keys())
+        self.col_names = list(col_indices.keys())
+
+        def flatten(value):
+            """Flatten row and column arrays"""
+            return (value * np.ones((self.nrow, self.ncol), dtype=value.dtype)).ravel()
+
+        row_arrs = [flatten(value[:, None]) for value in row_indices.values()]
+        col_arrs = [flatten(value) for value in col_indices.values()]
+
+        columns = pd.MultiIndex.from_arrays(
+            arrays=[np.arange(self.nrow * self.ncol).ravel(), *row_arrs, *col_arrs],
+            names=["series", *list(row_indices.keys()), *list(col_indices.keys())],
+        )
+
+        return columns
 
     def stats_post_process(self, result, **kwargs):
         if kwargs.get("axis") in [0, "time"]:
@@ -186,10 +166,6 @@ class DataCube(
             return self._series_class(result)
         else:
             return result
-
-    @property
-    def nseries(self):
-        return self.ncol * self.nrow
 
     def __getitem__(self, key):
         # Simple slice in time, results in DataCube
@@ -339,8 +315,76 @@ class DataCube(
         )
         return out
 
+    def to_dataframe(
+        self, row: int | float | list | slice, col: int | float | list | slice, **kwargs
+    ) -> DataFrame | ErrorFrame:
+        """Convert Cube to Frame with the given row and column indices.
+
+        Parameters
+        ----------
+        row : int | float | list | slice
+            Index/list of indices or slice of row indices to include.
+        col : int | float | list | slice
+            Index/list of indices or slice of column indices to include.
+
+        Returns
+        -------
+        DataFrame | ErrorFrame
+            A Frame object of the same type as the input data, either
+            DataFrame or ErrorFrame.
+        """
+
+        if isinstance(row, slice):
+            row_indices = range(self.nrow)[row]
+        else:
+            row_indices = np.atleast_1d(row)
+        if isinstance(col, slice):
+            col_indices = range(self.ncol)[col]
+        else:
+            col_indices = np.atleast_1d(col)
+        series_index = np.asarray(row_indices) * self.ncol + np.asarray(col_indices)
+        return self._frame_class(
+            self.iloc[:, series_index],
+            index=self.index,
+            columns=self.columns[series_index],
+            **kwargs,
+        )
+
+    @property
+    def meta(self):
+        return CubeMeta(self)
+
+    @property
+    def nseries(self):
+        return self.ncol * self.nrow
+
+    @property
+    def units(self):
+        return self._flux_units
+
+    @units.setter
+    def units(self, unit):
+        # remove formatting, if present
+        self._flux_units = str(unit)
+
+    @classmethod
+    def _build_instance(cls, new, **kwargs):
+        return cls(new, ntime=len(new), **kwargs)
+
+    def to_array(self):
+        return self.to_numpy().reshape(self.ntime, self.nrow, self.ncol)
+
+    @classmethod
+    def from_pandas(cls, data: pd.DataFrame, nrow: int, ncol: int, **kwargs):
+        """Convert a pd.DataFrame to a DataCube
+
+        Notes:
+        This assumes no multi-indexing in the pandas dataframe.
+        """
+        return cls(data.to_numpy(), ntime=len(data), nrow=nrow, ncol=ncol, **kwargs)
+
     def __repr__(self):
-        return f"📘 DataCube {self.ntime, self.nrow, self.ncol}"
+        return f"Cube {self.ntime, self.nrow, self.ncol}"
 
     def __str__(self):
         return self.__repr__()
@@ -361,97 +405,29 @@ class DataCube(
             {out0.to_html(max_rows=11, max_columns=11)}
             """
 
-    @property
-    def meta(self):
-        return CubeMeta(self)
 
-    @property
-    def units(self):
-        return self._flux_units
+class DataCube(
+    Cube,
+    StatsMixin,
+):
+    _frame_class = DataFrame
+    _series_class = DataSeries
+    _pd_class = pd.DataFrame
 
-    @units.setter
-    def units(self, unit):
-        self._flux_units = str(unit)
-
-    @staticmethod
-    def from_pandas(data, nrow, ncol, **kwargs):
-        """Convert a pd.DataFrame to a DataCube"""
-        return DataCube(
-            data.to_numpy(), ntime=len(data), nrow=nrow, ncol=ncol, **kwargs
-        )
-
-    def to_dataframe(self, row, col, **kwargs):
-        if isinstance(row, slice):
-            row_indices = range(self.nrow)[row]
-        else:
-            row_indices = np.atleast_1d(row)
-        if isinstance(col, slice):
-            col_indices = range(self.ncol)[col]
-        else:
-            col_indices = np.atleast_1d(col)
-        series_index = np.asarray(row_indices) * self.ncol + np.asarray(col_indices)
-        return self._frame_class(
-            self.iloc[:, series_index],
-            index=self.index,
-            columns=self.columns[series_index],
-        )
-
-    @classmethod
-    def _build_instance(cls, new, **kwargs):
-        return cls(new, ntime=len(new), **kwargs)
-
-    @classmethod
-    def _build_ds_instance(cls, new, **kwargs):
-        return cls(new, ntime=len(new), **kwargs)
-
-    def to_array(self):
-        return self.to_numpy().reshape(self.ntime, self.nrow, self.ncol)
-
-    @property
-    def _frame_class(self):
-        return DataFrame
-
-    @property
-    def _series_class(self):
-        return DataSeries
-
-    @property
-    def _pd_class(self):
-        return pd.DataFrame
-
-    def link_error(self, errorcube):
-        self._metadata.append("error")
-        self.error = errorcube
-        return
-
-    # @property
-    # def loc(self):
-    #     return self.loc
-
-    # @loc.getter
-    # def loc(self):
-    #     idx = pd.IndexSlice
-    #     return self.loc[:, idx]
+    def __repr__(self):
+        return f"📘 DataCube {self.ntime, self.nrow, self.ncol}"
 
 
-class ErrorCube(ErrorStatsMixin, DataCube):
+class ErrorCube(
+    Cube,
+    ErrorStatsMixin,
+):
+    _frame_class = ErrorFrame
+    _series_class = ErrorSeries
+    _pd_class = pd.DataFrame
+
     def __repr__(self):
         return f"📕 ErrorCube {self.ntime, self.nrow, self.ncol}"
-
-    @staticmethod
-    def from_pandas(data, nrow, ncol, **kwargs):
-        """Convert a pd.DataFrame to a DataCube"""
-        return ErrorCube(
-            data.to_numpy(), ntime=len(data), nrow=nrow, ncol=ncol, **kwargs
-        )
-
-    @property
-    def _frame_class(self):
-        return ErrorFrame
-
-    @property
-    def _series_class(self):
-        return ErrorSeries
 
 
 class MaskedCube(DataCube):
