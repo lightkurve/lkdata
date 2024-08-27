@@ -35,17 +35,15 @@ class Cube(ABC, pd.DataFrame, MathMixin, PlotMixin, AggMixin, ConvenienceMixins)
         time_indices: dict | list = None,
         row_indices: dict | list = None,
         col_indices: dict | list = None,
-        index: pd.MultiIndex = None,
-        columns: pd.MultiIndex = None,
-        ntime: int = None,
-        nrow: int = None,
-        ncol: int = None,
-        exposure_time: float = None,
         **kwargs,
     ):
         self._metadata = []
-        self.ntime, self.nrow, self.ncol = ntime, nrow, ncol
 
+        self.ntime = getattr(kwargs, "ntime", None)
+        self.nrow = getattr(kwargs, "nrow", None)
+        self.ncol = getattr(kwargs, "ncol", None)
+        index = getattr(kwargs, "index", None)
+        columns = getattr(kwargs, "columns", None)
         data = self._preprocess_data(data)
 
         index = self._parse_index(index, time_indices)
@@ -54,7 +52,7 @@ class Cube(ABC, pd.DataFrame, MathMixin, PlotMixin, AggMixin, ConvenienceMixins)
         super().__init__(data, index=index, columns=columns)
         self._include_convenience_index()
         self._include_convenience_columns()
-        self._include_convenience_meta(exposure_time=exposure_time, **kwargs)
+        self._include_convenience_meta(**kwargs)
 
     def _preprocess_data(self, data):
         data = np.array(data)
@@ -335,14 +333,20 @@ class Cube(ABC, pd.DataFrame, MathMixin, PlotMixin, AggMixin, ConvenienceMixins)
         """
 
         if isinstance(row, slice):
-            row_indices = range(self.nrow)[row]
+            row_indices = np.arange(self.nrow)[row]
         else:
             row_indices = np.atleast_1d(row)
         if isinstance(col, slice):
-            col_indices = range(self.ncol)[col]
+            col_indices = np.arange(self.ncol)[col]
         else:
             col_indices = np.atleast_1d(col)
-        series_index = np.asarray(row_indices) * self.ncol + np.asarray(col_indices)
+        nrow = len(row_indices)
+        ncol = len(col_indices)
+        series_index = (
+            row_indices.repeat(ncol).reshape(nrow, ncol).T * self.ncol
+            + col_indices.reshape(ncol, 1)
+        ).ravel()
+        series_index.sort()
         return self._frame_class(
             self.iloc[:, series_index],
             index=self.index,
