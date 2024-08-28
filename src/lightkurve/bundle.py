@@ -1,8 +1,10 @@
 """Classes and tools for creating data bundles and batches"""
-from typing import Dict, List, Union
+from typing import Dict, Union
+from textwrap import dedent
 from functools import singledispatchmethod
-import numpy as np
 from warnings import warn
+from collections.abc import Iterable
+import numpy as np
 from .datacube import DataCube, ErrorCube
 from .dataframe import DataFrame, ErrorFrame
 from .dataseries import DataSeries, ErrorSeries
@@ -14,7 +16,7 @@ lkTypes = lkDataTypes | lkErrorTypes
 
 class DataProcessorMixin:
     """
-    A base class for processing and validating various types of lk data inputs.
+    A mixin for processing and validating various types of lk data inputs.
 
     This class provides methods to process and validate input data, ensuring consistency
     with expected attributes and shapes. It supports various data types including
@@ -52,8 +54,8 @@ class DataProcessorMixin:
     CLASS_CHECKS = {
         DataCube: {"ntime", "nrow", "ncol", "index", "columns"},
         ErrorCube: {"ntime", "nrow", "ncol", "index", "columns"},
-        DataFrame: {"ntime", "npix", "index"},
-        ErrorFrame: {"ntime", "npix", "index"},
+        DataFrame: {"ntime", "nseries", "index"},
+        ErrorFrame: {"ntime", "nseries", "index"},
         DataSeries: {"ntime", "index"},
         ErrorSeries: {"ntime", "index"},
     }
@@ -64,7 +66,7 @@ class DataProcessorMixin:
 
     def _check_attrs(self, data_product):
         attrs = self.CLASS_CHECKS[data_product.__class__]
-        for attr in attrs.intersection({"ntime", "nrow", "ncol", "npix"}):
+        for attr in attrs.intersection({"ntime", "nrow", "ncol", "nseries"}):
             if hasattr(self, attr):
                 if getattr(self, attr) != getattr(data_product, attr):
                     raise ValueError(
@@ -85,8 +87,8 @@ class DataProcessorMixin:
                         """
                     )
 
-    def _build_data_product(self, data_arr: Union[List, np.ndarray]):
-        data_arr = np.array(data_arr)
+    def _build_data_product(self, data_arr: Iterable):
+        data_arr = np.asarray(data_arr)
         data_classes = {3: DataCube, 2: DataFrame, 1: DataSeries}
         error_classes = {3: ErrorCube, 2: ErrorFrame, 1: ErrorSeries}
         classes = {"data": data_classes, "error": error_classes}
@@ -126,7 +128,7 @@ class DataProcessorMixin:
         """
 
     @process_input.register
-    def _(self, data_input: list | np.ndarray):
+    def _(self, data_input: Iterable):
         assert self._type in ["data", "error"], "Unrecognized type"
         try:
             data_product = self._build_data_product(data_input)
@@ -165,11 +167,12 @@ class ProductBundle(dict, DataProcessorMixin):
 
     def __init__(
         self,
-        data: dict | list | np.ndarray = None,
+        data: dict | Iterable | lkTypes = None,
     ):
         self._data_types = dict()
-        data = self._unpack_data(data)
-        self.update(data)
+        if data is not None:
+            data = self._unpack_data(data)
+            self.update(data)
 
     @singledispatchmethod
     def _unpack_data(self, data):
@@ -180,8 +183,12 @@ class ProductBundle(dict, DataProcessorMixin):
         return data
 
     @_unpack_data.register
-    def _(self, data: Union[list, np.ndarray]):
-        return {"flux_" + self._type: np.array(data)}
+    def _(self, data: lkTypes):
+        return {"flux_" + self._type: data}
+
+    @_unpack_data.register
+    def _(self, data: Iterable):
+        return {"flux_" + self._type: np.asarray(data)}
 
     def __setitem__(self, key, val):
         val = self.process_input(val)
@@ -234,7 +241,7 @@ class DataProducts(ProductBundle):
 
     def __init__(
         self,
-        data: Dict[str, (list | np.ndarray | lkDataTypes)] | list | np.ndarray,
+        data: Dict[str, Iterable | lkDataTypes] | lkDataTypes | Iterable = None,
         **kwargs,
     ):
         self.kwargs = kwargs
@@ -263,7 +270,7 @@ class ErrorProducts(ProductBundle):
 
     def __init__(
         self,
-        error: dict | list | np.ndarray | lkErrorTypes = None,
+        error: Dict[str, Iterable | lkErrorTypes] | Iterable | lkErrorTypes = None,
         **kwargs,
     ):
         self.kwargs = kwargs
@@ -281,29 +288,34 @@ class Batch:
             | lkDataTypes
             | DataProducts
             | Dict[str, (list | np.ndarray | lkDataTypes)]
-        ),
+        ) = None,
         error: (
             list
             | np.ndarray
             | lkErrorTypes
             | ErrorProducts
             | Dict[str, (list | np.ndarray | lkErrorTypes)]
-        ),
+        ) = None,
         **kwargs,
     ):
         self.kwargs = kwargs
-        if isinstance(data, DataProducts):
-            self.data = data
-        else:
-            self.data = DataProducts(data, **kwargs)
-        if isinstance(error, ErrorProducts):
-            self.error = error
-        else:
-            self.error = ErrorProducts(error, **kwargs)
-        self._data_types = self.data._data_types
-        self._data_types.update(self.error._data_types)
         for k, v in kwargs.items():
             setattr(self, k, v)
+
+        self._data_types = {}
+        if data is not None:
+            if isinstance(data, DataProducts):
+                self.data = data
+            else:
+                self.data = DataProducts(data, **kwargs)
+            self._data_types.update(self.data._data_types)
+
+        if error is not None:
+            if isinstance(error, ErrorProducts):
+                self.error = error
+            else:
+                self.error = ErrorProducts(error, **kwargs)
+            self._data_types.update(self.error._data_types)
 
     def _set_attrs(self):
         standard_attrs = {"ntime", "nrow", "ncol", "npix" "index", "columns"}
@@ -388,48 +400,167 @@ class Batch:
         )
         return series
 
+    @singledispatchmethod
     def __getitem__(self, key):
-        if isinstance(key, str):
-            if key in self.data:
-                return self.data[key]
-            elif key in self.error:
-                return self.error[key]
-            else:
-                raise ValueError("Unrecognized key")
-        elif isinstance(key, slice):
+        pass
+
+    @__getitem__.register
+    def _(self, key: str):
+        if key in self.data:
+            return self.data[key]
+        elif key in self.error:
+            return self.error[key]
+        else:
+            raise ValueError("Unrecognized key")
+
+    @__getitem__.register
+    def _(self, key: int | slice):
+        def set_new_data(old_data, key, new_kwargs=False):
             new_data = {}
-            new_error = {}
-            new_kwargs = self.kwargs.copy()
-            d0 = 0
-            for data_key, data in self.data.items():
-                if isinstance(d0, int):
-                    d0 = data[key]
+            for data_key, data in old_data.items():
+                d = data[key]
+                new_data[data_key] = d.to_array()
+                if not new_kwargs:
+                    new_kwargs = self.kwargs.copy()
                     new_kwargs["row_indices"] = {
-                        row_name: None for row_name in d0.row_names
+                        row_name: None for row_name in d.row_names
                     }
                     new_kwargs["col_indices"] = {
-                        col_name: None for col_name in d0.col_names
+                        col_name: None for col_name in d.col_names
                     }
-                    new_kwargs["index"] = d0.index
-                    new_kwargs["columns"] = d0.columns
-                new_data[data_key] = data[key].to_array()
-            for error_key, error in self.error.items():
-                if isinstance(d0, int):
-                    d0 = error[key]
-                    new_kwargs["row_indices"] = {
-                        row_name: None for row_name in d0.row_names
-                    }
-                    new_kwargs["col_indices"] = {
-                        col_name: None for col_name in d0.col_names
-                    }
-                    new_kwargs["index"] = d0.index
-                    new_kwargs["columns"] = d0.columns
-                new_error[error_key] = error[key].to_array()
-            return self._build_instance(new_data, new_error, **new_kwargs)
+                    new_kwargs["index"] = d.index
+                    new_kwargs["columns"] = d.columns
+            return new_data, new_kwargs
+
+        new_data, new_kwargs = set_new_data(self.data, key, False)
+        new_error, new_kwargs = set_new_data(self.error, key, new_kwargs)
+
+        return self._build_instance(new_data, new_error, **new_kwargs)
+
+    @__getitem__.register
+    def _(self, key: tuple):
+        # def handle_series(key):
+        #     # For series: Just slice on time
+        #     new_data = {
+        #         data_key: data[key[0]]
+        #         for data_key, data in self.data.items()
+        #         if isinstance(data, DataSeries)
+        #     }
+        #     new_error = {
+        #         err_key: err[key[0]]
+        #         for err_key, err in self.error.items()
+        #         if isinstance(err, ErrorSeries)
+        #     }
+        #     return new_data, new_error
+
+        # def handle_frames(key):
+        #     # For frames: slice on time, potetnially on series
+        #     if len(key) <= 2:
+        #         try:
+        #             new_data = {
+        #                 data_key: data[key]
+        #                 for data_key, data in self.data.items()
+        #                 if isinstance(data, DataFrame)
+        #             }
+        #             new_error = {
+        #                 err_key: err[key]
+        #                 for err_key, err in self.error.items()
+        #                 if isinstance(err, ErrorFrame)
+        #             }
+        #         except:
+        #             handle_frames(key[0])
+
+        # NOT READY
+        if len(key) == 1:
+            # Just slicing/selecting on time, supported for all lkTypes
+            # No conversions
+            new_data = {data_key: data[key] for data_key, data in self.data.items()}
+            new_error = {err_key: err[key] for err_key, err in self.error.items()}
+        elif len(key) == 2:
+            # Slicing/selecting on time
+            # Slicing/selecting on "series" or applying an aperture/mask
+            # Supported for Cubes and Frames
+            # Converts to Frames
+            new_data = {
+                data_key + f"{key}": data[key]
+                for data_key, data in self.data.items()
+                if isinstance(data, DataCube | DataFrame)
+            }
+            new_data_series = {
+                data_key + f"{key}": data[key]
+                for data_key, data in self.data.items()
+                if isinstance(data, DataSeries)
+            }
+            new_data.update(new_data_series)
+            new_error = {
+                err_key: err[key]
+                for err_key, err in self.error.items()
+                if isinstance(err, ErrorCube | ErrorFrame)
+            }
+            new_error_series = {
+                err_key: err[key]
+                for err_key, err in self.error.items()
+                if isinstance(err, ErrorSeries)
+            }
+            new_error.update(new_error_series)
+
+        elif len(key) == 3:
+            # Slicing/selecting on time/row/column, supported for Cubes
+            # Converts to Frame, though if continuous should stay Cube...
+            new_data = {
+                data_key + f"{key}": data[key]
+                for data_key, data in self.data.items()
+                if isinstance(data, DataCube)
+            }
+            new_error = {
+                err_key: err[key]
+                for err_key, err in self.error.items()
+                if isinstance(err, ErrorCube)
+            }
+
+        else:
+            raise (ValueError, "Cannot parse the given key, too many values given.")
+
+        if len(new_data) > 0:
+            new_index = list(new_data.values())[0].index
+        else:
+            new_index = list(new_error.values())[0].index
+
+        new_kwargs = self.kwargs.copy()
+        new_kwargs["index"] = new_index
+
+        return self._build_instance(new_data, new_error, **new_kwargs)
 
     @classmethod
     def _build_instance(cls, newdata, newerror, **kwargs):
         return cls(newdata, newerror, **kwargs)
 
     def __repr__(self):
-        return f"{self.data},\n{self.error}"
+        if hasattr(self, "data"):
+            if hasattr(self, "error"):
+                msg = f"""
+                Data Products:
+                {self.data},
+                Error Products:
+                {self.error},
+                Properties:
+                {list(self.kwargs.keys())}
+                """
+            else:
+                msg = f"""
+                Data Products:
+                {self.data}
+                Properties:
+                {list(self.kwargs.keys())}
+                """
+        elif hasattr(self, "error"):
+            msg = f"""
+            Error Products:
+            {self.error}
+            Properties:
+            {list(self.kwargs.keys())}
+            """
+        else:
+            msg = f"Empty Batch. Properties:\n{list(self.kwargs.keys())}"
+        msg = dedent(msg)
+        return msg

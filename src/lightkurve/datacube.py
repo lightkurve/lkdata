@@ -1,6 +1,7 @@
 """Classes and tools for working with 3 dimensional data."""
 import logging
 from abc import ABC
+from functools import singledispatchmethod
 import pandas as pd
 from pandas.io.formats.style import Styler
 import numpy as np
@@ -39,11 +40,11 @@ class Cube(ABC, pd.DataFrame, MathMixin, PlotMixin, AggMixin, ConvenienceMixins)
     ):
         self._metadata = []
 
-        self.ntime = getattr(kwargs, "ntime", None)
-        self.nrow = getattr(kwargs, "nrow", None)
-        self.ncol = getattr(kwargs, "ncol", None)
-        index = getattr(kwargs, "index", None)
-        columns = getattr(kwargs, "columns", None)
+        self.ntime = kwargs.get("ntime", None)
+        self.nrow = kwargs.get("nrow", None)
+        self.ncol = kwargs.get("ncol", None)
+        index = kwargs.get("index", None)
+        columns = kwargs.get("columns", None)
         data = self._preprocess_data(data)
 
         index = self._parse_index(index, time_indices)
@@ -157,107 +158,26 @@ class Cube(ABC, pd.DataFrame, MathMixin, PlotMixin, AggMixin, ConvenienceMixins)
 
         return columns
 
-    def stats_post_process(self, result, **kwargs):
-        if kwargs.get("axis") in [0, "time"]:
-            return result.to_numpy().reshape(self.nrow, self.ncol)
-        elif kwargs.get("axis") in [1, "series"]:
-            return self._series_class(result)
-        else:
-            return result
-
-    def __getitem__(self, key):
-        # Simple slice in time, results in DataCube
-        if isinstance(key, (slice, np.ndarray, list, range)):
-            return self.__class__.from_pandas(
-                self.iloc[key],
-                nrow=self.nrow,
-                ncol=self.ncol,
-                index=self.index[key],
-                columns=self.columns,
-                row_indices={name: None for name in self.row_names},
-                col_indices={name: None for name in self.col_names},
-            )
-
-        # Integer time, currently results in DataCube
-        if isinstance(key, int):
-            return self.__class__.from_pandas(
-                self.iloc[np.atleast_1d(key)],
-                nrow=self.nrow,
-                ncol=self.ncol,
-                index=self.index[np.atleast_1d(key)],
-                columns=self.columns,
-            )
-
-        if isinstance(key, tuple):
-            time = key[0]
-            if isinstance(key[0], (int, list, np.ndarray)):
-                time = np.atleast_1d(time)
-            elif isinstance(key[0], slice):
-                time = range(self.ntime)[time]
-            else:
-                raise ValueError(f"Can not parse time {key[0]}")
-
-            if len(key) == 1:
-                return self.__class__.from_pandas(
-                    self.iloc[time],
-                    nrow=self.nrow,
-                    ncol=self.ncol,
-                    index=self.index[time],
-                    columns=self.columns,
-                )
-            # If only two things passed
-            if len(key) == 2:
-                if np.ndim(key[1]) == 2:
-                    aperture = key[1]
-                    # Passed an aperture, needs to become time-series
-                    return self[time].to_dataframe(*np.where(aperture))
-                else:
-                    # If not, must be expecting a slice
-                    row = key[1]
-                    col = slice(self.ncol + 1)
-            if len(key) == 3:
-                row, col = key[1], key[2]
-
-        # To be a a 3D dataset needs to pass slices or integers as row/column
-        if not isinstance(row, (slice)) & isinstance(col, (slice)):
-            return self[time].to_dataframe(row, col)
-        nrow, ncol, series_index = self._convert_to_series_index(row, col)
-        return self.__class__.from_pandas(
-            self.iloc[time, series_index],
-            nrow=nrow,
-            ncol=ncol,
-            index=self.index[time],
-            columns=self.columns[series_index],
-        )
-
     def _convert_to_series_index(self, row, col):
         # Convert row, col index to DataFrame column index
         if isinstance(row, slice):
-            row_indices = range(self.nrow)[row]
-            nrow = len(range(*row.indices(self.nrow)))
-        elif isinstance(row, range):
-            row_indices = list(row)
-        elif isinstance(row, int):
-            row_indices = [row]
-            nrow = 1
+            row_indices = np.arange(self.nrow)[row]
         else:
-            row_indices = row
-            nrow = len(row)
-
+            row_indices = np.atleast_1d(row)
         if isinstance(col, slice):
-            col_indices = range(self.ncol)[col]
-            ncol = len(range(*col.indices(self.ncol)))
-        elif isinstance(col, range):
-            col_indices = list(col)
-        elif isinstance(col, int):
-            col_indices = [col]
-            ncol = 1
+            col_indices = np.arange(self.ncol)[col]
         else:
-            col_indices = col
-            ncol = len(col)
-        return nrow, ncol, [r * self.ncol + c for r in row_indices for c in col_indices]
+            col_indices = np.atleast_1d(col)
+        nrow = len(row_indices)
+        ncol = len(col_indices)
+        series_index = (
+            row_indices.repeat(ncol).reshape(nrow, ncol).T * self.ncol
+            + col_indices.reshape(ncol, 1)
+        ).ravel()
+        series_index.sort()
+        return nrow, ncol, series_index
 
-    def _single_cadence_frame(self, cadence):
+    def single_frame(self, cadence: int) -> Styler:
         """Create a stylized single cadence frame of a datacube"""
         cadence = int(np.floor(cadence))
         if isinstance(self.index, pd.MultiIndex):
@@ -275,8 +195,8 @@ class Cube(ABC, pd.DataFrame, MathMixin, PlotMixin, AggMixin, ConvenienceMixins)
                 f"{i[0]} {i[1]}" for i in zip(self.index.names, [self.index[cadence]])
             ]
         str_index = "<br>" + "<br>".join(indices)
-        row = self.__getattr__(self.columns.names[1])
-        col = self.__getattr__(self.columns.names[2])
+        row = getattr(self, self.columns.names[1])
+        col = getattr(self, self.columns.names[2])
         df = pd.DataFrame(
             self.to_array()[cadence],
             index=pd.Series(row[:: self.ncol], name=self.columns.names[1]),
@@ -313,45 +233,106 @@ class Cube(ABC, pd.DataFrame, MathMixin, PlotMixin, AggMixin, ConvenienceMixins)
         )
         return out
 
-    def to_dataframe(
-        self, row: int | float | list | slice, col: int | float | list | slice, **kwargs
-    ) -> DataFrame | ErrorFrame:
-        """Convert Cube to Frame with the given row and column indices.
+    @classmethod
+    def _build_instance(cls, new, **kwargs):
+        return cls(new, ntime=len(new), **kwargs)
 
-        Parameters
-        ----------
-        row : int | float | list | slice
-            Index/list of indices or slice of row indices to include.
-        col : int | float | list | slice
-            Index/list of indices or slice of column indices to include.
-
-        Returns
-        -------
-        DataFrame | ErrorFrame
-            A Frame object of the same type as the input data, either
-            DataFrame or ErrorFrame.
-        """
-
-        if isinstance(row, slice):
-            row_indices = np.arange(self.nrow)[row]
+    def _repr_html_(self):
+        if hasattr(self, "_styler"):
+            out0 = self.styler
         else:
-            row_indices = np.atleast_1d(row)
-        if isinstance(col, slice):
-            col_indices = np.arange(self.ncol)[col]
+            out0 = self.single_frame(0)
+            self.styler = out0
+
+        if self.shape[0] > 1:
+            hidden_frames = f"[+{self.shape[0]-1} cadences]"
+            return f"""
+            {repr(self)}
+            {out0.to_html(max_rows=11, max_columns=11)}
+            ...<br>
+            {hidden_frames}<br>
+            """
         else:
-            col_indices = np.atleast_1d(col)
-        nrow = len(row_indices)
-        ncol = len(col_indices)
-        series_index = (
-            row_indices.repeat(ncol).reshape(nrow, ncol).T * self.ncol
-            + col_indices.reshape(ncol, 1)
-        ).ravel()
-        series_index.sort()
-        return self._frame_class(
-            self.iloc[:, series_index],
-            index=self.index,
+            return f"""
+            {repr(self)}
+            {out0.to_html(max_rows=11, max_columns=11)}
+            """
+
+    def __repr__(self):
+        return f"Cube {self.ntime, self.nrow, self.ncol}"
+
+    def __str__(self):
+        return self.__repr__()
+
+    @singledispatchmethod
+    def __getitem__(self, key):
+        pass
+
+    @__getitem__.register
+    def _(self, key: slice | np.ndarray | list | range):
+        # Simple slice in time, results in DataCube
+        return self.__class__.from_pandas(
+            self.iloc[key],
+            nrow=self.nrow,
+            ncol=self.ncol,
+            index=self.index[key],
+            columns=self.columns,
+            row_indices={name: None for name in self.row_names},
+            col_indices={name: None for name in self.col_names},
+        )
+
+    @__getitem__.register
+    def _(self, key: int):
+        # Integer time, currently results in DataCube
+        return self.__class__.from_pandas(
+            self.iloc[np.atleast_1d(key)],
+            nrow=self.nrow,
+            ncol=self.ncol,
+            index=self.index[np.atleast_1d(key)],
+            columns=self.columns,
+        )
+
+    @__getitem__.register
+    def _(self, key: tuple):
+        time = key[0]
+        if isinstance(key[0], (int, list, np.ndarray)):
+            time = np.atleast_1d(time)
+        elif isinstance(key[0], slice):
+            time = range(self.ntime)[time]
+        else:
+            raise ValueError(f"Can not parse time {key[0]}")
+
+        if len(key) == 1:
+            return self.__class__.from_pandas(
+                self.iloc[time],
+                nrow=self.nrow,
+                ncol=self.ncol,
+                index=self.index[time],
+                columns=self.columns,
+            )
+        # If only two things passed
+        if len(key) == 2:
+            if np.ndim(key[1]) == 2:
+                aperture = key[1]
+                # Passed an aperture, needs to become time-series
+                return self[time].to_dataframe(*np.where(aperture))
+            else:
+                # If not, must be expecting a slice
+                row = key[1]
+                col = slice(self.ncol + 1)
+        if len(key) == 3:
+            row, col = key[1], key[2]
+
+        # To be a a 3D dataset needs to pass slices or integers as row/column
+        if not isinstance(row, (slice)) & (not isinstance(col, (slice))):
+            return self[time].to_dataframe(row, col)
+        nrow, ncol, series_index = self._convert_to_series_index(row, col)
+        return self.__class__.from_pandas(
+            self.iloc[time, series_index],
+            nrow=nrow,
+            ncol=ncol,
+            index=self.index[time],
             columns=self.columns[series_index],
-            **kwargs,
         )
 
     @property
@@ -371,12 +352,60 @@ class Cube(ABC, pd.DataFrame, MathMixin, PlotMixin, AggMixin, ConvenienceMixins)
         # remove formatting, if present
         self._flux_units = str(unit)
 
-    @classmethod
-    def _build_instance(cls, new, **kwargs):
-        return cls(new, ntime=len(new), **kwargs)
+    @property
+    def styler(self):
+        if hasattr(self, "_styler"):
+            return self._styler
+        return None
 
-    def to_array(self):
-        return self.to_numpy().reshape(self.ntime, self.nrow, self.ncol)
+    @styler.setter
+    def styler(self, input: Styler):
+        self._styler = input
+
+    def stats_post_process(self, result, **kwargs):
+        if kwargs.get("axis") in [0, "time"]:
+            return result.to_numpy().reshape(self.nrow, self.ncol)
+        elif kwargs.get("axis") in [1, "series"]:
+            return self._series_class(result)
+        else:
+            return result
+
+    def to_dataframe(
+        self, row: int | float | list | slice, col: int | float | list | slice, **kwargs
+    ) -> DataFrame | ErrorFrame:
+        """Convert Cube to Frame with the given row and column indices.
+
+        Parameters
+        ----------
+        row : int | float | list | slice
+            Index/list of indices or slice of row indices to include.
+        col : int | float | list | slice
+            Index/list of indices or slice of column indices to include.
+
+        Returns
+        -------
+        DataFrame | ErrorFrame
+            A Frame object of the same type as the input data, either
+            DataFrame or ErrorFrame.
+        """
+        _, _, series_index = self._convert_to_series_index(row, col)
+        return self._frame_class(
+            self.iloc[:, series_index],
+            index=self.index,
+            columns=self.columns[series_index],
+            **kwargs,
+        )
+
+    def to_array(self) -> np.ndarray:
+        """Convert Cube data to a numpy array
+
+        Returns
+        -------
+        data_array
+            np.ndarray
+        """
+        data_array = self.to_numpy().reshape(self.ntime, self.nrow, self.ncol)
+        return data_array
 
     @classmethod
     def from_pandas(cls, data: pd.DataFrame, nrow: int, ncol: int, **kwargs):
@@ -386,28 +415,6 @@ class Cube(ABC, pd.DataFrame, MathMixin, PlotMixin, AggMixin, ConvenienceMixins)
         This assumes no multi-indexing in the pandas dataframe.
         """
         return cls(data.to_numpy(), ntime=len(data), nrow=nrow, ncol=ncol, **kwargs)
-
-    def __repr__(self):
-        return f"Cube {self.ntime, self.nrow, self.ncol}"
-
-    def __str__(self):
-        return self.__repr__()
-
-    def _repr_html_(self):
-        out0 = self._single_cadence_frame(0)
-        if self.shape[0] > 1:
-            hidden_frames = f"[+{self.shape[0]-1} cadences]"
-            return f"""
-            {repr(self)}
-            {out0.to_html(max_rows=11, max_columns=11)}
-            ...<br>
-            {hidden_frames}<br>
-            """
-        else:
-            return f"""
-            {repr(self)}
-            {out0.to_html(max_rows=11, max_columns=11)}
-            """
 
 
 class DataCube(

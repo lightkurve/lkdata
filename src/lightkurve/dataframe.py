@@ -1,6 +1,8 @@
 """Classes and tools for working with 3 dimensional data."""
-
+from functools import singledispatchmethod
+from collections.abc import Iterable
 import logging
+import numpy as np
 import pandas as pd
 
 from .dataseries import DataSeries, ErrorSeries
@@ -28,7 +30,7 @@ class DataFrame(
         return self.shape[1]
 
     def __repr__(self):
-        return f"🟦 DataFrame {self.shape}\n"
+        return f"🟦 DataFrame {self.shape}"
 
     def _repr_html_(self):
         return self.__repr__() + super()._repr_html_()
@@ -77,10 +79,34 @@ class DataFrame(
     def _pd_class(self):
         return pd.DataFrame
 
+    @singledispatchmethod
+    def __getitem__(self, key):
+        pass
+
+    @__getitem__.register
+    def _(self, key: int | Iterable | slice):
+        return self.__class__.from_pandas(
+            self.iloc[key], index=self.index[key], columns=self.columns
+        )
+
+    @__getitem__.register
+    def _(self, key: tuple):
+        time_key = key[0]
+        if isinstance(key[1], slice):
+            series_index = np.arange(self.nseries)[key[1]]
+        elif isinstance(key[1], Iterable):
+            series_index = key[1]
+
+        return self.__class__.from_pandas(
+            self.iloc[time_key, series_index],
+            index=self.index[time_key],
+            columns=self.columns[series_index],
+        )
+
 
 class ErrorFrame(ErrorStatsMixin, DataFrame):
     def __repr__(self):
-        return f"🟥 ErrorFrame {self.shape}\n"
+        return f"🟥 ErrorFrame {self.shape}"
 
     @property
     def _series_class(self):
