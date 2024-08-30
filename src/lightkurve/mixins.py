@@ -285,17 +285,19 @@ class AggMixin:
                 new_index.get_level_values("cadence").astype(int), level="cadence"
             )
             new_index = new_index.rename({"cadence": "mid_cadence"})
+
+        new_data = new[bin_mask].to_numpy()
+        if self._stats_type == "error":
+            new_data = new_data**0.5
+
         new_obj = self._build_instance(
-            new[bin_mask].to_numpy(),
+            new_data,
             index=new_index[bin_mask],
             columns=self.columns,
             nrow=self.nrow,
             ncol=self.ncol,
         )
-        if self._stats_type == "error":
-            return new_obj**0.5
-        else:
-            return new_obj
+        return new_obj
 
     def spatial_downsample(
         self,

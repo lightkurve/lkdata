@@ -1,8 +1,8 @@
-from lightkurve import DataCube, ErrorCube, DataFrame, ErrorFrame, DataSeries, TESTDATA
-from lightkurve.mixins import STATS_METHOD_NAMES
 import numpy as np
 import pandas as pd
 from astropy.io import fits
+from lightkurve import TESTDATA, DataCube, DataFrame, DataSeries, ErrorCube, ErrorFrame
+from lightkurve.mixins import STATS_METHOD_NAMES
 
 
 def test_setup():
@@ -33,10 +33,29 @@ def test_setup():
     assert df[:, :2].nrow == 2
     assert df[:, :2].ncol == ncol
 
+    assert isinstance(df[:, :2, :], DataCube)
+    assert df[:, :2, :].ntime == ntime
+    assert df[:, :2, :].nrow == 2
+    assert df[:, :2, :].ncol == ncol
+
     assert isinstance(df[:, :, :2], DataCube)
     assert df[:, :, :2].ntime == ntime
     assert df[:, :, :2].nrow == nrow
     assert df[:, :, :2].ncol == 2
+
+    assert isinstance(df[:, :2, :2], DataCube)
+    assert df[:, :2, :2].ntime == ntime
+    assert df[:, :2, :2].nrow == 2
+    assert df[:, :2, :2].ncol == 2
+
+    assert isinstance(df[:, [0, 1], :2], DataFrame)
+    assert df[:, [0, 1], :2].ntime == ntime
+    assert df[:, [0, 1], :2].nseries == 4
+
+    assert all(df[:, [0, 1], 0] == df[:, [0, 1], [0, 0]])
+    assert isinstance(df[:, [0, 1], 0], DataFrame)
+    assert df[:, [0, 1], 0].ntime == ntime
+    assert df[:, [0, 1], 0].nseries == 2
 
     assert isinstance(df[:, aperture], pd.DataFrame)
     assert df[:, aperture].shape == (ntime, 9)
@@ -62,7 +81,7 @@ def test_setup():
     assert df[:, :, 0].ntime == ntime
     assert df[:, :, 0].shape == (ntime, nrow)
 
-    # DataCube
+    # DataFrame, should be series?
     assert isinstance(df[:, 1, 0], DataFrame)
     assert df[:, 1, 0].ntime == ntime
     assert df[:, 1, 0].shape == (ntime, 1)

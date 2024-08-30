@@ -170,10 +170,13 @@ class Cube(ABC, pd.DataFrame, MathMixin, PlotMixin, AggMixin, ConvenienceMixins)
             col_indices = np.atleast_1d(col)
         nrow = len(row_indices)
         ncol = len(col_indices)
-        series_index = (
-            row_indices.repeat(ncol).reshape(nrow, ncol).T * self.ncol
-            + col_indices.reshape(ncol, 1)
-        ).ravel()
+        if isinstance(row, slice) or isinstance(col, slice):
+            series_index = (
+                row_indices.repeat(ncol).reshape(nrow, ncol).T * self.ncol
+                + col_indices.reshape(ncol, 1)
+            ).ravel()
+        else:
+            series_index = row_indices * self.ncol + col_indices
         series_index.sort()
         return nrow, ncol, series_index
 
@@ -312,20 +315,44 @@ class Cube(ABC, pd.DataFrame, MathMixin, PlotMixin, AggMixin, ConvenienceMixins)
             )
         # If only two things passed
         if len(key) == 2:
-            if np.ndim(key[1]) == 2:
-                aperture = key[1]
-                # Passed an aperture, needs to become time-series
-                return self[time].to_dataframe(*np.where(aperture))
-            else:
-                # If not, must be expecting a slice
+            if isinstance(key[1], slice):
                 row = key[1]
                 col = slice(self.ncol + 1)
+            elif np.ndim(key[1]) == 2:
+                aperture = key[1]
+                # Passed an aperture with shape (nrow, ncol),
+                # example:
+                # aper = Cube.sum(axis=1) > 10000
+                # Cube[:, aper]
+                # needs to become frame of time-series
+                return self[time].to_dataframe(*np.where(aperture))
+
+            elif len(key[1]) == self.ncol * self.nrow:
+                # Passed an aperture with shape(nrow*ncol)
+                # example:
+                # aper = Cube.row == 2
+                # Cube[:, aper]
+                nrow = len(self.columns.get_level_values(1)[key[1]].unique())
+                ncol = len(self.columns.get_level_values(2)[key[1]].unique())
+                return self.__class__.from_pandas(
+                    self.iloc[time, key[1]],
+                    nrow=nrow,
+                    ncol=ncol,
+                    index=self.index[time],
+                    columns=self.columns[key[1]],
+                )
+
         if len(key) == 3:
             row, col = key[1], key[2]
 
         # To be a a 3D dataset needs to pass slices or integers as row/column
-        if not isinstance(row, (slice)) & (not isinstance(col, (slice))):
+        if (not isinstance(row, (slice))) | (not isinstance(col, (slice))):
             return self[time].to_dataframe(row, col)
+        elif (isinstance(row, slice) & (row.step not in [None, 1])) | (
+            isinstance(col, slice) & (col.step not in [None, 1])
+        ):
+            return self[time].to_dataframe(row, col)
+
         nrow, ncol, series_index = self._convert_to_series_index(row, col)
         return self.__class__.from_pandas(
             self.iloc[time, series_index],

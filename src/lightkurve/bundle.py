@@ -326,7 +326,7 @@ class Batch:
                 setattr(self, val, getattr(self.error, val))
 
     @property
-    def cubes(self):
+    def cubes(self) -> dict:
         """Retrieve all DataCube and ErrorCube objects.
 
         Returns
@@ -351,7 +351,7 @@ class Batch:
         return cubes
 
     @property
-    def frames(self):
+    def frames(self) -> dict:
         """Retrieve all DataFrame and ErrorFrame objects.
 
         Returns
@@ -376,7 +376,7 @@ class Batch:
         return frames
 
     @property
-    def series(self):
+    def series(self) -> dict:
         """Retrieve all DataSeries and ErrorSeries objects.
 
         Returns
@@ -439,87 +439,38 @@ class Batch:
 
     @__getitem__.register
     def _(self, key: tuple):
-        # def handle_series(key):
-        #     # For series: Just slice on time
-        #     new_data = {
-        #         data_key: data[key[0]]
-        #         for data_key, data in self.data.items()
-        #         if isinstance(data, DataSeries)
-        #     }
-        #     new_error = {
-        #         err_key: err[key[0]]
-        #         for err_key, err in self.error.items()
-        #         if isinstance(err, ErrorSeries)
-        #     }
-        #     return new_data, new_error
+        time_key = key[0]
+        if len(key) not in [1, 2, 3]:
+            raise (IndexError, f"Cannot parse key with {len(key)} elements.")
 
-        # def handle_frames(key):
-        #     # For frames: slice on time, potetnially on series
-        #     if len(key) <= 2:
-        #         try:
-        #             new_data = {
-        #                 data_key: data[key]
-        #                 for data_key, data in self.data.items()
-        #                 if isinstance(data, DataFrame)
-        #             }
-        #             new_error = {
-        #                 err_key: err[key]
-        #                 for err_key, err in self.error.items()
-        #                 if isinstance(err, ErrorFrame)
-        #             }
-        #         except:
-        #             handle_frames(key[0])
+        new_data = {
+            data_key + f"{key}": data[key]
+            for data_key, data in self.data.items()
+            if isinstance(data, DataCube)
+        }
+        new_error = {
+            err_key: err[key]
+            for err_key, err in self.error.items()
+            if isinstance(err, ErrorCube)
+        }
 
-        # NOT READY
-        if len(key) == 1:
-            # Just slicing/selecting on time, supported for all lkTypes
-            # No conversions
-            new_data = {data_key: data[key] for data_key, data in self.data.items()}
-            new_error = {err_key: err[key] for err_key, err in self.error.items()}
-        elif len(key) == 2:
-            # Slicing/selecting on time
-            # Slicing/selecting on "series" or applying an aperture/mask
-            # Supported for Cubes and Frames
-            # Converts to Frames
-            new_data = {
-                data_key + f"{key}": data[key]
-                for data_key, data in self.data.items()
-                if isinstance(data, DataCube | DataFrame)
-            }
-            new_data_series = {
-                data_key + f"{key}": data[key]
+        # Just slicing/selecting on time, supported for all lkTypes
+        # No conversions
+        new_data.update(
+            {
+                data_key: data[time_key]
                 for data_key, data in self.data.items()
                 if isinstance(data, DataSeries)
             }
-            new_data.update(new_data_series)
-            new_error = {
-                err_key: err[key]
-                for err_key, err in self.error.items()
-                if isinstance(err, ErrorCube | ErrorFrame)
-            }
-            new_error_series = {
-                err_key: err[key]
+        )
+
+        new_error.update(
+            {
+                err_key: err[time_key]
                 for err_key, err in self.error.items()
                 if isinstance(err, ErrorSeries)
             }
-            new_error.update(new_error_series)
-
-        elif len(key) == 3:
-            # Slicing/selecting on time/row/column, supported for Cubes
-            # Converts to Frame, though if continuous should stay Cube...
-            new_data = {
-                data_key + f"{key}": data[key]
-                for data_key, data in self.data.items()
-                if isinstance(data, DataCube)
-            }
-            new_error = {
-                err_key: err[key]
-                for err_key, err in self.error.items()
-                if isinstance(err, ErrorCube)
-            }
-
-        else:
-            raise (ValueError, "Cannot parse the given key, too many values given.")
+        )
 
         if len(new_data) > 0:
             new_index = list(new_data.values())[0].index
