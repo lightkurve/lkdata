@@ -1,10 +1,11 @@
-import numpy as np
-import pandas as pd
+"""Mixin methods and classes for lightkurve data objects"""
 import re
-import matplotlib.pyplot as plt
 from copy import deepcopy
 
-__all__ = ["StatsMixin", "MathMixin", "ErrorStatsMixin", "PlotMixin"]
+import numpy as np
+import pandas as pd
+
+__all__ = ["StatsMixin", "MathMixin", "ErrorStatsMixin"]
 
 _AGG_ERROR_FUNCS = {
     "agg_mean": lambda x: (np.sum(x**2) ** 0.5) / len(x),
@@ -15,10 +16,10 @@ _AGG_ERROR_FUNCS = {
 }
 
 _AGG_FUNCS = {
-    "agg_mean": lambda x: np.mean(x),
-    "agg_median": lambda x: np.median(x),
-    "agg_std": lambda x: np.std(x),
-    "agg_sum": lambda x: np.sum(x),
+    "agg_mean": np.mean,
+    "agg_median": np.median,
+    "agg_std": np.std,
+    "agg_sum": np.sum,
     "agg_count": lambda x: np.isfinite(x).sum(),
 }
 
@@ -73,6 +74,8 @@ for method_name in CUM_METHOD_NAMES:
 
 
 class ErrorStatsMixin:
+    """Statistics mixins for error products"""
+
     _stats_type = "error"
 
     def _sum(self, axis=0):
@@ -121,6 +124,8 @@ class ErrorStatsMixin:
 
 
 class MathMixin:
+    """Math mixins for lightkurve data objects."""
+
     def _process_math_val(self, val):
         if isinstance(val, (np.ndarray, float)):
             return val
@@ -184,21 +189,6 @@ class MathMixin:
         )
 
 
-class PlotMixin:
-    def plot(self, ax=None, **kwargs):
-        if ax is None:
-            _, ax = plt.subplots()
-        if isinstance(self, pd.DataFrame):
-            if hasattr(self, "nrow"):
-                # Assume 2D
-                data = self.get_frame(kwargs.pop("frame", 0))
-                ax.imshow(data, **kwargs)
-            else:
-                data = self.to_numpy()
-                ax.plot(data, **kwargs)
-        return ax
-
-
 class AggMixin:
     def _set_precision(self, func):
         """np.array wrapper to strictly enforce precision."""
@@ -206,17 +196,17 @@ class AggMixin:
         def wrap(*args, **kwargs):
             arr = func(*args, **kwargs)
             npdtype = type(arr[0])
-            precision = np.finfo(npdtype).precision
+            precision = np.finfo(npdtype).precision  # noqa: E1101
             return arr.round(precision)
 
         return wrap
 
-    def downsample(self, nframes=5, level=-1):
-        round = self._set_precision(np.array)
+    def downsample(self, nframes: int = 5, level: int | str = -1):
+        round_arr = self._set_precision(np.array)
         # Find the index to downsample on
         index = self.index.get_level_values(level=level)
         try:
-            index = round(index)
+            index = round_arr(index)
         except ValueError:
             pass
 
@@ -225,12 +215,7 @@ class AggMixin:
         nbins = int(np.ceil((index.max() - index.min()) / dt) + 1)
         # Calculate what bin edges result in this spacing
         bins = np.arange(index.min(), index.min() + nbins * dt, dt)
-        bins = round(bins)
-        # Original:
-        # dt = np.median(np.diff(index))
-        # bins = np.arange(index.min(),
-        #          index.max()+(nframes-1)*dt,
-        #          nframes*dt)
+        bins = round_arr(bins)
 
         bin_edges_left = pd.cut(np.sort(index), bins, right=False)
 
@@ -245,8 +230,14 @@ class AggMixin:
 
         new = gb.sum()
         # We only accept cases where the number of points in a bin is the same as the number of frames we downsample to
-        count = gb[int(self.columns.get_level_values(0)[0])].count()
-        bin_mask = np.asarray(count == nframes)[:, 0]
+        if hasattr(self, "columns"):
+            count = gb[int(self.columns.get_level_values(0)[0])].count()
+            bin_mask = np.asarray(count == nframes)[:, 0]
+
+        else:
+            # for DataSeries
+            count = gb.count()
+            bin_mask = np.asarray(count == nframes)
 
         # We have to create a new index. We'll take the mean of each bin
         new_index_left = self.index.to_frame().groupby(bin_edges_left, observed=False)
@@ -289,14 +280,19 @@ class AggMixin:
         new_data = new[bin_mask].to_numpy()
         if self._stats_type == "error":
             new_data = new_data**0.5
-
-        new_obj = self._build_instance(
-            new_data,
-            index=new_index[bin_mask],
-            columns=self.columns,
-            nrow=self.nrow,
-            ncol=self.ncol,
-        )
+        if hasattr(self, "columns"):
+            new_obj = self._build_instance(
+                new_data,
+                index=new_index[bin_mask],
+                columns=self.columns,
+                nrow=self.nrow,
+                ncol=self.ncol,
+            )
+        else:
+            new_obj = self._build_instance(
+                new_data,
+                index=new_index[bin_mask],
+            )
         return new_obj
 
     def spatial_downsample(
@@ -340,7 +336,7 @@ class AggMixin:
         else:
             row_factor = factor[0]
             col_factor = factor[1]
-        round = self._set_precision(np.array)
+        round_array = self._set_precision(np.array)
         row_name = row_name or self.columns.names[1]
         col_name = col_name or self.columns.names[2]
         row = self.__getattribute__(row_name)
@@ -350,8 +346,8 @@ class AggMixin:
             indexed = True
         else:
             indexed = False
-            row = round(row)
-            col = round(col)
+            row = round_array(row)
+            col = round_array(col)
 
         # Find the average spacing of the index
         dr = np.median(np.diff(np.sort(np.unique(row))))
@@ -575,6 +571,8 @@ class AggMixin:
 
 
 class ConvenienceMixins:
+    """Convenience mixins which add properties to lightkurve data objects as attributes."""
+
     def _include_convenience_index(self):
         INDEX_DICTS = {
             level if level is not None else "index": np.asarray(
@@ -599,25 +597,17 @@ class ConvenienceMixins:
                 self._metadata.append(key)
                 setattr(self, key, index)
 
-    def _include_convenience_meta(self, **kwargs):
-        for key, value in kwargs.items():
-            if key not in self._metadata:
-                self._metadata.append(key)
-            setattr(self, key, value)
-
-    def fold(self, period, t0=None, level=1, inplace=False, label=None):
-        """ """
+    def _fold_index(self, period, t0, level, label):
         index = deepcopy(self.index)
         if len(self.index.names) == 1:
             # Cadence is typically level 0 and datetimes levels 1+
             level = 0
-        if label is None:
-            label = "phase"
+
         if label in index.names:
             index = index.droplevel(label)
 
         time = index.get_level_values(level)
-        if t0 is not None:
+        if t0:
             time = time - t0
         else:
             time = time - time.min()
@@ -625,20 +615,96 @@ class ConvenienceMixins:
         phase = time % period / period
         indices = index.to_frame()
         indices[label] = phase
+        return indices
 
+    def fold(
+        self,
+        period: float,
+        t0: float = None,
+        level: int | str = 1,
+        inplace: bool = False,
+        label: str = "phase",
+    ):
+        """Fold data on a given period and adds the folded time as an index.
+
+        Parameters
+        ----------
+        period : float
+            The period on which to fold the data. The user must ensure that it
+            this has the same units and scale as the level.
+        t0 : float, optional
+            The time at which to start the first period, by default None and t0
+            becomes the minimum value of the time array.
+        level : int|str, optional
+            The index level on which to fold, by default 1, presumed to be the
+            first time index that aren't cadences.
+        inplace : bool, optional
+            Whether to modify the object itself or return a new object, by default False
+        label : str, optional
+            What label to give the new time index, by default "phase"
+
+        Returns
+        -------
+        Cube|Frame|Series
+            Returns an object of the same type given.
+        """
+        indices = self._fold_index(period, t0, level, label)
+        indices.set_index(label, append=True, inplace=True)
         if inplace:
-            indices.set_index(label, append=True, inplace=True)
-            self.index = indices.index
-            self._metadata.append(label)
-            setattr(self, label, self.index.get_level_values(level=label))
-            return
+            new_data_obj = self
+        else:
+            new_data_obj = deepcopy(self)
 
-        del indices["cadence"]
+        setattr(new_data_obj, "index", indices.index)
+        new_data_obj._metadata.append(label)
+        setattr(new_data_obj, label, new_data_obj.index.get_level_values(level=label))
+        return new_data_obj
 
-        folded_cube = self._build_instance(
-            self.to_array(),
-            time_indices=indices.reset_index(drop=True).to_dict("list"),
-            columns=self.columns,
-        )
-        # folded_cube is just a datacube
-        return folded_cube
+    def sort_index(self, *args, **kwargs):
+        if "inplace" in kwargs:
+            inplace = kwargs["inplace"]
+            kwargs["inplace"] = False
+        else:
+            inplace = False
+        df = super(self._pd_class, self).sort_index(*args, **kwargs)
+        if inplace:
+            super(self._pd_class, self).__init__(df)
+        else:
+            return self[df.index.get_level_values(0).values]
+
+    def droplevel(self, level, axis=0):
+        # pylint: disable:overridden-final-method
+        if level in [0, "time_index", "series"]:
+            raise ValueError("0-index levels cannot be dropped from Cubes.")
+        if axis == 1:
+            raise NotImplementedError(
+                "Dropping column indices is not currently supported."
+            )
+        pdframe = super(self._pd_class, self).droplevel(level, axis)
+
+        if hasattr(self, "ncol"):
+            return self.from_pandas(
+                pdframe,
+                nrow=self.nrow,
+                ncol=self.ncol,
+                **self.user_kwargs,
+            )
+        else:
+            return self.from_pandas(
+                pdframe,
+                **self.user_kwargs,
+            )
+
+    def to_array(self):
+        """Method to return the data as a numpy array."""
+        return self.to_numpy()
+
+    @property
+    def user_kwargs(self):
+        """Keywords passed by the user"""
+        return {key: getattr(self, key, None) for key in self._user_kwargs}
+
+    def _build_instance(self, new, **kwargs):
+        all_kwargs = self.user_kwargs.copy()
+        all_kwargs.update(**kwargs)
+        return self.__class__(new, **all_kwargs)

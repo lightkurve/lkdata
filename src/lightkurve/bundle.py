@@ -1,10 +1,13 @@
 """Classes and tools for creating data bundles and batches"""
-from typing import Dict, Union
-from textwrap import dedent
-from functools import singledispatchmethod
-from warnings import warn
 from collections.abc import Iterable
+from copy import deepcopy
+from functools import singledispatchmethod
+from textwrap import dedent
+from typing import Dict, Union
+from warnings import warn
+
 import numpy as np
+
 from .datacube import DataCube, ErrorCube
 from .dataframe import DataFrame, ErrorFrame
 from .dataseries import DataSeries, ErrorSeries
@@ -27,9 +30,9 @@ class DataProcessorMixin:
     CLASS_CHECKS : dict
         A dictionary mapping data classes to sets of attributes to be checked.
     _data : dict
-        Storage for processed data.
+        Storage for processed data products.
     _error : dict
-        Storage for processed error data.
+        Storage for processed error products.
     _type : str or None
         The type of data being processed ('data' or 'error').
     kwargs : dict or None
@@ -149,8 +152,11 @@ class DataProcessorMixin:
 class ProductBundle(dict, DataProcessorMixin):
     """A class to hold a collection of related data products.
 
-    The products contained have the same base attributes (ntime, nrow, etc.)
-    and share methods for slicing, aggregating, adding, downsampling, etc.
+    The products contained have the same basic attributes and share methods for
+    slicing, aggregating, adding, downsampling, etc.
+
+    All contained Cubes must have the same dimensions, all products must have
+    the same time indices.
 
     Returns
     -------
@@ -280,6 +286,9 @@ class ErrorProducts(ProductBundle):
 class Batch:
     """Class to group related data and error products for batch processing."""
 
+    _user_kwargs = None
+    index = None
+
     def __init__(
         self,
         data: (
@@ -298,9 +307,12 @@ class Batch:
         ) = None,
         **kwargs,
     ):
+        self._user_kwargs = []
         self.kwargs = kwargs
         for k, v in kwargs.items():
             setattr(self, k, v)
+            if k not in ("ntime", "nrow", "ncol", "index", "columns"):
+                self._user_kwargs.append(k)
 
         self._data_types = {}
         if data is not None:
@@ -317,8 +329,10 @@ class Batch:
                 self.error = ErrorProducts(error, **kwargs)
             self._data_types.update(self.error._data_types)
 
+        self._set_attrs()
+
     def _set_attrs(self):
-        standard_attrs = {"ntime", "nrow", "ncol", "npix" "index", "columns"}
+        standard_attrs = {"ntime", "index"}
         for val in standard_attrs:
             if hasattr(self.data, val):
                 setattr(self, val, getattr(self.data, val))
@@ -400,6 +414,48 @@ class Batch:
         )
         return series
 
+    def fold(
+        self,
+        period: float,
+        t0: float = None,
+        level: int | str = 1,
+        inplace: bool = False,
+        label: str = "phase",
+    ):
+        index = deepcopy(self.index)
+        if len(self.index.names) == 1:
+            # Cadence is typically level 0 and datetimes levels 1+
+            level = 0
+
+        if label in index.names:
+            index = index.droplevel(label)
+
+        time = index.get_level_values(level)
+        if t0:
+            time = time - t0
+        else:
+            time = time - time.min()
+
+        phase = time % period / period
+        indices = index.to_frame()
+        indices[label] = phase
+        indices.set_index(label, append=True, inplace=True)
+
+        if inplace:
+            newbatch = self
+        else:
+            newbatch = deepcopy(self)
+
+        newbatch.index = indices.index
+        newbatch._metadata.append(label)
+        setattr(newbatch, label, newbatch.index.get_level_values(level=label))
+        for val in newbatch.data.values():
+            val.index = indices.index
+        for val in newbatch.error.values():
+            val.index = indices.index
+
+        return newbatch
+
     @singledispatchmethod
     def __getitem__(self, key):
         pass
@@ -441,7 +497,7 @@ class Batch:
     def _(self, key: tuple):
         time_key = key[0]
         if len(key) not in [1, 2, 3]:
-            raise (IndexError, f"Cannot parse key with {len(key)} elements.")
+            raise KeyError(f"Cannot parse key with {len(key)} elements.")
 
         new_data = {
             data_key + f"{key}": data[key]
@@ -482,9 +538,15 @@ class Batch:
 
         return self._build_instance(new_data, new_error, **new_kwargs)
 
-    @classmethod
-    def _build_instance(cls, newdata, newerror, **kwargs):
-        return cls(newdata, newerror, **kwargs)
+    @property
+    def user_kwargs(self):
+        """Keywords passed by the user"""
+        return {key: getattr(self, key, None) for key in self._user_kwargs}
+
+    def _build_instance(self, newdata, newerror, **kwargs):
+        all_kwargs = self.user_kwargs.copy()
+        all_kwargs.update(**kwargs)
+        return self.__class__(newdata, newerror, **all_kwargs)
 
     def __repr__(self):
         if hasattr(self, "data"):

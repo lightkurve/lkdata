@@ -12,16 +12,20 @@ from .mixins import (
     StatsMixin,
     MathMixin,
     ErrorStatsMixin,
-    PlotMixin,
     AggMixin,
     ConvenienceMixins,
 )
-from .meta import CubeMeta
 
 log = logging.getLogger()
 
 
-class Cube(ABC, pd.DataFrame, MathMixin, PlotMixin, AggMixin, ConvenienceMixins):
+class Cube(
+    ABC,
+    MathMixin,
+    AggMixin,
+    ConvenienceMixins,
+    pd.DataFrame,
+):
     """Abstract dataclass for cube-like data with time, row, and column axes"""
 
     ntime = None
@@ -29,6 +33,7 @@ class Cube(ABC, pd.DataFrame, MathMixin, PlotMixin, AggMixin, ConvenienceMixins)
     ncol = None
     row_names = None
     col_names = None
+    _user_kwargs = None
 
     def __init__(
         self,
@@ -38,22 +43,28 @@ class Cube(ABC, pd.DataFrame, MathMixin, PlotMixin, AggMixin, ConvenienceMixins)
         col_indices: dict | list = None,
         **kwargs,
     ):
+        # For pandas DataFrames subclasses, new properties must
+        # be included in the _metadata list
         self._metadata = []
+        self._user_kwargs = []
 
-        self.ntime = kwargs.get("ntime", None)
         self.nrow = kwargs.get("nrow", None)
         self.ncol = kwargs.get("ncol", None)
         index = kwargs.get("index", None)
         columns = kwargs.get("columns", None)
-        data = self._preprocess_data(data)
 
+        for key, val in kwargs.items():
+            if key not in ("ntime", "nrow", "ncol", "index", "columns"):
+                self._user_kwargs.append(key)
+                self._metadata.append(key)
+                setattr(self, key, val)
         index = self._parse_index(index, time_indices)
         columns = self._parse_columns(columns, row_indices, col_indices)
+        data = self._preprocess_data(data)
 
         super().__init__(data, index=index, columns=columns)
         self._include_convenience_index()
         self._include_convenience_columns()
-        self._include_convenience_meta(**kwargs)
 
     def _preprocess_data(self, data):
         data = np.array(data)
@@ -188,7 +199,7 @@ class Cube(ABC, pd.DataFrame, MathMixin, PlotMixin, AggMixin, ConvenienceMixins)
             for i in zip(self.index.names, self.index[cadence]):
                 if i[0] == "cadences":
                     strlabel = f"{i[0]}: {i[1]}"
-                elif "cadence" in i[0]:
+                elif ("cadence" in i[0]) or ("index" in i[0]):
                     strlabel = f"{i[0]}: {int(np.floor(i[1]))}"
                 else:
                     strlabel = f"{i[0]}: {i[1]:0.3f}"
@@ -236,10 +247,6 @@ class Cube(ABC, pd.DataFrame, MathMixin, PlotMixin, AggMixin, ConvenienceMixins)
         )
         return out
 
-    @classmethod
-    def _build_instance(cls, new, **kwargs):
-        return cls(new, ntime=len(new), **kwargs)
-
     def _repr_html_(self):
         if hasattr(self, "_styler"):
             out0 = self.styler
@@ -261,11 +268,20 @@ class Cube(ABC, pd.DataFrame, MathMixin, PlotMixin, AggMixin, ConvenienceMixins)
             {out0.to_html(max_rows=11, max_columns=11)}
             """
 
+    @property
+    def ntime(self):
+        return self.shape[0]
+
     def __repr__(self):
         return f"Cube {self.ntime, self.nrow, self.ncol}"
 
     def __str__(self):
         return self.__repr__()
+
+    def __deepcopy__(self, *args, **kwargs):
+        return self._build_instance(
+            self.to_array(), index=self.index, columns=self.columns, **self.user_kwargs
+        )
 
     @singledispatchmethod
     def __getitem__(self, key):
@@ -278,10 +294,9 @@ class Cube(ABC, pd.DataFrame, MathMixin, PlotMixin, AggMixin, ConvenienceMixins)
             self.iloc[key],
             nrow=self.nrow,
             ncol=self.ncol,
-            index=self.index[key],
-            columns=self.columns,
             row_indices={name: None for name in self.row_names},
             col_indices={name: None for name in self.col_names},
+            **self.user_kwargs,
         )
 
     @__getitem__.register
@@ -291,8 +306,7 @@ class Cube(ABC, pd.DataFrame, MathMixin, PlotMixin, AggMixin, ConvenienceMixins)
             self.iloc[np.atleast_1d(key)],
             nrow=self.nrow,
             ncol=self.ncol,
-            index=self.index[np.atleast_1d(key)],
-            columns=self.columns,
+            **self.user_kwargs,
         )
 
     @__getitem__.register
@@ -310,12 +324,13 @@ class Cube(ABC, pd.DataFrame, MathMixin, PlotMixin, AggMixin, ConvenienceMixins)
                 self.iloc[time],
                 nrow=self.nrow,
                 ncol=self.ncol,
-                index=self.index[time],
-                columns=self.columns,
+                **self.user_kwargs,
             )
         # If only two things passed
         if len(key) == 2:
-            if isinstance(key[1], slice):
+            if isinstance(key[1], int):
+                return DataSeries(self.iloc[time, key[1]], **self.user_kwargs)
+            elif isinstance(key[1], slice):
                 row = key[1]
                 col = slice(self.ncol + 1)
             elif np.ndim(key[1]) == 2:
@@ -325,7 +340,7 @@ class Cube(ABC, pd.DataFrame, MathMixin, PlotMixin, AggMixin, ConvenienceMixins)
                 # aper = Cube.sum(axis=1) > 10000
                 # Cube[:, aper]
                 # needs to become frame of time-series
-                return self[time].to_dataframe(*np.where(aperture))
+                return self[time].to_dataframe(*np.where(aperture), **self.user_kwargs)
 
             elif len(key[1]) == self.ncol * self.nrow:
                 # Passed an aperture with shape(nrow*ncol)
@@ -338,40 +353,80 @@ class Cube(ABC, pd.DataFrame, MathMixin, PlotMixin, AggMixin, ConvenienceMixins)
                     self.iloc[time, key[1]],
                     nrow=nrow,
                     ncol=ncol,
-                    index=self.index[time],
-                    columns=self.columns[key[1]],
+                    **self.user_kwargs,
                 )
 
         if len(key) == 3:
             row, col = key[1], key[2]
 
         # To be a a 3D dataset needs to pass slices or integers as row/column
-        if (not isinstance(row, (slice))) | (not isinstance(col, (slice))):
-            return self[time].to_dataframe(row, col)
+        if isinstance(row, int) & isinstance(col, int):
+            _, _, series = self._convert_to_series_index(row, col)
+            return DataSeries(self.iloc[time, int(series[0])], **self.user_kwargs)
+        elif (not isinstance(row, (slice))) | (not isinstance(col, (slice))):
+            return self[time].to_dataframe(row, col, **self.user_kwargs)
         elif (isinstance(row, slice) & (row.step not in [None, 1])) | (
             isinstance(col, slice) & (col.step not in [None, 1])
         ):
-            return self[time].to_dataframe(row, col)
+            return self[time].to_dataframe(row, col, **self.user_kwargs)
 
         nrow, ncol, series_index = self._convert_to_series_index(row, col)
         return self.__class__.from_pandas(
             self.iloc[time, series_index],
             nrow=nrow,
             ncol=ncol,
-            index=self.index[time],
-            columns=self.columns[series_index],
+            **self.user_kwargs,
         )
 
-    @property
-    def meta(self):
-        return CubeMeta(self)
+    def describe_cube(self, **printoptions):
+        """Print a description of the Cube instance.
+
+        This description prints information about the temporal and spatial
+        indices available in the Cube. It also prints out any additional
+        user-assigned properties given via the kwargs on initialization.
+        """
+        printoptions["linewidth"] = printoptions.get("linewidth", 79)
+        printoptions["edgeitems"] = printoptions.get("edgeitems", 2)
+        printoptions["threshold"] = printoptions.get("threshold", 20)
+        with np.printoptions(**printoptions):
+            max_name_len = max(map(len, self._metadata))
+            print(repr(self) + " (ntime, nrow, ncol)")
+            print()
+            print("Time indices available: " + str(self.index.names))
+            for key in self.index.names:
+                print(
+                    f"\t{key.ljust(max_name_len+1)}:\t{getattr(self, key, 'Not Defined')}"
+                )
+            print()
+            print(f"Number of unique 'series': {len(self.series)}")
+            print()
+            print("Row names: " + str(self.row_names))
+            for key in self.row_names:
+                print(
+                    f"\t{key.ljust(max_name_len+1)}:\t{getattr(self, key, 'Not Defined')}"
+                )
+            print()
+            print("Column names: " + str(self.col_names))
+            for key in self.col_names:
+                print(
+                    f"\t{key.ljust(max_name_len+1)}:\t{getattr(self, key, 'Not Defined')}"
+                )
+            print()
+            print("User defined attributes accessible via `object.key`")
+            print("(displaying only unique values)")
+            for key in self._user_kwargs:
+                print(
+                    f'\t{key.ljust(max_name_len+1)}:\t{getattr(self, key, "Not defined")}'
+                )
 
     @property
     def nseries(self):
+        """Total number of time series contained in the cube"""
         return self.ncol * self.nrow
 
     @property
     def units(self):
+        """Data units, if any"""
         return self._flux_units
 
     @units.setter
@@ -381,15 +436,17 @@ class Cube(ABC, pd.DataFrame, MathMixin, PlotMixin, AggMixin, ConvenienceMixins)
 
     @property
     def styler(self):
+        """The pandas.DataFrame styler for single cadence frames."""
         if hasattr(self, "_styler"):
             return self._styler
         return None
 
     @styler.setter
-    def styler(self, input: Styler):
-        self._styler = input
+    def styler(self, val: Styler):
+        self._styler = val
 
     def stats_post_process(self, result, **kwargs):
+        """Statistics post processer to format return data."""
         if kwargs.get("axis") in [0, "time"]:
             return result.to_numpy().reshape(self.nrow, self.ncol)
         elif kwargs.get("axis") in [1, "series"]:
@@ -415,11 +472,13 @@ class Cube(ABC, pd.DataFrame, MathMixin, PlotMixin, AggMixin, ConvenienceMixins)
             A Frame object of the same type as the input data, either
             DataFrame or ErrorFrame.
         """
-        _, _, series_index = self._convert_to_series_index(row, col)
+        nrow, ncol, series_index = self._convert_to_series_index(row, col)
         return self._frame_class(
             self.iloc[:, series_index],
             index=self.index,
             columns=self.columns[series_index],
+            nrow=nrow,
+            ncol=ncol,
             **kwargs,
         )
 
@@ -435,19 +494,21 @@ class Cube(ABC, pd.DataFrame, MathMixin, PlotMixin, AggMixin, ConvenienceMixins)
         return data_array
 
     @classmethod
-    def from_pandas(cls, data: pd.DataFrame, nrow: int, ncol: int, **kwargs):
+    def from_pandas(cls, data: pd.DataFrame, **kwargs):
         """Convert a pd.DataFrame to a DataCube
 
         Notes:
         This assumes no multi-indexing in the pandas dataframe.
         """
-        return cls(data.to_numpy(), ntime=len(data), nrow=nrow, ncol=ncol, **kwargs)
+        return cls(data.to_numpy(), index=data.index, columns=data.columns, **kwargs)
 
 
 class DataCube(
     Cube,
     StatsMixin,
 ):
+    """A Cube object which contains data with time and 2 spatial dimensions."""
+
     _frame_class = DataFrame
     _series_class = DataSeries
     _pd_class = pd.DataFrame
@@ -460,68 +521,11 @@ class ErrorCube(
     Cube,
     ErrorStatsMixin,
 ):
+    """A Cube object which contains errors with time and 2 spatial dimensions."""
+
     _frame_class = ErrorFrame
     _series_class = ErrorSeries
     _pd_class = pd.DataFrame
 
     def __repr__(self):
         return f"📕 ErrorCube {self.ntime, self.nrow, self.ncol}"
-
-
-class MaskedCube(DataCube):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-
-class FluxCube:
-    def __init__(self, data, error, **kwargs):
-        self.data = DataCube(data, **kwargs)
-        self.error = ErrorCube(error, **kwargs)
-        self.kwargs = kwargs
-
-    @staticmethod
-    def applyfunc(obj, func, *args, **kwargs):
-        func = getattr(obj, func)
-        return func(*args, **kwargs)
-
-    @classmethod
-    def _build_fc_instance(cls, newdata, newerror, **kwargs):
-        return cls(newdata, newerror, **kwargs)
-
-    def __getattr__(self, attr, *args, **kwargs):
-        if "_repr_" in attr:
-            pass
-        else:
-            data_attr = getattr(self.data, attr)
-            error_attr = getattr(self.error, attr)
-            if callable(data_attr):
-
-                def func(*args, **kwargs):
-                    data_ret = data_attr(*args, **kwargs)
-                    error_ret = error_attr(*args, **kwargs)
-                    if isinstance(data_ret, self.data.__class__):
-                        new = self._build_fc_instance(
-                            data_ret.to_array(), error_ret.to_array(), **data_ret.meta
-                        )
-                        return new
-                    else:
-                        return (data_attr(*args, **kwargs), error_attr(*args, **kwargs))
-
-                return func
-
-            elif hasattr(data_attr, "__iter__"):
-                if all(data_attr == error_attr):
-                    return data_attr
-                else:
-                    return (data_attr, error_attr)
-            elif data_attr == error_attr:
-                return data_attr
-            return (data_attr, error_attr)
-
-    def __repr__(self):
-        return f"{self.data.__repr__()}, {self.error.__repr__()}"
-
-    def _repr_html_(self):
-        return self.data._repr_html_().replace(
-            self.data.__repr__(), self.data.__repr__() + ", " + self.error.__repr__()
-        )

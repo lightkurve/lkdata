@@ -1,5 +1,6 @@
 """Classes and tools for working with 3 dimensional data."""
 from functools import singledispatchmethod
+from abc import ABC
 from collections.abc import Iterable
 import logging
 import numpy as np
@@ -10,7 +11,6 @@ from .mixins import (
     StatsMixin,
     MathMixin,
     ErrorStatsMixin,
-    PlotMixin,
     AggMixin,
     ConvenienceMixins,
 )
@@ -18,22 +18,41 @@ from .mixins import (
 log = logging.getLogger()
 
 
-class DataFrame(
-    StatsMixin, MathMixin, AggMixin, PlotMixin, ConvenienceMixins, pd.DataFrame
+class Frame(
+    ABC,
+    MathMixin,
+    AggMixin,
+    ConvenienceMixins,
+    pd.DataFrame,
 ):
+    """Abstract dataclass for frame-like data with time and multiple series"""
+
+    _pd_class = pd.DataFrame
+    row_names = None
+    col_names = None
+    _user_kwargs = None
+
     def __init__(self, *args, **kwargs):
+        self._user_kwargs = []
+        for key, val in kwargs.items():
+            if key not in ("ntime", "index", "columns"):
+                self._metadata.append(key)
+                setattr(self, key, val)
+                if key not in ("nrow", "ncol"):
+                    self._user_kwargs.append(key)
+
+        for key in self._metadata:
+            kwargs.pop(key, None)
         pd.DataFrame.__init__(self, *args, **kwargs)
         self.__post_init__()
 
     @property
     def nseries(self):
+        """Number of series in the DataFrame"""
         return self.shape[1]
 
-    def __repr__(self):
-        return f"🟦 DataFrame {self.shape}"
-
     def _repr_html_(self):
-        return self.__repr__() + super()._repr_html_()
+        return repr(self) + super()._repr_html_()
 
     def __post_init__(self):
         def make_pixelseries(result):
@@ -58,26 +77,8 @@ class DataFrame(
 
     @property
     def ntime(self):
+        """Number of time frames"""
         return self.shape[0]
-
-    @staticmethod
-    def from_pandas(data, **kwargs):
-        """Convert a pd.DataFrame to a DataFrame"""
-        return DataFrame(data, **kwargs)
-
-    def _build_instance(self, new, **kwargs):
-        return self.__class__(new, **kwargs)
-
-    def to_array(self):
-        return self.to_numpy()
-
-    @property
-    def _series_class(self):
-        return DataSeries
-
-    @property
-    def _pd_class(self):
-        return pd.DataFrame
 
     @singledispatchmethod
     def __getitem__(self, key):
@@ -86,7 +87,10 @@ class DataFrame(
     @__getitem__.register
     def _(self, key: int | Iterable | slice):
         return self.__class__.from_pandas(
-            self.iloc[key], index=self.index[key], columns=self.columns
+            self.iloc[key],
+            index=self.index[key],
+            columns=self.columns,
+            **self.user_kwargs,
         )
 
     @__getitem__.register
@@ -96,21 +100,38 @@ class DataFrame(
             series_index = np.arange(self.nseries)[key[1]]
         elif isinstance(key[1], Iterable):
             series_index = key[1]
+        else:
+            return self._series_class(
+                self.iloc[time_key, key[1]],
+                index=self.index[time_key],
+                **self.user_kwargs,
+            )
 
         return self.__class__.from_pandas(
             self.iloc[time_key, series_index],
             index=self.index[time_key],
             columns=self.columns[series_index],
+            **self.user_kwargs,
         )
 
 
-class ErrorFrame(ErrorStatsMixin, DataFrame):
+class DataFrame(Frame, StatsMixin):
+    _series_class = DataSeries
+
+    def __repr__(self):
+        return f"🟦 DataFrame {self.shape}"
+
+    @staticmethod
+    def from_pandas(data, **kwargs):
+        """Convert a pd.DataFrame to a DataFrame"""
+        return DataFrame(data, **kwargs)
+
+
+class ErrorFrame(Frame, ErrorStatsMixin):
+    _series_class = ErrorSeries
+
     def __repr__(self):
         return f"🟥 ErrorFrame {self.shape}"
-
-    @property
-    def _series_class(self):
-        return ErrorSeries
 
     @staticmethod
     def from_pandas(data, **kwargs):

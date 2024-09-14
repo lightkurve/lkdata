@@ -1,13 +1,13 @@
-"""Classes and tools for working with 3 dimensional data."""
+"""Classes and tools for working with 1 dimensional data."""
 
 import logging
+from abc import ABC
 import pandas as pd
 
 from .mixins import (
     StatsMixin,
     MathMixin,
     ErrorStatsMixin,
-    PlotMixin,
     AggMixin,
     ConvenienceMixins,
 )
@@ -15,15 +15,29 @@ from .mixins import (
 log = logging.getLogger()
 
 
-class DataSeries(
-    StatsMixin, MathMixin, AggMixin, PlotMixin, ConvenienceMixins, pd.Series
+class Series(
+    ABC,
+    MathMixin,
+    AggMixin,
+    ConvenienceMixins,
+    pd.Series,
 ):
+    """Abstract dataclass for series-like data with time and data"""
+
+    _pd_class = pd.Series
+    _user_kwargs = None
+
     def __init__(self, *args, **kwargs):
+        self._user_kwargs = []
+        for key, val in kwargs.items():
+            if key not in ("ntime", "index"):
+                self._user_kwargs.append(key)
+                self._metadata.append(key)
+                setattr(self, key, val)
+        for key in self._user_kwargs:
+            kwargs.pop(key)
         super().__init__(*args, **kwargs)
         self.__post_init__()
-
-    def _lk_repr(self):
-        return f"📉 DataSeries {self.shape}\n"
 
     def __repr__(self):
         return self._lk_repr() + super().__repr__()
@@ -37,29 +51,23 @@ class DataSeries(
 
     @property
     def ntime(self):
+        """Number of cadences in the data."""
         return self.shape[0]
 
-    @staticmethod
-    def from_pandas(data, **kwargs):
-        """Convert a pd.DataFrame to a DataFrame"""
-        return DataSeries(data, **kwargs)
-
-    def _build_instance(self, new, **kwargs):
-        return self.__class__(new, **kwargs)
-
-    def to_array(self):
-        return self.to_numpy()
-
-    @property
-    def _pd_class(self):
-        return pd.Series
+    @classmethod
+    def from_pandas(cls, data, **kwargs):
+        """Convert a pd.Series to a DataSeries"""
+        return cls(data, **kwargs)
 
 
-class ErrorSeries(ErrorStatsMixin, DataSeries):
+class DataSeries(Series, StatsMixin):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def _lk_repr(self):
+        return f"📉 DataSeries {self.shape}\n"
+
+
+class ErrorSeries(Series, ErrorStatsMixin):
     def _lk_repr(self):
         return f"📈 ErrorSeries {self.shape}\n"
-
-    @staticmethod
-    def from_pandas(data, **kwargs):
-        """Convert a pd.DataFrame to a DataFrame"""
-        return ErrorSeries(data, **kwargs)
