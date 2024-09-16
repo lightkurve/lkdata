@@ -200,6 +200,10 @@ class ProductBundle(dict, DataProcessorMixin):
         val = self.process_input(val)
         self._data_types[key] = type(val)
         dict.__setitem__(self, key, val)
+        if not hasattr(self, "index"):
+            setattr(self, "index", val.index)
+        if not hasattr(self, "ntime"):
+            setattr(self, "ntime", val.ntime)
 
     def update(self, *args, **kwargs):
         for k, v in dict(*args, **kwargs).items():
@@ -321,6 +325,8 @@ class Batch:
             else:
                 self.data = DataProducts(data, **kwargs)
             self._data_types.update(self.data._data_types)
+        else:
+            self.data = DataProducts(**kwargs)
 
         if error is not None:
             if isinstance(error, ErrorProducts):
@@ -328,7 +334,8 @@ class Batch:
             else:
                 self.error = ErrorProducts(error, **kwargs)
             self._data_types.update(self.error._data_types)
-
+        else:
+            self.error = ErrorProducts(**kwargs)
         self._set_attrs()
 
     def _set_attrs(self):
@@ -422,6 +429,7 @@ class Batch:
         inplace: bool = False,
         label: str = "phase",
     ):
+        """Phase fold all data products."""
         index = deepcopy(self.index)
         if len(self.index.names) == 1:
             # Cadence is typically level 0 and datetimes levels 1+
@@ -447,7 +455,6 @@ class Batch:
             newbatch = deepcopy(self)
 
         newbatch.index = indices.index
-        newbatch._metadata.append(label)
         setattr(newbatch, label, newbatch.index.get_level_values(level=label))
         for val in newbatch.data.values():
             val.index = indices.index
@@ -455,6 +462,31 @@ class Batch:
             val.index = indices.index
 
         return newbatch
+
+    def _batch_wrapper(self, func):
+        def new_func(*args, **kwargs):
+            newdata = dict(deepcopy(self.data))
+            newerror = dict(deepcopy(self.error))
+            for key, val in newdata.items():
+                obj_func = getattr(val, func)
+                newdata[key] = obj_func(*args, **kwargs)
+
+            for key, val in newerror.items():
+                obj_func = getattr(val, func)
+                newerror[key] = obj_func(*args, **kwargs)
+            return self._build_instance(newdata, newerror)
+
+        return new_func
+
+    def downsample(self, nframes: int = 5, level: str | int = -1):
+        """Downsample all contained data and error products."""
+        downsample = self._batch_wrapper("downsample")
+        return downsample(nframes, level)
+
+    def droplevel(self, level, axis=0):
+        """Drop a given level from the index."""
+        droplevel = self._batch_wrapper("droplevel")
+        return droplevel(level, axis)
 
     @singledispatchmethod
     def __getitem__(self, key):

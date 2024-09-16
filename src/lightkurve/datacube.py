@@ -58,9 +58,10 @@ class Cube(
                 self._user_kwargs.append(key)
                 self._metadata.append(key)
                 setattr(self, key, val)
+
+        data = self._preprocess_data(data)
         index = self._parse_index(index, time_indices)
         columns = self._parse_columns(columns, row_indices, col_indices)
-        data = self._preprocess_data(data)
 
         super().__init__(data, index=index, columns=columns)
         self._include_convenience_index()
@@ -68,6 +69,7 @@ class Cube(
 
     def _preprocess_data(self, data):
         data = np.array(data)
+        self._set_dim("ntime", data.shape[0])
         log.info("data.ndim = %s, data.shape= %s", data.ndim, data.shape)
         if data.ndim == 2:
             if (self.nrow is None) | (self.ncol is None):
@@ -77,12 +79,11 @@ class Cube(
                 """
                 )
         elif data.ndim == 3:
-            self._set_dim("ntime", data.shape[0])
             self._set_dim("nrow", data.shape[1])
             self._set_dim("ncol", data.shape[2])
             data = np.hstack(data.transpose([1, 0, 2]))
         else:
-            raise ValueError("""Dimension of given data not interpretable as a cube""")
+            raise ValueError("""Dimension of given data not interpretable as a Cube""")
         return data
 
     def _set_dim(self, attr, val):
@@ -267,10 +268,6 @@ class Cube(
             {repr(self)}
             {out0.to_html(max_rows=11, max_columns=11)}
             """
-
-    @property
-    def ntime(self):
-        return self.shape[0]
 
     def __repr__(self):
         return f"Cube {self.ntime, self.nrow, self.ncol}"
