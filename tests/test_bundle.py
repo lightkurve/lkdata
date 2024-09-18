@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from lightkurve.bundle import DataProcessorMixin, DataProducts, ErrorProducts, Batch
+from lightkurve.bundle import DataProcessorMixin, DataProducts, ErrorProducts, DataSet
 from lightkurve.datacube import DataCube, ErrorCube
 from lightkurve.dataframe import DataFrame, ErrorFrame
 from lightkurve.dataseries import DataSeries, ErrorSeries
@@ -93,14 +93,14 @@ class TestBatch(unittest.TestCase):
         self.error = np.array([[0.1, 0.2], [0.3, 0.4]])
 
     def test_init(self):
-        batch = Batch(self.data, self.error)
+        batch = DataSet(self.data, self.error)
         self.assertIsInstance(batch.data, DataProducts)
         self.assertIsInstance(batch.error, ErrorProducts)
 
     def test_cubes_property(self):
         cube_data = np.array([[[1, 2], [3, 4]]])
         cube_error = np.array([[[0.1, 0.2], [0.3, 0.4]]])
-        batch = Batch(
+        batch = DataSet(
             {"data_cube": DataCube(cube_data)}, {"error_cube": ErrorCube(cube_error)}
         )
         cubes = batch.cubes
@@ -110,7 +110,7 @@ class TestBatch(unittest.TestCase):
         self.assertIsInstance(cubes["error_cube"], ErrorCube)
 
     def test_frames_property(self):
-        batch = Batch(
+        batch = DataSet(
             {"data_frame": DataFrame(self.data)},
             {"error_frame": ErrorFrame(self.error)},
         )
@@ -123,7 +123,7 @@ class TestBatch(unittest.TestCase):
     def test_series_property(self):
         series_data = np.array([1, 2, 3, 4])
         series_error = np.array([0.1, 0.2, 0.3, 0.4])
-        batch = Batch(
+        batch = DataSet(
             {"data_series": DataSeries(series_data)},
             {"error_series": ErrorSeries(series_error)},
         )
@@ -134,24 +134,24 @@ class TestBatch(unittest.TestCase):
         self.assertIsInstance(series["error_series"], ErrorSeries)
 
     def test_getitem_string(self):
-        batch = Batch({"data": self.data}, {"error": self.error})
+        batch = DataSet({"data": self.data}, {"error": self.error})
         self.assertIsInstance(batch["data"], DataFrame)
         self.assertIsInstance(batch["error"], ErrorFrame)
 
     def test_getitem_slice(self):
-        batch = Batch({"data": self.data}, {"error": self.error})
+        batch = DataSet({"data": self.data}, {"error": self.error})
         sliced_batch = batch[0:1]
-        self.assertIsInstance(sliced_batch, Batch)
+        self.assertIsInstance(sliced_batch, DataSet)
         np.testing.assert_array_equal(sliced_batch.data["data"], self.data[0:1])
         np.testing.assert_array_equal(sliced_batch.error["error"], self.error[0:1])
 
     def test_getitem_invalid_key(self):
-        batch = Batch({"data": self.data}, {"error": self.error})
+        batch = DataSet({"data": self.data}, {"error": self.error})
         with self.assertRaises(ValueError):
             batch["invalid_key"]
 
     def test_repr(self):
-        batch = Batch({"data": self.data}, {"error": self.error})
+        batch = DataSet({"data": self.data}, {"error": self.error})
         repr_str = repr(batch)
         self.assertIn("data", repr_str)
         self.assertIn("error", repr_str)

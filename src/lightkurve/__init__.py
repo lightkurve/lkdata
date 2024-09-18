@@ -49,9 +49,11 @@ def get_logger():
 
 
 from .version import __version__  # noqa: E402, F401
-from .datacube import *  # noqa: F403, E402
-from .dataframe import *  # noqa: F403, E402
-from .dataseries import *  # noqa: F403, E402
-from .periodogram import *  # noqa: F403, E402
-from .time import *  # noqa: F403, E402
-from .meta import *  # noqa: F403, E402
+from .datacube import DataCube, ErrorCube  # noqa: F403, E402
+from .dataframe import DataFrame, ErrorFrame  # noqa: F403, E402
+from .dataseries import DataSeries, ErrorSeries  # noqa: F403, E402
+from .dataset import DataSet  # noqa: E402
+
+lkDataTypes = DataCube | DataFrame | DataSeries
+lkErrorTypes = ErrorCube | ErrorFrame | ErrorSeries
+lkTypes = lkDataTypes | lkErrorTypes | DataSet

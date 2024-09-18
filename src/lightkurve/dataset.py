@@ -8,13 +8,10 @@ from warnings import warn
 
 import numpy as np
 
+from . import lkDataTypes, lkErrorTypes, lkTypes
 from .datacube import DataCube, ErrorCube
 from .dataframe import DataFrame, ErrorFrame
 from .dataseries import DataSeries, ErrorSeries
-
-lkDataTypes = DataCube | DataFrame | DataSeries
-lkErrorTypes = ErrorCube | ErrorFrame | ErrorSeries
-lkTypes = lkDataTypes | lkErrorTypes
 
 
 class DataProcessorMixin:
@@ -209,6 +206,10 @@ class ProductBundle(dict, DataProcessorMixin):
         for k, v in dict(*args, **kwargs).items():
             self[k] = v
 
+    def apply(self, func):
+        mod = {key: func(val) for key, val in self.items()}
+        return self.__class__(mod)
+
     @singledispatchmethod
     def __getitem__(self, key):
         pass
@@ -231,7 +232,7 @@ class ProductBundle(dict, DataProcessorMixin):
 
 class DataProducts(ProductBundle):
     """
-    A class for managing and processing data products.
+    A dict-like class for managing and processing data products.
 
     This class inherits from ProductBundle and is specifically designed to handle
     data (as opposed to error) products. It provides a container for various types
@@ -260,7 +261,7 @@ class DataProducts(ProductBundle):
 
 class ErrorProducts(ProductBundle):
     """
-    A class for managing and processing error products.
+    A dict-like class for managing and processing error products.
 
     This class inherits from ProductBundle and is specifically designed to handle
     error (as opposed to data) products. It provides a container for various types
@@ -287,8 +288,31 @@ class ErrorProducts(ProductBundle):
         super().__init__(error)
 
 
-class Batch:
-    """Class to group related data and error products for batch processing."""
+class DataSet:
+    """Class to group related data and error products for batch processing.
+
+    Parameters
+    ----------
+    data : Iterable | lkDataTypes | DataProducts | Dict[str, (Iterable | lkDataTypes)]
+        Data which sums linearly. Providing a dictionary
+        of lightkurve data products (DataCube, DataFrame, DataSeries) is recommended.
+        However, a singular array-like or a dictionary of array-like data may
+        be given and will be converted into the corresponding lkDataType based
+        on the shape of the data.
+
+    error : Iterable | lkErrorTypes | ErrorProducts | Dict[str, (Iterable | lkErrorTypes)]
+        Data which sums in quadrature. Providing a dictionary of lightkurve
+        error products (ErrorCube, ErrorFrame, ErrorSeries) is recommended.
+        However, a singular array-like or a dictionary of array-like data may
+        be given and will be converted into the corresponding lkErrorType based
+        on the shape of the data.
+
+    Returns
+    -------
+    DataSet
+        A dict-like object containing related data and error products which
+        may be manipulated and analyzed simultaneously.
+    """
 
     _user_kwargs = None
     index = None
@@ -296,18 +320,14 @@ class Batch:
     def __init__(
         self,
         data: (
-            list
-            | np.ndarray
-            | lkDataTypes
-            | DataProducts
-            | Dict[str, (list | np.ndarray | lkDataTypes)]
+            Iterable | lkDataTypes | DataProducts | Dict[str, (Iterable | lkDataTypes)]
         ) = None,
         error: (
             list
             | np.ndarray
             | lkErrorTypes
             | ErrorProducts
-            | Dict[str, (list | np.ndarray | lkErrorTypes)]
+            | Dict[str, (Iterable | lkErrorTypes)]
         ) = None,
         **kwargs,
     ):
