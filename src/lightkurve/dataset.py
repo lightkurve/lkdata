@@ -8,10 +8,13 @@ from warnings import warn
 
 import numpy as np
 
-from . import lkDataTypes, lkErrorTypes, lkTypes
 from .datacube import DataCube, ErrorCube
 from .dataframe import DataFrame, ErrorFrame
 from .dataseries import DataSeries, ErrorSeries
+
+lkDataTypes = DataCube | DataFrame | DataSeries
+lkErrorTypes = ErrorCube | ErrorFrame | ErrorSeries
+lkTypes = lkDataTypes | lkErrorTypes
 
 
 class DataProcessorMixin:
