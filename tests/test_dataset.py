@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from lightkurve.bundle import DataProcessorMixin, DataProducts, ErrorProducts, DataSet
+from lightkurve.dataset import DataProcessorMixin, DataProducts, ErrorProducts, DataSet
 from lightkurve.datacube import DataCube, ErrorCube
 from lightkurve.dataframe import DataFrame, ErrorFrame
 from lightkurve.dataseries import DataSeries, ErrorSeries

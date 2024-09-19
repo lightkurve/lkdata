@@ -82,7 +82,7 @@ def test_setup():
     assert df[:, :, 0].shape == (ntime, nrow)
 
     # DataFrame, should be series?
-    assert isinstance(df[:, 1, 0], DataFrame)
+    assert isinstance(df[:, 1, 0], DataSeries)
     assert df[:, 1, 0].ntime == ntime
     assert df[:, 1, 0].shape == (ntime, 1)
 
