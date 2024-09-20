@@ -118,6 +118,10 @@ class Frame(
 class DataFrame(Frame, StatsMixin):
     _series_class = DataSeries
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._set_stats_methods()
+
     def __repr__(self):
         return f"🟦 DataFrame {self.shape}"
 
@@ -129,6 +133,10 @@ class DataFrame(Frame, StatsMixin):
 
 class ErrorFrame(Frame, ErrorStatsMixin):
     _series_class = ErrorSeries
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._set_errstats_methods()
 
     def __repr__(self):
         return f"🟥 ErrorFrame {self.shape}"

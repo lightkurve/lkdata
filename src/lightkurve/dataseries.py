@@ -63,11 +63,16 @@ class Series(
 class DataSeries(Series, StatsMixin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._set_stats_methods()
 
     def _lk_repr(self):
         return f"📉 DataSeries {self.shape}\n"
 
 
 class ErrorSeries(Series, ErrorStatsMixin):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._set_errstats_methods()
+
     def _lk_repr(self):
         return f"📈 ErrorSeries {self.shape}\n"

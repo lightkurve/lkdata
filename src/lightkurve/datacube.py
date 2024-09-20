@@ -510,6 +510,10 @@ class DataCube(
     _series_class = DataSeries
     _pd_class = pd.DataFrame
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._set_stats_methods()
+
     def __repr__(self):
         return f"📘 DataCube {self.ntime, self.nrow, self.ncol}"
 
@@ -523,6 +527,10 @@ class ErrorCube(
     _frame_class = ErrorFrame
     _series_class = ErrorSeries
     _pd_class = pd.DataFrame
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._set_errstats_methods()
 
     def __repr__(self):
         return f"📕 ErrorCube {self.ntime, self.nrow, self.ncol}"

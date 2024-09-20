@@ -48,29 +48,27 @@ class StatsMixin:
 
     _stats_type = "data"
 
+    def _set_stats_methods(self):
+        for method_name in STATS_METHOD_NAMES:
+            setattr(self, method_name, self._create_stats_method(method_name))
+        for method_name in CUM_METHOD_NAMES:
+            setattr(self, method_name, self._create_cum_method(method_name))
 
-def _create_stats_method(method_name):
-    def _method(self, *args, **kwargs):
-        pandas_method = getattr(super(self._pd_class, self), method_name)
-        axis = kwargs.get("axis", 0)
-        return self.stats_post_process(pandas_method(*args, **kwargs), axis=axis)
+    def _create_stats_method(self, method_name):
+        def _method(*args, **kwargs):
+            pandas_method = getattr(super(self._pd_class, self), method_name)
+            axis = kwargs.get("axis", 0)
+            return self.stats_post_process(pandas_method(*args, **kwargs), axis=axis)
 
-    return _method
+        return _method
 
+    def _create_cum_method(self, method_name):
+        def _method(*args, **kwargs):
+            pandas_method = getattr(super(self._pd_class, self), method_name)
+            new = pandas_method(*args, **kwargs)
+            return self._build_instance(new.to_numpy())
 
-def _create_cum_method(method_name):
-    def _method(self, *args, **kwargs):
-        pandas_method = getattr(super(self._pd_class, self), method_name)
-        new = pandas_method(*args, **kwargs)
-        return self._build_instance(new.to_numpy())
-
-    return _method
-
-
-for method_name in STATS_METHOD_NAMES:
-    setattr(StatsMixin, method_name, _create_stats_method(method_name))
-for method_name in CUM_METHOD_NAMES:
-    setattr(StatsMixin, method_name, _create_cum_method(method_name))
+        return _method
 
 
 class ErrorStatsMixin:
@@ -90,11 +88,11 @@ class ErrorStatsMixin:
     def _cumsum(self, axis=0):
         return getattr(super(pd.DataFrame, self), "cumsum")(axis=axis)
 
-    def sum(self, axis=0):
+    def new_sum(self, axis=0):
         """Returns the standard error"""
         return self.stats_post_process((self**2)._sum(axis=axis) ** 0.5, axis=axis)
 
-    def std(self, axis=0):
+    def new_std(self, axis=0):
         if axis in [0, "time"]:
             n = self.ntime
             return self.stats_post_process(
@@ -109,18 +107,28 @@ class ErrorStatsMixin:
                 self._median(axis=axis) / (np.sqrt(2 * n)), axis=axis
             )
 
-    def mean(self, axis=0):
+    def new_mean(self, axis=0):
         if axis in [0, "time"]:
             n = self.ntime
         else:
             n = self.nseries
         return self.stats_post_process(self.sum(axis=axis) / n, axis=axis)
 
-    def median(self, axis=0):
+    def new_median(self, axis=0):
         return self.stats_post_process(self.mean(axis=axis), axis=axis)
 
-    def cumsum(self, axis=0):
+    def new_cumsum(self, axis=0):
         return self.stats_post_process((self**2)._cumsum(axis=axis) ** 0.5, axis=axis)
+
+    def _set_errstats_methods(self):
+        for method in (
+            "sum",
+            "std",
+            "mean",
+            "median",
+            "cumsum",
+        ):
+            setattr(self, method, getattr(self, "new_" + method))
 
 
 class MathMixin:

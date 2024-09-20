@@ -1,6 +1,20 @@
+# for uv
+[project]
+name = "lkdata"
+version = "0.1.0"
+description = "A friendly package for analysing TESS & Kepler time series data"
+authors = ["TESS Science Support Center <tesshelp@bigbang.gsfc.nasa.gov>"]
+license = "MIT"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.26.3",
+    "pandas[plot]>=2.1.4",
+]
+
 [tool.poetry]
-name = "lightkurve"
-version = "0.2.0"
+name = "lkdata"
+version = "0.1.0"
 description = "A friendly package for analysing TESS & Kepler time series data"
 authors = ["TESS Science Support Center <tesshelp@bigbang.gsfc.nasa.gov>"]
 license = "MIT"
@@ -9,8 +23,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = ">=3.10"
 numpy = "^1.26.3"
-rich = "^13.7.0"
-pandas = "^2.1.4"
+pandas = {version="^2.1.4", extras=["plot"]}
 
 
 [tool.poetry.group.dev.dependencies]

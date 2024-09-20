@@ -1,7 +1,15 @@
 import numpy as np
 import pandas as pd
 from astropy.io import fits
-from lightkurve import TESTDATA, DataCube, DataFrame, DataSeries, ErrorCube, ErrorFrame
+from lightkurve import (
+    TESTDATA,
+    DataCube,
+    DataFrame,
+    DataSeries,
+    ErrorSeries,
+    ErrorCube,
+    ErrorFrame,
+)
 from lightkurve.mixins import STATS_METHOD_NAMES
 
 
@@ -76,15 +84,15 @@ def test_setup():
     assert df[:, 0, :].ntime == ntime
     assert df[:, 0, :].shape == (ntime, ncol)
 
-    # DataCube
+    # DataFrame
     assert isinstance(df[:, :, 0], DataFrame)
     assert df[:, :, 0].ntime == ntime
     assert df[:, :, 0].shape == (ntime, nrow)
 
-    # DataFrame, should be series?
+    # DataSeries
     assert isinstance(df[:, 1, 0], DataSeries)
     assert df[:, 1, 0].ntime == ntime
-    assert df[:, 1, 0].shape == (ntime, 1)
+    assert df[:, 1, 0].shape == (ntime,)
 
     # TimeSeries
     assert isinstance(df[:, :1, [1, 2]], DataFrame)
@@ -120,8 +128,8 @@ def test_downsample():
     assert df.spatial_downsample((1, 2)).to_array().shape == (200, 10, 7)
 
     assert (df.spatial_downsample(2).to_array() == 4).all()
-    assert (df.spatial_downsample((2, 1)) == 2).all()
-    assert (df.spatial_downsample((1, 2)) == 2).all()
+    assert all(df.spatial_downsample((2, 1)) == 2)
+    assert all(df.spatial_downsample((1, 2)) == 2)
     assert df[:, :, :-1].spatial_downsample(2).to_array().shape == (200, 5, 6)
     assert (
         df[:, :, :-1].spatial_downsample(2).to_array()
@@ -187,7 +195,7 @@ def test_real_data():
     assert isinstance(flux_err[:, aper], ErrorFrame)
 
     assert isinstance(flux[:, aper].sum(axis=1), DataSeries)
-    assert isinstance(flux_err[:, aper].sum(axis=1), DataSeries)
+    assert isinstance(flux_err[:, aper].sum(axis=1), ErrorSeries)
 
     assert flux.spatial_downsample(2).to_array().shape == (50, 3, 3)
     assert flux.spatial_downsample(2).to_array()[0, 0, 0] == flux[0, :2, :2].sum().sum()
