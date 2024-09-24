@@ -7,7 +7,7 @@ from lkdata.utils import (
 
 
 def test_lightkurve_warning():
-    with pytest.warns(LightkurveWarning):
+    with pytest.raises(LightkurveWarning):
         raise LightkurveWarning("Test warning")
 
 
