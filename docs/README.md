@@ -1,6 +1,6 @@
-# Documentation Guide for `Lightkurve`
+# Documentation Guide for `Lightkurve`'s `lkdata`
 
-Welcome to the documentation guide for `Lightkurve`. This README will provide you with the guidelines and tools necessary to contribute to the project's documentation.
+Welcome to the documentation guide for `Lightkurve`'s `lkdata`. This README will provide you with the guidelines and tools necessary to contribute to the project's documentation.
 
 ## Writing Style
 

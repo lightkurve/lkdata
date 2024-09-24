@@ -1,9 +1,10 @@
 .. Lightkurve documentation master file, created by
    sphinx-quickstart on Thu Jan 11 11:36:35 2024.
+   Updated by Daniel Giles on Tue Sep 34 14:55 2024.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Lightkurve's documentation!
+Welcome to Lightkurve's lkdata documentation!
 ==================================
 
 .. toctree::

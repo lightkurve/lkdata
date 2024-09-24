@@ -17,7 +17,7 @@ import sys
 sys.path.insert(0, os.path.abspath("../../src"))
 
 
-project = "lightkurve"
+project = "lkdata"
 copyright = "2024, TESS Science Support Center"
 author = "TESS Science Support Center"
 
@@ -81,13 +81,10 @@ default_role = "py:obj"
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3/", None),
     "numpy": ("https://docs.scipy.org/doc/numpy/", None),
-    "scipy": ("https://docs.scipy.org/doc/scipy/reference", None),
-    "matplotlib": ("https://matplotlib.org", None),
     "pandas": ("https://pandas.pydata.org/pandas-docs/stable/", None),
-    "astropy": ("https://docs.astropy.org/en/latest/", None),
 }
 
 
 # rst_epilog = """
-# .. |version| replace:: 0.2.0
+# .. |version| replace:: 0.1.0
 # """

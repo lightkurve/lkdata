@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from astropy.io import fits
-from lightkurve import (
+from lkdata import (
     TESTDATA,
     DataCube,
     DataFrame,
@@ -10,7 +10,7 @@ from lightkurve import (
     ErrorCube,
     ErrorFrame,
 )
-from lightkurve.mixins import STATS_METHOD_NAMES
+from lkdata.mixins import STATS_METHOD_NAMES
 
 
 def test_setup():

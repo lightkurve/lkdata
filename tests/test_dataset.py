@@ -1,9 +1,9 @@
 import unittest
 import numpy as np
-from lightkurve.dataset import DataProcessorMixin, DataProducts, ErrorProducts, DataSet
-from lightkurve.datacube import DataCube, ErrorCube
-from lightkurve.dataframe import DataFrame, ErrorFrame
-from lightkurve.dataseries import DataSeries, ErrorSeries
+from lkdata.dataset import DataProcessorMixin, DataProducts, ErrorProducts, DataSet
+from lkdata.datacube import DataCube, ErrorCube
+from lkdata.dataframe import DataFrame, ErrorFrame
+from lkdata.dataseries import DataSeries, ErrorSeries
 
 
 class TestDataProcessor(unittest.TestCase):

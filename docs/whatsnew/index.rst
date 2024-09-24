@@ -7,4 +7,4 @@ This page shows what's changed in Lightkurve and captures the new features for o
 .. toctree::
    :maxdepth: 2
 
-   3.0
+   0.1.0
