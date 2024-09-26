@@ -5,6 +5,7 @@ from functools import singledispatchmethod
 import pandas as pd
 from pandas.io.formats.style import Styler
 import numpy as np
+from typing import Union, List, Dict, Optional
 
 from .dataframe import DataFrame, ErrorFrame
 from .dataseries import DataSeries, ErrorSeries
@@ -28,25 +29,25 @@ class Cube(
 ):
     """Abstract dataclass for cube-like data with time, row, and column axes"""
 
-    ntime = None
-    nrow = None
-    ncol = None
-    row_names = None
-    col_names = None
-    _user_kwargs = None
+    ntime: Optional[int] = None
+    nrow: Optional[int] = None
+    ncol: Optional[int] = None
+    row_names: Optional[List[str]] = None
+    col_names: Optional[List[str]] = None
+    _user_kwargs: Optional[List[str]] = None
 
     def __init__(
         self,
-        data: list | np.ndarray,
-        time_indices: dict | list = None,
-        row_indices: dict | list = None,
-        col_indices: dict | list = None,
+        data: Union[List, np.ndarray],
+        time_indices: Union[Dict, List, None] = None,
+        row_indices: Union[Dict, List, None] = None,
+        col_indices: Union[Dict, List, None] = None,
         **kwargs,
     ):
         # For pandas DataFrames subclasses, new properties must
         # be included in the _metadata list
-        self._metadata = []
-        self._user_kwargs = []
+        self._metadata: List[str] = []
+        self._user_kwargs: List[str] = []
 
         self.nrow = kwargs.get("nrow", None)
         self.ncol = kwargs.get("ncol", None)
@@ -284,8 +285,11 @@ class Cube(
     def __getitem__(self, key):
         pass
 
-    @__getitem__.register
-    def _(self, key: slice | np.ndarray | list | range):
+    @__getitem__.register(slice)
+    @__getitem__.register(np.ndarray)
+    @__getitem__.register(list)
+    @__getitem__.register(range)
+    def _(self, key):
         # Simple slice in time, results in DataCube
         return self.__class__.from_pandas(
             self.iloc[key],
@@ -452,20 +456,23 @@ class Cube(
             return result
 
     def to_dataframe(
-        self, row: int | float | list | slice, col: int | float | list | slice, **kwargs
-    ) -> DataFrame | ErrorFrame:
+        self,
+        row: Union[int, float, list, slice],
+        col: Union[int, float, list, slice],
+        **kwargs,
+    ) -> Union[DataFrame, ErrorFrame]:
         """Convert Cube to Frame with the given row and column indices.
 
         Parameters
         ----------
-        row : int | float | list | slice
+        row: Union[int, float, List[Union[int, float]], slice]
             Index/list of indices or slice of row indices to include.
-        col : int | float | list | slice
+        col: Union[int, float, List[Union[int, float]], slice]
             Index/list of indices or slice of column indices to include.
 
         Returns
         -------
-        DataFrame | ErrorFrame
+        Union[DataFrame, ErrorFrame]
             A Frame object of the same type as the input data, either
             DataFrame or ErrorFrame.
         """

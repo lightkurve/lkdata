@@ -1,18 +1,19 @@
 """Classes and tools for working with 3 dimensional data."""
-from functools import singledispatchmethod
+import logging
 from abc import ABC
 from collections.abc import Iterable
-import logging
+from functools import singledispatchmethod
+
 import numpy as np
 import pandas as pd
 
 from .dataseries import DataSeries, ErrorSeries
 from .mixins import (
-    StatsMixin,
-    MathMixin,
-    ErrorStatsMixin,
     AggMixin,
     ConvenienceMixins,
+    ErrorStatsMixin,
+    MathMixin,
+    StatsMixin,
 )
 
 log = logging.getLogger()
@@ -84,8 +85,10 @@ class Frame(
     def __getitem__(self, key):
         pass
 
-    @__getitem__.register
-    def _(self, key: int | Iterable | slice):
+    @__getitem__.register(int)
+    @__getitem__.register(Iterable)
+    @__getitem__.register(slice)
+    def _(self, key):
         return self.__class__.from_pandas(
             self.iloc[key],
             index=self.index[key],

@@ -1,6 +1,7 @@
 """Mixin methods and classes for lightkurve data objects"""
 import re
 from copy import deepcopy
+from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -209,7 +210,7 @@ class AggMixin:
 
         return wrap
 
-    def downsample(self, nframes: int = 5, level: int | str = -1):
+    def downsample(self, nframes: int = 5, level: Union[int, str] = -1):
         round_arr = self._set_precision(np.array)
         # Find the index to downsample on
         index = self.index.get_level_values(level=level)
@@ -629,7 +630,7 @@ class ConvenienceMixins:
         self,
         period: float,
         t0: float = None,
-        level: int | str = 1,
+        level: Union[int, str] = 1,
         inplace: bool = False,
         label: str = "phase",
     ):
@@ -643,7 +644,7 @@ class ConvenienceMixins:
         t0 : float, optional
             The time at which to start the first period, by default None and t0
             becomes the minimum value of the time array.
-        level : int|str, optional
+        level : Union[int, str], optional
             The index level on which to fold, by default 1, presumed to be the
             first time index that aren't cadences.
         inplace : bool, optional
@@ -653,7 +654,7 @@ class ConvenienceMixins:
 
         Returns
         -------
-        Cube|Frame|Series
+        Union[Cube, Frame, Series]
             Returns an object of the same type given.
         """
         indices = self._fold_index(period, t0, level, label)

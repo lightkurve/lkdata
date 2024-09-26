@@ -2,14 +2,15 @@
 
 import logging
 from abc import ABC
+
 import pandas as pd
 
 from .mixins import (
-    StatsMixin,
-    MathMixin,
-    ErrorStatsMixin,
     AggMixin,
     ConvenienceMixins,
+    ErrorStatsMixin,
+    MathMixin,
+    StatsMixin,
 )
 
 log = logging.getLogger()

@@ -12,9 +12,9 @@ from .datacube import DataCube, ErrorCube
 from .dataframe import DataFrame, ErrorFrame
 from .dataseries import DataSeries, ErrorSeries
 
-lkDataTypes = DataCube | DataFrame | DataSeries
-lkErrorTypes = ErrorCube | ErrorFrame | ErrorSeries
-lkTypes = lkDataTypes | lkErrorTypes
+lkDataTypes = Union[DataCube, DataFrame, DataSeries]
+lkErrorTypes = Union[ErrorCube, ErrorFrame, ErrorSeries]
+lkTypes = Union[lkDataTypes, lkErrorTypes]
 
 
 class DataProcessorMixin:
@@ -118,7 +118,7 @@ class DataProcessorMixin:
             The input data to be processed.
         Returns
         -------
-        (DataCube|DataFrame|DataSeries|ErrorCube|ErrorFrame|ErrorSeries)
+        Union[DataCube, DataFrame, DataSeries, ErrorCube, ErrorFrame, ErrorSeries]
             The processed data product.
 
         Raises
@@ -143,8 +143,13 @@ class DataProcessorMixin:
                 dictionary and use the `update` method."""
             ) from err
 
-    @process_input.register
-    def _(self, data_input: lkTypes):
+    @process_input.register(DataCube)
+    @process_input.register(DataFrame)
+    @process_input.register(DataSeries)
+    @process_input.register(ErrorCube)
+    @process_input.register(ErrorFrame)
+    @process_input.register(ErrorSeries)
+    def _(self, data_input):
         self._check_attrs(data_input)
         return data_input
 
@@ -173,7 +178,9 @@ class ProductBundle(dict, DataProcessorMixin):
 
     def __init__(
         self,
-        data: dict | Iterable | lkTypes = None,
+        data: Union[
+            Dict[str, Union[Iterable, lkDataTypes]], Iterable, lkDataTypes
+        ] = None,
     ):
         self._data_types = dict()
         if data is not None:
@@ -188,8 +195,13 @@ class ProductBundle(dict, DataProcessorMixin):
     def _(self, data: dict):
         return data
 
-    @_unpack_data.register
-    def _(self, data: lkTypes):
+    @_unpack_data.register(DataCube)
+    @_unpack_data.register(DataFrame)
+    @_unpack_data.register(DataSeries)
+    @_unpack_data.register(ErrorCube)
+    @_unpack_data.register(ErrorFrame)
+    @_unpack_data.register(ErrorSeries)
+    def _(self, data):
         return {"flux_" + self._type: data}
 
     @_unpack_data.register
@@ -221,8 +233,11 @@ class ProductBundle(dict, DataProcessorMixin):
     def _(self, key: str):
         return super().__getitem__(key)
 
-    @__getitem__.register
-    def _(self, key: Union[int, slice, tuple, np.ndarray]):
+    @__getitem__.register(int)
+    @__getitem__.register(slice)
+    @__getitem__.register(tuple)
+    @__getitem__.register(np.ndarray)
+    def _(self, key):
         new_values = {}
         for k, v in self.items():
             try:
@@ -255,7 +270,9 @@ class DataProducts(ProductBundle):
 
     def __init__(
         self,
-        data: Dict[str, Iterable | lkDataTypes] | lkDataTypes | Iterable = None,
+        data: Union[
+            Dict[str, Union[Iterable, lkDataTypes]], lkDataTypes, Iterable
+        ] = None,
         **kwargs,
     ):
         self.kwargs = kwargs
@@ -284,7 +301,9 @@ class ErrorProducts(ProductBundle):
 
     def __init__(
         self,
-        error: Dict[str, Iterable | lkErrorTypes] | Iterable | lkErrorTypes = None,
+        error: Union[
+            Dict[str, Union[Iterable, lkErrorTypes]], Iterable, lkErrorTypes
+        ] = None,
         **kwargs,
     ):
         self.kwargs = kwargs
@@ -296,14 +315,14 @@ class DataSet:
 
     Parameters
     ----------
-    data : Iterable | lkDataTypes | DataProducts | Dict[str, (Iterable | lkDataTypes)]
+    data: Union[Iterable, lkDataTypes, DataProducts, Dict[str, Union[Iterable, lkDataTypes]]]
         Data which sums linearly. Providing a dictionary
         of lightkurve data products (DataCube, DataFrame, DataSeries) is recommended.
         However, a singular array-like or a dictionary of array-like data may
         be given and will be converted into the corresponding lkDataType based
         on the shape of the data.
 
-    error : Iterable | lkErrorTypes | ErrorProducts | Dict[str, (Iterable | lkErrorTypes)]
+    error: Union[Iterable, lkErrorTypes, ErrorProducts, Dict[str, Union[Iterable, lkErrorTypes]]]
         Data which sums in quadrature. Providing a dictionary of lightkurve
         error products (ErrorCube, ErrorFrame, ErrorSeries) is recommended.
         However, a singular array-like or a dictionary of array-like data may
@@ -322,16 +341,16 @@ class DataSet:
 
     def __init__(
         self,
-        data: (
-            Iterable | lkDataTypes | DataProducts | Dict[str, (Iterable | lkDataTypes)]
-        ) = None,
-        error: (
-            list
-            | np.ndarray
-            | lkErrorTypes
-            | ErrorProducts
-            | Dict[str, (Iterable | lkErrorTypes)]
-        ) = None,
+        data: Union[
+            Iterable, lkDataTypes, DataProducts, Dict[str, Union[Iterable, lkDataTypes]]
+        ] = None,
+        error: Union[
+            list,
+            np.ndarray,
+            lkErrorTypes,
+            ErrorProducts,
+            Dict[str, Union[Iterable, lkErrorTypes]],
+        ] = None,
         **kwargs,
     ):
         self._user_kwargs = []
@@ -448,7 +467,7 @@ class DataSet:
         self,
         period: float,
         t0: float = None,
-        level: int | str = 1,
+        level: Union[int, str] = -1,
         inplace: bool = False,
         label: str = "phase",
     ):
@@ -501,7 +520,7 @@ class DataSet:
 
         return new_func
 
-    def downsample(self, nframes: int = 5, level: str | int = -1):
+    def downsample(self, nframes: int = 5, level: Union[str, int] = -1):
         """Downsample all contained data and error products."""
         downsample = self._batch_wrapper("downsample")
         return downsample(nframes, level)
@@ -524,8 +543,9 @@ class DataSet:
         else:
             raise ValueError("Unrecognized key")
 
-    @__getitem__.register
-    def _(self, key: int | slice):
+    @__getitem__.register(int)
+    @__getitem__.register(slice)
+    def _(self, key):
         def set_new_data(old_data, key, new_kwargs=False):
             new_data = {}
             for data_key, data in old_data.items():
