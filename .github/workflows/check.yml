@@ -19,7 +19,11 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
+<<<<<<< HEAD
         python-version: 3.9
+=======
+        python-version: '3.10'
+>>>>>>> cd57a35 (update workflows to use python=3.10)
 
     - name: Cache Poetry dependencies
       uses: actions/cache@v3
