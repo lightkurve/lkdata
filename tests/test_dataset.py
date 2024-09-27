@@ -1,9 +1,11 @@
 import unittest
+import pytest
 import numpy as np
 from lkdata.dataset import DataProcessorMixin, DataProducts, ErrorProducts, DataSet
 from lkdata.datacube import DataCube, ErrorCube
 from lkdata.dataframe import DataFrame, ErrorFrame
 from lkdata.dataseries import DataSeries, ErrorSeries
+import pandas as pd
 
 
 class TestDataProcessor(unittest.TestCase):
@@ -155,3 +157,110 @@ class TestBatch(unittest.TestCase):
         repr_str = repr(batch)
         self.assertIn("data", repr_str)
         self.assertIn("error", repr_str)
+
+
+class TestDataset:
+    @pytest.fixture
+    def sample_dataset(self):
+        return DataSet()
+
+    @pytest.fixture
+    def sample_datacube(self):
+        data = np.random.rand(10, 5, 5)
+        return DataCube(data)
+
+    @pytest.fixture
+    def sample_dataframe(self):
+        data = pd.DataFrame(np.random.rand(10, 25))
+        return DataFrame(data, nrow=5, ncol=5)
+
+    def test_check_attrs_matching(self, sample_dataset, sample_datacube):
+        sample_dataset.ntime = 10
+        sample_dataset.nrow = 5
+        sample_dataset.ncol = 5
+        sample_dataset.data._check_attrs(sample_datacube)
+        assert sample_dataset.ntime == sample_datacube.ntime
+        assert sample_dataset.data.nrow == sample_datacube.nrow
+        assert sample_dataset.data.ncol == sample_datacube.ncol
+
+    def test_check_attrs_mismatch(self, sample_dataset, sample_datacube):
+        sample_dataset.data.ntime = 11  # Mismatch
+        sample_dataset.data.nrow = 5
+        sample_dataset.data.ncol = 5
+        with pytest.raises(
+            ValueError, match="Dataset value for ntime != given data ntime"
+        ):
+            sample_dataset.data._check_attrs(sample_datacube)
+
+    def test_check_attrs_setting_new(self, sample_dataset, sample_datacube):
+        sample_dataset.data._check_attrs(sample_datacube)
+        assert sample_dataset.ntime == sample_datacube.ntime
+        assert sample_dataset.data.nrow == sample_datacube.nrow
+        assert sample_dataset.data.ncol == sample_datacube.ncol
+
+    def test_check_attrs_index_mismatch(self, sample_dataset, sample_datacube):
+        sample_dataset.data.index = pd.MultiIndex.from_product([range(11), ["A", "B"]])
+        with pytest.raises(
+            ValueError, match="Dataset shape for index does not match given data index"
+        ):
+            sample_dataset.data._check_attrs(sample_datacube)
+
+    def test_check_attrs_columns_mismatch(self, sample_dataset, sample_datacube):
+        sample_dataset.data.columns = pd.MultiIndex.from_product([range(6), ["X", "Y"]])
+        with pytest.raises(
+            ValueError,
+            match="Dataset shape for columns does not match given data columns",
+        ):
+            sample_dataset.data._check_attrs(sample_datacube)
+
+    def test_check_attrs_datacube(self, sample_dataset, sample_datacube):
+        sample_dataset.data._check_attrs(sample_datacube)
+        assert sample_dataset.ntime == sample_datacube.ntime
+        assert sample_dataset.data.nrow == sample_datacube.nrow
+        assert sample_dataset.data.ncol == sample_datacube.ncol
+
+    def test_check_attrs_dataframe(self, sample_dataset, sample_dataframe):
+        sample_dataset.data._check_attrs(sample_dataframe)
+        assert sample_dataset.ntime == sample_dataframe.ntime
+
+    def test_check_attrs_errorcube(self, sample_dataset):
+        error_cube = ErrorCube(np.random.rand(10, 5, 5))
+        sample_dataset.error._check_attrs(error_cube)
+        assert sample_dataset.ntime == error_cube.ntime
+        assert sample_dataset.error.nrow == error_cube.nrow
+        assert sample_dataset.error.ncol == error_cube.ncol
+
+    def test_check_attrs_errorframe(self, sample_dataset):
+        error_frame = ErrorFrame(pd.DataFrame(np.random.rand(10, 25)), nrow=5, ncol=5)
+        sample_dataset.error._check_attrs(error_frame)
+        assert sample_dataset.ntime == error_frame.ntime
+
+    def test_check_attrs_index_matching(self, sample_dataset, sample_datacube):
+        sample_dataset.index = sample_datacube.index
+        sample_dataset.data._check_attrs(sample_datacube)
+        assert (sample_dataset.index == sample_datacube.index).all()
+
+    def test_check_attrs_columns_matching(self, sample_dataset, sample_datacube):
+        sample_dataset.columns = sample_datacube.columns
+        sample_dataset.data._check_attrs(sample_datacube)
+        assert (sample_dataset.data.columns == sample_datacube.columns).all()
+
+    def test_check_attrs_mixed_attributes(self, sample_dataset, sample_datacube):
+        sample_dataset.ntime = 10
+        sample_dataset.nrow = 5
+        sample_dataset.data._check_attrs(sample_datacube)
+        assert sample_dataset.ntime == sample_datacube.ntime
+        assert sample_dataset.data.nrow == sample_datacube.nrow
+        assert sample_dataset.data.ncol == sample_datacube.ncol
+
+    def test_check_attrs_no_existing_attributes(self, sample_dataset, sample_datacube):
+        sample_dataset.data._check_attrs(sample_datacube)
+        assert hasattr(sample_dataset, "ntime")
+        assert hasattr(sample_dataset, "index")
+
+    def test_check_attrs_with_non_standard_attribute(
+        self, sample_dataset, sample_datacube
+    ):
+        sample_datacube.custom_attr = "test"
+        sample_dataset.data._check_attrs(sample_datacube)
+        assert not hasattr(sample_dataset, "custom_attr")

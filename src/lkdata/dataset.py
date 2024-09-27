@@ -57,8 +57,8 @@ class DataProcessorMixin:
     CLASS_CHECKS = {
         DataCube: {"ntime", "nrow", "ncol", "index", "columns"},
         ErrorCube: {"ntime", "nrow", "ncol", "index", "columns"},
-        DataFrame: {"ntime", "nseries", "index"},
-        ErrorFrame: {"ntime", "nseries", "index"},
+        DataFrame: {"ntime", "index"},
+        ErrorFrame: {"ntime", "index"},
         DataSeries: {"ntime", "index"},
         ErrorSeries: {"ntime", "index"},
     }
@@ -69,7 +69,7 @@ class DataProcessorMixin:
 
     def _check_attrs(self, data_product):
         attrs = self.CLASS_CHECKS[data_product.__class__]
-        for attr in attrs.intersection({"ntime", "nrow", "ncol", "nseries"}):
+        for attr in attrs.intersection({"ntime", "nrow", "ncol"}):
             if hasattr(self, attr):
                 if getattr(self, attr) != getattr(data_product, attr):
                     raise ValueError(
@@ -89,6 +89,8 @@ class DataProcessorMixin:
                         {getattr(self, attr).shape} != {getattr(data_product, attr).shape}
                         """
                     )
+            else:
+                setattr(self, attr, getattr(data_product, attr, None))
 
     def _build_data_product(self, data_arr: Iterable):
         data_arr = np.asarray(data_arr)
@@ -337,7 +339,6 @@ class DataSet:
     """
 
     _user_kwargs = None
-    index = None
 
     def __init__(
         self,
@@ -385,7 +386,7 @@ class DataSet:
         for val in standard_attrs:
             if hasattr(self.data, val):
                 setattr(self, val, getattr(self.data, val))
-            elif hasattr(self.error, val):
+            if hasattr(self.error, val):
                 setattr(self, val, getattr(self.error, val))
 
     @property
@@ -617,6 +618,54 @@ class DataSet:
     def user_kwargs(self):
         """Keywords passed by the user"""
         return {key: getattr(self, key, None) for key in self._user_kwargs}
+
+    def _attr_override(self, attr, val):
+        setattr(self.data, attr, val)
+        setattr(self.error, attr, val)
+
+    @property
+    def ntime(self):
+        data_val = getattr(self.data, "ntime", None)
+        err_val = getattr(self.error, "ntime", None)
+        if data_val:
+            if err_val:
+                msg = f"""
+                Data and Errors have different values for `ntime`.
+                Data `ntime`: {data_val}
+                Error `ntime`: {err_val}
+                """
+                assert data_val == err_val, msg
+            return data_val
+        elif err_val:
+            return err_val
+        else:
+            return None
+
+    @ntime.setter
+    def ntime(self, val):
+        self._attr_override("ntime", val)
+
+    @property
+    def index(self):
+        data_val = getattr(self.data, "index", None)
+        err_val = getattr(self.error, "index", None)
+        if data_val is not None:
+            if err_val is not None:
+                msg = f"""
+                Data and Errors have different values for `index`.
+                Data `index`: {data_val}
+                Error `index`: {err_val}
+                """
+                assert (data_val == err_val).all(), msg
+            return data_val
+        elif err_val is not None:
+            return err_val
+        else:
+            return None
+
+    @index.setter
+    def index(self, val):
+        self._attr_override("index", val)
 
     def _build_instance(self, newdata, newerror, **kwargs):
         all_kwargs = self.user_kwargs.copy()
