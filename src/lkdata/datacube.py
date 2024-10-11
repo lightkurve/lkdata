@@ -44,11 +44,6 @@ class Cube(
         col_indices: Union[Dict, List, None] = None,
         **kwargs,
     ):
-        # For pandas DataFrames subclasses, new properties must
-        # be included in the _metadata list
-        self._metadata: List[str] = []
-        self._user_kwargs: List[str] = []
-
         self.nrow = kwargs.get("nrow", None)
         self.ncol = kwargs.get("ncol", None)
         index = kwargs.get("index", None)
@@ -61,7 +56,7 @@ class Cube(
                 setattr(self, key, val)
 
         data = self._preprocess_data(data)
-        index = self._parse_index(index, time_indices)
+        index = self.parse_index(index, time_indices, self.ntime)
         columns = self._parse_columns(columns, row_indices, col_indices)
 
         super().__init__(data, index=index, columns=columns)
@@ -92,26 +87,6 @@ class Cube(
             setattr(self, attr, val)
         elif getattr(self, attr) != val:
             raise ValueError(f"Given {attr} does not match given data shape {val}")
-
-    def _parse_index(self, index: pd.MultiIndex, time_indices: dict):
-        """Retrieve time_indices from a pd.MultiIndex"""
-
-        if index is not None:
-            # prefer existing index, if available
-            time_names = index.names
-            time_indices = {name: index.get_level_values(name) for name in time_names}
-        elif not time_indices:
-            time_indices = {"time_index": np.arange(self.ntime)}
-
-        if "time_index" in time_indices.keys():
-            arrays = [*list(time_indices.values())]
-            names = [*list(time_indices.keys())]
-        else:
-            arrays = [np.arange(self.ntime), *list(time_indices.values())]
-            names = ["time_index", *list(time_indices.keys())]
-
-        index = pd.MultiIndex.from_arrays(arrays, names=names)
-        return index
 
     def _parse_columns(
         self,
@@ -199,7 +174,7 @@ class Cube(
         if isinstance(self.index, pd.MultiIndex):
             indices = []
             for i in zip(self.index.names, self.index[cadence]):
-                if i[0] == "cadences":
+                if i[0] == "indices":
                     strlabel = f"{i[0]}: {i[1]}"
                 elif ("cadence" in i[0]) or ("index" in i[0]):
                     strlabel = f"{i[0]}: {int(np.floor(i[1]))}"
@@ -518,6 +493,10 @@ class DataCube(
     _pd_class = pd.DataFrame
 
     def __init__(self, *args, **kwargs):
+        # For pandas DataFrames subclasses, new properties must
+        # be included in the _metadata list
+        self._metadata: List[str] = []
+        self._user_kwargs: List[str] = []
         super().__init__(*args, **kwargs)
         self._set_stats_methods()
 
@@ -536,6 +515,10 @@ class ErrorCube(
     _pd_class = pd.DataFrame
 
     def __init__(self, *args, **kwargs):
+        # For pandas DataFrames subclasses, new properties must
+        # be included in the _metadata list
+        self._metadata: List[str] = []
+        self._user_kwargs: List[str] = []
         super().__init__(*args, **kwargs)
         self._set_errstats_methods()
 

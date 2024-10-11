@@ -50,6 +50,11 @@ class Series(
         self.stats_post_process = stats_post_process
         self._include_convenience_index()
 
+    def __deepcopy__(self, *args, **kwargs):
+        return self._build_instance(
+            self.to_array(), index=self.index, **self.user_kwargs
+        )
+
     @property
     def ntime(self):
         """Number of cadences in the data."""

@@ -7,6 +7,7 @@ from typing import Dict, Union
 from warnings import warn
 
 import numpy as np
+import pandas as pd
 
 from .datacube import DataCube, ErrorCube
 from .dataframe import DataFrame, ErrorFrame
@@ -183,7 +184,10 @@ class ProductBundle(dict, DataProcessorMixin):
         data: Union[
             Dict[str, Union[Iterable, lkDataTypes]], Iterable, lkDataTypes
         ] = None,
+        index: pd.MultiIndex = None,
     ):
+        if isinstance(index, pd.MultiIndex):
+            self.index = index
         self._data_types = dict()
         if data is not None:
             data = self._unpack_data(data)
@@ -249,6 +253,9 @@ class ProductBundle(dict, DataProcessorMixin):
                 new_values[k] = v
         return new_values
 
+    def __deepcopy__(self, *args, **kwargs):
+        return self.__class__({key: deepcopy(val) for key, val in self.items()})
+
 
 class DataProducts(ProductBundle):
     """
@@ -275,10 +282,11 @@ class DataProducts(ProductBundle):
         data: Union[
             Dict[str, Union[Iterable, lkDataTypes]], lkDataTypes, Iterable
         ] = None,
+        index: pd.MultiIndex = None,
         **kwargs,
     ):
         self.kwargs = kwargs
-        super().__init__(data)
+        super().__init__(data, index)
 
 
 class ErrorProducts(ProductBundle):
@@ -306,10 +314,11 @@ class ErrorProducts(ProductBundle):
         error: Union[
             Dict[str, Union[Iterable, lkErrorTypes]], Iterable, lkErrorTypes
         ] = None,
+        index: pd.MultiIndex = None,
         **kwargs,
     ):
         self.kwargs = kwargs
-        super().__init__(error)
+        super().__init__(error, index)
 
 
 class DataSet:
@@ -352,42 +361,57 @@ class DataSet:
             ErrorProducts,
             Dict[str, Union[Iterable, lkErrorTypes]],
         ] = None,
+        index: pd.MultiIndex = None,
+        time_indices: Dict[str, Iterable] = None,
         **kwargs,
     ):
         self._user_kwargs = []
         self.kwargs = kwargs
         for k, v in kwargs.items():
             setattr(self, k, v)
-            if k not in ("ntime", "nrow", "ncol", "index", "columns"):
+            if k not in ("ntime", "nrow", "ncol", "columns"):
                 self._user_kwargs.append(k)
+
+        parsed_index = DataCube.parse_index(index, time_indices)
+        if not parsed_index.empty:
+            index = parsed_index
 
         self._data_types = {}
         if data is not None:
             if isinstance(data, DataProducts):
                 self.data = data
             else:
-                self.data = DataProducts(data, **kwargs)
+                self.data = DataProducts(data, index, **kwargs)
             self._data_types.update(self.data._data_types)
         else:
-            self.data = DataProducts(**kwargs)
+            self.data = DataProducts(index=index, **kwargs)
 
         if error is not None:
             if isinstance(error, ErrorProducts):
                 self.error = error
             else:
-                self.error = ErrorProducts(error, **kwargs)
+                self.error = ErrorProducts(error, index, **kwargs)
             self._data_types.update(self.error._data_types)
         else:
-            self.error = ErrorProducts(**kwargs)
-        self._set_attrs()
+            self.error = ErrorProducts(index=index, **kwargs)
 
-    def _set_attrs(self):
-        standard_attrs = {"ntime", "index"}
-        for val in standard_attrs:
-            if hasattr(self.data, val):
-                setattr(self, val, getattr(self.data, val))
-            if hasattr(self.error, val):
-                setattr(self, val, getattr(self.error, val))
+        if not hasattr(self.data, "index"):
+            if not hasattr(self.error, "index"):
+                self.data.ntime = 0
+                self.data.index = parsed_index
+                self.error.ntime = 0
+                self.error.index = parsed_index
+            else:
+                self.data.ntime = self.error.ntime
+                self.data.index = self.error.index
+        elif not hasattr(self.error, "index"):
+            self.error.ntime = self.data.ntime
+            self.error.index = self.data.index
+
+        for val in self.data.values():
+            val.index = self.index
+        for val in self.error.values():
+            val.index = self.index
 
     @property
     def cubes(self) -> dict:
@@ -473,6 +497,8 @@ class DataSet:
         label: str = "phase",
     ):
         """Phase fold all data products."""
+        if period <= 0:
+            raise ValueError("`period` must be greater than 0.")
         index = deepcopy(self.index)
         if len(self.index.names) == 1:
             # Cadence is typically level 0 and datetimes levels 1+
@@ -639,11 +665,14 @@ class DataSet:
         elif err_val:
             return err_val
         else:
-            return None
+            return 0
 
     @ntime.setter
     def ntime(self, val):
         self._attr_override("ntime", val)
+        if self.index.empty:
+            new_index = DataCube.parse_index(ntime=val)
+            self._attr_override("index", new_index)
 
     @property
     def index(self):

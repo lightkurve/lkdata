@@ -1,4 +1,5 @@
 """Mixin methods and classes for lightkurve data objects"""
+
 import re
 from copy import deepcopy
 from typing import Union
@@ -151,6 +152,9 @@ class MathMixin:
         kwargs = {"index": self.index}
         if isinstance(self, pd.DataFrame):
             kwargs["columns"] = self.columns
+        if hasattr(self, "nrow") and hasattr(self, "ncol"):
+            kwargs["nrow"] = self.nrow
+            kwargs["ncol"] = self.ncol
         return kwargs
 
     def __add__(self, val):
@@ -158,15 +162,15 @@ class MathMixin:
             if isinstance(val, self.__class__):
                 return self._build_instance(
                     (self.to_numpy() ** 2 + val.to_numpy() ** 2) ** 0.5,
-                    nrow=self.nrow,
-                    ncol=self.ncol,
                     **self._get_math_kwargs(),
+                )
+            else:
+                raise TypeError(
+                    f"Adding {type(val)} to an error product is not supported."
                 )
         else:
             return self._build_instance(
                 self.to_numpy() + self._process_math_val(val),
-                nrow=self.nrow,
-                ncol=self.ncol,
                 **self._get_math_kwargs(),
             )
 
@@ -176,24 +180,18 @@ class MathMixin:
     def __mul__(self, val):
         return self._build_instance(
             self.to_numpy() * self._process_math_val(val),
-            nrow=self.nrow,
-            ncol=self.ncol,
             **self._get_math_kwargs(),
         )
 
     def __pow__(self, val):
         return self._build_instance(
             self.to_numpy() ** self._process_math_val(val),
-            nrow=self.nrow,
-            ncol=self.ncol,
             **self._get_math_kwargs(),
         )
 
     def __mod__(self, val):
         return self._build_instance(
             self.to_numpy() % self._process_math_val(val),
-            nrow=self.nrow,
-            ncol=self.ncol,
             **self._get_math_kwargs(),
         )
 
@@ -251,7 +249,7 @@ class AggMixin:
         # We have to create a new index. We'll take the mean of each bin
         new_index_left = self.index.to_frame().groupby(bin_edges_left, observed=False)
 
-        if "cadences" in self.index.names:
+        if "indices" in self.index.names:
 
             def repack(vals):
                 unpackvals = [
@@ -262,41 +260,50 @@ class AggMixin:
                     allvals += val
                 return str(allvals)
 
-            cadences = new_index_left["cadences"].apply(repack).values
+            cadences = new_index_left["indices"].apply(repack).values
             new_index_left = (
                 self.index.to_frame()
-                .drop(["cadences"], axis=1)
+                .drop(["indices"], axis=1)
                 .groupby(bin_edges_left, observed=False)
             )
-            self.index = self.index.droplevel("cadences")
-        elif "cadence" in self.index.names:
+            self.index = self.index.droplevel("indices")
+        elif "time_index" in self.index.names:
             cadences = (
-                new_index_left["cadence"].apply(lambda val: str(np.unique(val))).values
+                new_index_left["time_index"]
+                .apply(lambda val: str(np.unique(val)))
+                .values
             )
         # if the old index was time based, use the mean of the bin for the new index
         new_index_left = new_index_left.mean().reset_index(drop=True)
         index_names = list(self.index.names)
-        if ("cadence" in new_index_left) or ("mid_cadence" in new_index_left):
-            new_index_left["cadences"] = cadences
-            index_names.append("cadences")
+        if ("time_index" in new_index_left) or ("mid_index" in new_index_left):
+            new_index_left["indices"] = cadences
+            index_names.append("indices")
         new_index = new_index_left.set_index(index_names).index
-        if "cadence" in new_index.names:
+        if "time_index" in new_index.names:
             new_index.set_levels(
-                new_index.get_level_values("cadence").astype(int), level="cadence"
+                new_index.get_level_values("time_index").astype(int), level="time_index"
             )
-            new_index = new_index.rename({"cadence": "mid_cadence"})
+            new_index = new_index.rename({"time_index": "mid_index"})
 
         new_data = new[bin_mask].to_numpy()
         if self._stats_type == "error":
             new_data = new_data**0.5
         if hasattr(self, "columns"):
-            new_obj = self._build_instance(
-                new_data,
-                index=new_index[bin_mask],
-                columns=self.columns,
-                nrow=self.nrow,
-                ncol=self.ncol,
-            )
+            if hasattr(self, "nrow") and hasattr(self, "ncol"):
+                new_obj = self._build_instance(
+                    new_data,
+                    index=new_index[bin_mask],
+                    columns=self.columns,
+                    nrow=self.nrow,
+                    ncol=self.ncol,
+                )
+            else:
+                new_obj = self._build_instance(
+                    new_data,
+                    index=new_index[bin_mask],
+                    columns=self.columns,
+                )
         else:
             new_obj = self._build_instance(
                 new_data,
@@ -581,6 +588,48 @@ class AggMixin:
 
 class ConvenienceMixins:
     """Convenience mixins which add properties to lightkurve data objects as attributes."""
+
+    @classmethod
+    def parse_index(
+        cls, index: pd.MultiIndex = None, time_indices: dict = None, ntime: int = 0
+    ):
+        """Parse given indices and return a single pandas MultiIndex"""
+        if time_indices:
+            ntime_inds = len(list(time_indices.values())[0])
+            if ("time_index" not in time_indices.keys()) and (
+                "mid_index" not in time_indices.keys()
+            ):
+                time_indices.update({"time_index": np.arange(ntime_inds)})
+        else:
+            time_indices = {}
+
+        if isinstance(index, pd.MultiIndex):
+            time_names = index.names
+            time_indices.update(
+                {name: index.get_level_values(name) for name in time_names}
+            )
+
+            ntime_index = len(index)
+            if ("time_index" not in time_indices.keys()) and (
+                "mid_index" not in time_indices.keys()
+            ):
+                time_indices.update({"time_index": np.arange(ntime_index)})
+
+        if time_indices == {}:
+            time_indices.update({"time_index": np.arange(ntime)})
+
+        if "time_index" in time_indices:
+            t0 = time_indices.pop("time_index")
+            arrays = [t0, *list(time_indices.values())]
+            names = ["time_index", *list(time_indices.keys())]
+        elif "mid_index" in time_indices:
+            t0 = time_indices.pop("mid_index")
+            tfull = time_indices.pop("indices")
+            arrays = [t0, tfull, *list(time_indices.values())]
+            names = ["mid_index", "indices", *list(time_indices.keys())]
+
+        index = pd.MultiIndex.from_arrays(arrays, names=names)
+        return index
 
     def _include_convenience_index(self):
         INDEX_DICTS = {
