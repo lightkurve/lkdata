@@ -7,6 +7,7 @@ from typing import Dict, Union
 from warnings import warn
 
 import numpy as np
+import pandas as pd
 
 from .datacube import DataCube, ErrorCube
 from .dataframe import DataFrame, ErrorFrame
@@ -57,8 +58,8 @@ class DataProcessorMixin:
     CLASS_CHECKS = {
         DataCube: {"ntime", "nrow", "ncol", "index", "columns"},
         ErrorCube: {"ntime", "nrow", "ncol", "index", "columns"},
-        DataFrame: {"ntime", "nseries", "index"},
-        ErrorFrame: {"ntime", "nseries", "index"},
+        DataFrame: {"ntime", "index"},
+        ErrorFrame: {"ntime", "index"},
         DataSeries: {"ntime", "index"},
         ErrorSeries: {"ntime", "index"},
     }
@@ -69,7 +70,7 @@ class DataProcessorMixin:
 
     def _check_attrs(self, data_product):
         attrs = self.CLASS_CHECKS[data_product.__class__]
-        for attr in attrs.intersection({"ntime", "nrow", "ncol", "nseries"}):
+        for attr in attrs.intersection({"ntime", "nrow", "ncol"}):
             if hasattr(self, attr):
                 if getattr(self, attr) != getattr(data_product, attr):
                     raise ValueError(
@@ -89,6 +90,8 @@ class DataProcessorMixin:
                         {getattr(self, attr).shape} != {getattr(data_product, attr).shape}
                         """
                     )
+            else:
+                setattr(self, attr, getattr(data_product, attr, None))
 
     def _build_data_product(self, data_arr: Iterable):
         data_arr = np.asarray(data_arr)
@@ -97,8 +100,20 @@ class DataProcessorMixin:
         classes = {"data": data_classes, "error": error_classes}
 
         obj_class = classes[self._type].get(data_arr.ndim, None)
-        if obj_class:
+        if obj_class in [DataCube, ErrorCube]:
             data_product = obj_class(data_arr, **self.kwargs)
+            self._check_attrs(data_product)
+        elif obj_class:
+            kwargs = deepcopy(self.kwargs)
+            # The following kwargs are assumed to be for building cubes when
+            # initializing a DataSet and are ignored if a DataSet is built
+            # with generic iterables
+            kwargs.pop("columns", None)
+            kwargs.pop("nrow", None)
+            kwargs.pop("ncol", None)
+            kwargs.pop("row_indices", None)
+            kwargs.pop("col_indices", None)
+            data_product = obj_class(data_arr, **kwargs)
             self._check_attrs(data_product)
         else:
             raise TypeError("Unrecognized format given for input.")
@@ -130,6 +145,16 @@ class DataProcessorMixin:
             If the data type is not recognized.
         """
 
+    @process_input.register(DataCube)
+    @process_input.register(DataFrame)
+    @process_input.register(DataSeries)
+    @process_input.register(ErrorCube)
+    @process_input.register(ErrorFrame)
+    @process_input.register(ErrorSeries)
+    def _(self, data_input):
+        self._check_attrs(data_input)
+        return data_input
+
     @process_input.register
     def _(self, data_input: Iterable):
         assert self._type in ["data", "error"], "Unrecognized type"
@@ -142,16 +167,6 @@ class DataProcessorMixin:
                 If giving multiple data products, provide input as a
                 dictionary and use the `update` method."""
             ) from err
-
-    @process_input.register(DataCube)
-    @process_input.register(DataFrame)
-    @process_input.register(DataSeries)
-    @process_input.register(ErrorCube)
-    @process_input.register(ErrorFrame)
-    @process_input.register(ErrorSeries)
-    def _(self, data_input):
-        self._check_attrs(data_input)
-        return data_input
 
 
 class ProductBundle(dict, DataProcessorMixin):
@@ -181,7 +196,10 @@ class ProductBundle(dict, DataProcessorMixin):
         data: Union[
             Dict[str, Union[Iterable, lkDataTypes]], Iterable, lkDataTypes
         ] = None,
+        index: pd.MultiIndex = None,
     ):
+        if isinstance(index, pd.MultiIndex):
+            self.index = index
         self._data_types = dict()
         if data is not None:
             data = self._unpack_data(data)
@@ -247,6 +265,9 @@ class ProductBundle(dict, DataProcessorMixin):
                 new_values[k] = v
         return new_values
 
+    def __deepcopy__(self, *args, **kwargs):
+        return self.__class__({key: deepcopy(val) for key, val in self.items()})
+
 
 class DataProducts(ProductBundle):
     """
@@ -273,10 +294,11 @@ class DataProducts(ProductBundle):
         data: Union[
             Dict[str, Union[Iterable, lkDataTypes]], lkDataTypes, Iterable
         ] = None,
+        index: pd.MultiIndex = None,
         **kwargs,
     ):
         self.kwargs = kwargs
-        super().__init__(data)
+        super().__init__(data, index)
 
 
 class ErrorProducts(ProductBundle):
@@ -304,10 +326,11 @@ class ErrorProducts(ProductBundle):
         error: Union[
             Dict[str, Union[Iterable, lkErrorTypes]], Iterable, lkErrorTypes
         ] = None,
+        index: pd.MultiIndex = None,
         **kwargs,
     ):
         self.kwargs = kwargs
-        super().__init__(error)
+        super().__init__(error, index)
 
 
 class DataSet:
@@ -337,7 +360,6 @@ class DataSet:
     """
 
     _user_kwargs = None
-    index = None
 
     def __init__(
         self,
@@ -351,42 +373,57 @@ class DataSet:
             ErrorProducts,
             Dict[str, Union[Iterable, lkErrorTypes]],
         ] = None,
+        index: pd.MultiIndex = None,
+        time_indices: Dict[str, Iterable] = None,
         **kwargs,
     ):
         self._user_kwargs = []
         self.kwargs = kwargs
         for k, v in kwargs.items():
             setattr(self, k, v)
-            if k not in ("ntime", "nrow", "ncol", "index", "columns"):
+            if k not in ("ntime", "nrow", "ncol", "columns"):
                 self._user_kwargs.append(k)
+
+        parsed_index = DataCube.parse_index(index, time_indices)
+        if not parsed_index.empty:
+            index = parsed_index
 
         self._data_types = {}
         if data is not None:
             if isinstance(data, DataProducts):
                 self.data = data
             else:
-                self.data = DataProducts(data, **kwargs)
+                self.data = DataProducts(data, index, **kwargs)
             self._data_types.update(self.data._data_types)
         else:
-            self.data = DataProducts(**kwargs)
+            self.data = DataProducts(index=index, **kwargs)
 
         if error is not None:
             if isinstance(error, ErrorProducts):
                 self.error = error
             else:
-                self.error = ErrorProducts(error, **kwargs)
+                self.error = ErrorProducts(error, index, **kwargs)
             self._data_types.update(self.error._data_types)
         else:
-            self.error = ErrorProducts(**kwargs)
-        self._set_attrs()
+            self.error = ErrorProducts(index=index, **kwargs)
 
-    def _set_attrs(self):
-        standard_attrs = {"ntime", "index"}
-        for val in standard_attrs:
-            if hasattr(self.data, val):
-                setattr(self, val, getattr(self.data, val))
-            elif hasattr(self.error, val):
-                setattr(self, val, getattr(self.error, val))
+        if not hasattr(self.data, "index"):
+            if not hasattr(self.error, "index"):
+                self.data.ntime = 0
+                self.data.index = parsed_index
+                self.error.ntime = 0
+                self.error.index = parsed_index
+            else:
+                self.data.ntime = self.error.ntime
+                self.data.index = self.error.index
+        elif not hasattr(self.error, "index"):
+            self.error.ntime = self.data.ntime
+            self.error.index = self.data.index
+
+        for val in self.data.values():
+            val.index = self.index
+        for val in self.error.values():
+            val.index = self.index
 
     @property
     def cubes(self) -> dict:
@@ -472,6 +509,8 @@ class DataSet:
         label: str = "phase",
     ):
         """Phase fold all data products."""
+        if period <= 0:
+            raise ValueError("`period` must be greater than 0.")
         index = deepcopy(self.index)
         if len(self.index.names) == 1:
             # Cadence is typically level 0 and datetimes levels 1+
@@ -544,29 +583,32 @@ class DataSet:
             raise ValueError("Unrecognized key")
 
     @__getitem__.register(int)
+    @__getitem__.register(list)
+    @__getitem__.register(np.ndarray)
+    def _(self, key):
+        new_data = {}
+        for data_key, data in self.data.items():
+            new_data[data_key] = data[key]
+        new_data = DataProducts(new_data, self.data.index[np.atleast_1d(key)])
+
+        new_err = {}
+        for err_key, err in self.error.items():
+            new_err[err_key] = err[key]
+        new_err = ErrorProducts(new_err, self.error.index[np.atleast_1d(key)])
+        return self._build_instance(new_data, new_err)
+
     @__getitem__.register(slice)
     def _(self, key):
-        def set_new_data(old_data, key, new_kwargs=False):
-            new_data = {}
-            for data_key, data in old_data.items():
-                d = data[key]
-                new_data[data_key] = d.to_array()
-                if not new_kwargs:
-                    new_kwargs = self.kwargs.copy()
-                    new_kwargs["row_indices"] = {
-                        row_name: None for row_name in d.row_names
-                    }
-                    new_kwargs["col_indices"] = {
-                        col_name: None for col_name in d.col_names
-                    }
-                    new_kwargs["index"] = d.index
-                    new_kwargs["columns"] = d.columns
-            return new_data, new_kwargs
+        new_data = {}
+        for data_key, data in self.data.items():
+            new_data[data_key] = data[key]
+        new_data = DataProducts(new_data, self.data.index[key])
 
-        new_data, new_kwargs = set_new_data(self.data, key, False)
-        new_error, new_kwargs = set_new_data(self.error, key, new_kwargs)
-
-        return self._build_instance(new_data, new_error, **new_kwargs)
+        new_err = {}
+        for err_key, err in self.error.items():
+            new_err[err_key] = err[key]
+        new_err = ErrorProducts(new_err, self.error.index[key])
+        return self._build_instance(new_data, new_err)
 
     @__getitem__.register
     def _(self, key: tuple):
@@ -575,7 +617,7 @@ class DataSet:
             raise KeyError(f"Cannot parse key with {len(key)} elements.")
 
         new_data = {
-            data_key + f"{key}": data[key]
+            data_key: data[key]
             for data_key, data in self.data.items()
             if isinstance(data, DataCube)
         }
@@ -585,13 +627,19 @@ class DataSet:
             if isinstance(err, ErrorCube)
         }
 
-        # Just slicing/selecting on time, supported for all lkTypes
-        # No conversions
+        if len(new_data) > 0:
+            new_columns = list(new_data.values())[0].columns
+        elif len(new_error) > 0:
+            new_columns = list(new_error.values())[0].columns
+        else:
+            new_columns = pd.MultiIndex.from_arrays([[]], names=["series"])
+
+        # Just slicing/selecting on time for Series and Frames
         new_data.update(
             {
                 data_key: data[time_key]
                 for data_key, data in self.data.items()
-                if isinstance(data, DataSeries)
+                if isinstance(data, (DataSeries, DataFrame))
             }
         )
 
@@ -599,17 +647,20 @@ class DataSet:
             {
                 err_key: err[time_key]
                 for err_key, err in self.error.items()
-                if isinstance(err, ErrorSeries)
+                if isinstance(err, (ErrorSeries, ErrorFrame))
             }
         )
 
         if len(new_data) > 0:
             new_index = list(new_data.values())[0].index
-        else:
+        elif len(new_error) > 0:
             new_index = list(new_error.values())[0].index
+        else:
+            new_index = pd.MultiIndex.from_arrays([[]], names=["time_index"])
 
         new_kwargs = self.kwargs.copy()
         new_kwargs["index"] = new_index
+        new_kwargs["columns"] = new_columns
 
         return self._build_instance(new_data, new_error, **new_kwargs)
 
@@ -617,6 +668,57 @@ class DataSet:
     def user_kwargs(self):
         """Keywords passed by the user"""
         return {key: getattr(self, key, None) for key in self._user_kwargs}
+
+    def _attr_override(self, attr, val):
+        setattr(self.data, attr, val)
+        setattr(self.error, attr, val)
+
+    @property
+    def ntime(self):
+        data_val = getattr(self.data, "ntime", None)
+        err_val = getattr(self.error, "ntime", None)
+        if data_val:
+            if err_val:
+                msg = f"""
+                Data and Errors have different values for `ntime`.
+                Data `ntime`: {data_val}
+                Error `ntime`: {err_val}
+                """
+                assert data_val == err_val, msg
+            return data_val
+        elif err_val:
+            return err_val
+        else:
+            return 0
+
+    @ntime.setter
+    def ntime(self, val):
+        self._attr_override("ntime", val)
+        if self.index.empty:
+            new_index = DataCube.parse_index(ntime=val)
+            self._attr_override("index", new_index)
+
+    @property
+    def index(self):
+        data_val = getattr(self.data, "index", None)
+        err_val = getattr(self.error, "index", None)
+        if data_val is not None:
+            if err_val is not None:
+                msg = f"""
+                Data and Errors have different values for `index`.
+                Data `index`: {data_val}
+                Error `index`: {err_val}
+                """
+                assert (data_val == err_val).all(), msg
+            return data_val
+        elif err_val is not None:
+            return err_val
+        else:
+            return None
+
+    @index.setter
+    def index(self, val):
+        self._attr_override("index", val)
 
     def _build_instance(self, newdata, newerror, **kwargs):
         all_kwargs = self.user_kwargs.copy()

@@ -1,4 +1,5 @@
 """Mixin methods and classes for lightkurve data objects"""
+
 import re
 from copy import deepcopy
 from typing import Union
@@ -151,6 +152,9 @@ class MathMixin:
         kwargs = {"index": self.index}
         if isinstance(self, pd.DataFrame):
             kwargs["columns"] = self.columns
+        if hasattr(self, "nrow") and hasattr(self, "ncol"):
+            kwargs["nrow"] = self.nrow
+            kwargs["ncol"] = self.ncol
         return kwargs
 
     def __add__(self, val):
@@ -158,15 +162,15 @@ class MathMixin:
             if isinstance(val, self.__class__):
                 return self._build_instance(
                     (self.to_numpy() ** 2 + val.to_numpy() ** 2) ** 0.5,
-                    nrow=self.nrow,
-                    ncol=self.ncol,
                     **self._get_math_kwargs(),
+                )
+            else:
+                raise TypeError(
+                    f"Adding {type(val)} to an error product is not supported."
                 )
         else:
             return self._build_instance(
                 self.to_numpy() + self._process_math_val(val),
-                nrow=self.nrow,
-                ncol=self.ncol,
                 **self._get_math_kwargs(),
             )
 
@@ -176,24 +180,18 @@ class MathMixin:
     def __mul__(self, val):
         return self._build_instance(
             self.to_numpy() * self._process_math_val(val),
-            nrow=self.nrow,
-            ncol=self.ncol,
             **self._get_math_kwargs(),
         )
 
     def __pow__(self, val):
         return self._build_instance(
             self.to_numpy() ** self._process_math_val(val),
-            nrow=self.nrow,
-            ncol=self.ncol,
             **self._get_math_kwargs(),
         )
 
     def __mod__(self, val):
         return self._build_instance(
             self.to_numpy() % self._process_math_val(val),
-            nrow=self.nrow,
-            ncol=self.ncol,
             **self._get_math_kwargs(),
         )
 
@@ -251,7 +249,7 @@ class AggMixin:
         # We have to create a new index. We'll take the mean of each bin
         new_index_left = self.index.to_frame().groupby(bin_edges_left, observed=False)
 
-        if "cadences" in self.index.names:
+        if "indices" in self.index.names:
 
             def repack(vals):
                 unpackvals = [
@@ -262,41 +260,50 @@ class AggMixin:
                     allvals += val
                 return str(allvals)
 
-            cadences = new_index_left["cadences"].apply(repack).values
+            cadences = new_index_left["indices"].apply(repack).values
             new_index_left = (
                 self.index.to_frame()
-                .drop(["cadences"], axis=1)
+                .drop(["indices"], axis=1)
                 .groupby(bin_edges_left, observed=False)
             )
-            self.index = self.index.droplevel("cadences")
-        elif "cadence" in self.index.names:
+            self.index = self.index.droplevel("indices")
+        elif "time_index" in self.index.names:
             cadences = (
-                new_index_left["cadence"].apply(lambda val: str(np.unique(val))).values
+                new_index_left["time_index"]
+                .apply(lambda val: str(np.unique(val)))
+                .values
             )
         # if the old index was time based, use the mean of the bin for the new index
         new_index_left = new_index_left.mean().reset_index(drop=True)
         index_names = list(self.index.names)
-        if ("cadence" in new_index_left) or ("mid_cadence" in new_index_left):
-            new_index_left["cadences"] = cadences
-            index_names.append("cadences")
+        if ("time_index" in new_index_left) or ("mid_index" in new_index_left):
+            new_index_left["indices"] = cadences
+            index_names.append("indices")
         new_index = new_index_left.set_index(index_names).index
-        if "cadence" in new_index.names:
+        if "time_index" in new_index.names:
             new_index.set_levels(
-                new_index.get_level_values("cadence").astype(int), level="cadence"
+                new_index.get_level_values("time_index").astype(int), level="time_index"
             )
-            new_index = new_index.rename({"cadence": "mid_cadence"})
+            new_index = new_index.rename({"time_index": "mid_index"})
 
         new_data = new[bin_mask].to_numpy()
         if self._stats_type == "error":
             new_data = new_data**0.5
         if hasattr(self, "columns"):
-            new_obj = self._build_instance(
-                new_data,
-                index=new_index[bin_mask],
-                columns=self.columns,
-                nrow=self.nrow,
-                ncol=self.ncol,
-            )
+            if hasattr(self, "nrow") and hasattr(self, "ncol"):
+                new_obj = self._build_instance(
+                    new_data,
+                    index=new_index[bin_mask],
+                    columns=self.columns,
+                    nrow=self.nrow,
+                    ncol=self.ncol,
+                )
+            else:
+                new_obj = self._build_instance(
+                    new_data,
+                    index=new_index[bin_mask],
+                    columns=self.columns,
+                )
         else:
             new_obj = self._build_instance(
                 new_data,
@@ -581,6 +588,164 @@ class AggMixin:
 
 class ConvenienceMixins:
     """Convenience mixins which add properties to lightkurve data objects as attributes."""
+
+    @classmethod
+    def parse_index(
+        cls, index: pd.MultiIndex = None, time_indices: dict = None, ntime: int = 0
+    ):
+        """Parse given indices and return a single pandas MultiIndex"""
+        if time_indices:
+            ntime_inds = len(list(time_indices.values())[0])
+            if ("time_index" not in time_indices.keys()) and (
+                "mid_index" not in time_indices.keys()
+            ):
+                time_indices.update({"time_index": np.arange(ntime_inds)})
+        else:
+            time_indices = {}
+
+        if isinstance(index, pd.MultiIndex):
+            time_names = index.names
+            time_indices.update(
+                {name: index.get_level_values(name) for name in time_names}
+            )
+
+            ntime_index = len(index)
+            if ("time_index" not in time_indices.keys()) and (
+                "mid_index" not in time_indices.keys()
+            ):
+                time_indices.update({"time_index": np.arange(ntime_index)})
+
+        if time_indices == {}:
+            time_indices.update({"time_index": np.arange(ntime)})
+
+        if "time_index" in time_indices:
+            t0 = time_indices.pop("time_index")
+            arrays = [t0, *list(time_indices.values())]
+            names = ["time_index", *list(time_indices.keys())]
+        elif "mid_index" in time_indices:
+            t0 = time_indices.pop("mid_index")
+            tfull = time_indices.pop("indices")
+            arrays = [t0, tfull, *list(time_indices.values())]
+            names = ["mid_index", "indices", *list(time_indices.keys())]
+        else:
+            arrays = [*list(time_indices.values())]
+            names = [*list(time_indices.keys())]
+
+        index = pd.MultiIndex.from_arrays(arrays, names=names)
+        return index
+
+    def parse_columns(
+        self,
+        columns: pd.MultiIndex = None,
+        row_indices: dict = None,
+        col_indices: dict = None,
+        nrow: int = 0,
+        ncol: int = 0,
+        continuous=False,
+    ):
+        """Parse row and column information from given information
+
+        Parameters
+        ----------
+        columns : pd.MultiIndex, optional
+            An existing columns instance, easiest to deal with, by default None
+        row_indices : dict, optional
+            A dictionary of row arrays, by default None
+        col_indices : dict, optional
+            A dictionary of column arrays, by default None
+        nrow : int, optional
+            The number of rows, by default 0
+        ncol : int, optional
+            The number of columns, by default 0
+        continuous : bool, optional
+            Whether the rows and columns in row and col indices should be
+            interpreted as continuous.
+            If not continuous, the arrays given in row and col indices should
+            correspond to coordinates by pixel.
+            For DataCubes, the region must be continous. For DataFrames, it is
+            assumed that the region is non-contiguous, by default False.
+
+        Returns
+        -------
+        pd.MultiIndex, int, int
+            Returns a tuple of the parsed columns instance, the number of rows,
+            and the number of columns inferred from the inputs.
+        """
+        if (
+            (columns is None)
+            and (row_indices is None)
+            and (col_indices is None)
+            and (nrow == 0)
+            and (ncol == 0)
+        ):
+            return pd.MultiIndex.from_arrays([[]], names=["series"]), None, None
+
+        def flatten(value):
+            """Flatten row and column arrays"""
+            return (value * np.ones((nrow, ncol), dtype=value.dtype)).ravel()
+
+        row_indices = row_indices or {}
+        col_indices = col_indices or {}
+        if (len(row_indices) > 0) and (len(col_indices) > 0) and continuous:
+            nrow = len(list(row_indices.values())[0])
+            ncol = len(list(col_indices.values())[0])
+            for key, val in row_indices.items():
+                row_indices[key] = flatten(val[:, None])
+            for key, val in col_indices.items():
+                col_indices[key] = flatten(val)
+
+        if columns is not None:
+            parsed_columns = columns.to_frame().reset_index(drop=True)
+            for name in [name for name in columns.names if name is not None]:
+                # Attempt to parse rows and columns from columns.names
+                if "row" in name:
+                    row_indices.update({name: columns.get_level_values(name)})
+                elif "col" in name:
+                    col_indices.update({name: columns.get_level_values(name)})
+        else:
+            parsed_columns = pd.DataFrame()
+
+        # If the column names weren't parseable,
+        # and the given row and col indices were empty
+        if (len(row_indices) == 0) or (len(col_indices) == 0):
+            # Generate indices if both nrow and ncol are given
+            if (nrow > 0) and (ncol > 0) and continuous:
+                row_indices = {"row": flatten(np.arange(nrow)[:, None])}
+                col_indices = {"col": flatten(np.arange(ncol))}
+            # Otherwise just return columns, rows and columns are not parseable
+            else:
+                return columns, nrow, ncol
+        else:
+            for i, val in enumerate(row_indices.values()):
+                if i == 0:
+                    nrow = len(np.unique(val))
+                assert (
+                    len(np.unique(val)) == nrow
+                ), "Mismatch encountered in number of rows specified."
+            for i, val in enumerate(col_indices.values()):
+                if i == 0:
+                    ncol = len(np.unique(val))
+                assert (
+                    len(np.unique(val)) == ncol
+                ), "Mismatch encountered in number of columns specified."
+
+        for key, val in row_indices.items():
+            parsed_columns[key] = val
+        for key, val in col_indices.items():
+            parsed_columns[key] = val
+
+        if "series" not in parsed_columns:
+            parsed_columns["series"] = np.arange(nrow * ncol).ravel()
+
+        series_col = parsed_columns.pop("series")
+        parsed_columns.insert(0, "series", series_col)
+
+        columns = parsed_columns.set_index(
+            ["series", *row_indices.keys(), *col_indices.keys()]
+        ).index
+        self.row_names = list(row_indices.keys())
+        self.col_names = list(col_indices.keys())
+        return columns, nrow, ncol
 
     def _include_convenience_index(self):
         INDEX_DICTS = {

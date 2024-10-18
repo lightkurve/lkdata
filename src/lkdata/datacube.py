@@ -1,4 +1,5 @@
 """Classes and tools for working with 3 dimensional data."""
+
 import logging
 from abc import ABC
 from functools import singledispatchmethod
@@ -44,11 +45,6 @@ class Cube(
         col_indices: Union[Dict, List, None] = None,
         **kwargs,
     ):
-        # For pandas DataFrames subclasses, new properties must
-        # be included in the _metadata list
-        self._metadata: List[str] = []
-        self._user_kwargs: List[str] = []
-
         self.nrow = kwargs.get("nrow", None)
         self.ncol = kwargs.get("ncol", None)
         index = kwargs.get("index", None)
@@ -61,8 +57,10 @@ class Cube(
                 setattr(self, key, val)
 
         data = self._preprocess_data(data)
-        index = self._parse_index(index, time_indices)
-        columns = self._parse_columns(columns, row_indices, col_indices)
+        index = self.parse_index(index, time_indices, self.ntime)
+        columns, self.nrow, self.ncol = self.parse_columns(
+            columns, row_indices, col_indices, self.nrow, self.ncol, continuous=True
+        )
 
         super().__init__(data, index=index, columns=columns)
         self._include_convenience_index()
@@ -93,84 +91,6 @@ class Cube(
         elif getattr(self, attr) != val:
             raise ValueError(f"Given {attr} does not match given data shape {val}")
 
-    def _parse_index(self, index: pd.MultiIndex, time_indices: dict):
-        """Retrieve time_indices from a pd.MultiIndex"""
-
-        if index is not None:
-            # prefer existing index, if available
-            time_names = index.names
-            time_indices = {name: index.get_level_values(name) for name in time_names}
-        elif not time_indices:
-            time_indices = {"time_index": np.arange(self.ntime)}
-
-        if "time_index" in time_indices.keys():
-            arrays = [*list(time_indices.values())]
-            names = [*list(time_indices.keys())]
-        else:
-            arrays = [np.arange(self.ntime), *list(time_indices.values())]
-            names = ["time_index", *list(time_indices.keys())]
-
-        index = pd.MultiIndex.from_arrays(arrays, names=names)
-        return index
-
-    def _parse_columns(
-        self,
-        columns: pd.MultiIndex,
-        row_indices: dict,
-        col_indices: dict,
-    ):
-        # prefer existing columns, if available
-        if columns is not None:
-            if row_indices:
-                self.row_names = list(row_indices.keys())
-            if col_indices:
-                self.col_names = list(col_indices.keys())
-
-            row_names = getattr(self, "row_names") or []
-            col_names = getattr(self, "col_names") or []
-
-            for name in columns.names:
-                if ("row" in name) and (name not in row_names):
-                    row_names.append(name)
-                elif ("col" in name) and (name not in col_names):
-                    col_names.append(name)
-            if (len(row_names) == 0) or (len(col_names) == 0):
-                raise ValueError(
-                    """
-                row and column indices cannot be inferred from a pandas.MultiIndex,
-                specify the rows and columns in the row_indices and col_indices dicts.
-                """
-                )
-
-            row_indices = {
-                name: np.unique(columns.get_level_values(name)) for name in row_names
-            }
-            col_indices = {
-                name: np.unique(columns.get_level_values(name)) for name in col_names
-            }
-
-        if not row_indices:
-            row_indices = {"row": np.arange(self.nrow)}
-        if not col_indices:
-            col_indices = {"col": np.arange(self.ncol)}
-
-        self.row_names = list(row_indices.keys())
-        self.col_names = list(col_indices.keys())
-
-        def flatten(value):
-            """Flatten row and column arrays"""
-            return (value * np.ones((self.nrow, self.ncol), dtype=value.dtype)).ravel()
-
-        row_arrs = [flatten(value[:, None]) for value in row_indices.values()]
-        col_arrs = [flatten(value) for value in col_indices.values()]
-
-        columns = pd.MultiIndex.from_arrays(
-            arrays=[np.arange(self.nrow * self.ncol).ravel(), *row_arrs, *col_arrs],
-            names=["series", *list(row_indices.keys()), *list(col_indices.keys())],
-        )
-
-        return columns
-
     def _convert_to_series_index(self, row, col):
         # Convert row, col index to DataFrame column index
         if isinstance(row, slice):
@@ -199,7 +119,7 @@ class Cube(
         if isinstance(self.index, pd.MultiIndex):
             indices = []
             for i in zip(self.index.names, self.index[cadence]):
-                if i[0] == "cadences":
+                if i[0] == "indices":
                     strlabel = f"{i[0]}: {i[1]}"
                 elif ("cadence" in i[0]) or ("index" in i[0]):
                     strlabel = f"{i[0]}: {int(np.floor(i[1]))}"
@@ -295,8 +215,6 @@ class Cube(
             self.iloc[key],
             nrow=self.nrow,
             ncol=self.ncol,
-            row_indices={name: None for name in self.row_names},
-            col_indices={name: None for name in self.col_names},
             **self.user_kwargs,
         )
 
@@ -518,6 +436,10 @@ class DataCube(
     _pd_class = pd.DataFrame
 
     def __init__(self, *args, **kwargs):
+        # For pandas DataFrames subclasses, new properties must
+        # be included in the _metadata list
+        self._metadata: List[str] = []
+        self._user_kwargs: List[str] = []
         super().__init__(*args, **kwargs)
         self._set_stats_methods()
 
@@ -536,6 +458,10 @@ class ErrorCube(
     _pd_class = pd.DataFrame
 
     def __init__(self, *args, **kwargs):
+        # For pandas DataFrames subclasses, new properties must
+        # be included in the _metadata list
+        self._metadata: List[str] = []
+        self._user_kwargs: List[str] = []
         super().__init__(*args, **kwargs)
         self._set_errstats_methods()
 

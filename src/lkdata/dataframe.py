@@ -1,4 +1,5 @@
 """Classes and tools for working with 3 dimensional data."""
+
 import logging
 from abc import ABC
 from collections.abc import Iterable
@@ -34,9 +35,32 @@ class Frame(
     _user_kwargs = None
 
     def __init__(self, *args, **kwargs):
-        self._user_kwargs = []
+        index = kwargs.pop("index", None)
+        time_indices = kwargs.pop("time_indices", None)
+        index = self.parse_index(index, time_indices)
+        if index.empty:
+            index = None
+        columns = kwargs.pop("columns", None)
+        row_indices = kwargs.pop("row_indices", None)
+        col_indices = kwargs.pop("col_indices", None)
+        columns, kwargs["nrow"], kwargs["ncol"] = self.parse_columns(
+            columns,
+            row_indices,
+            col_indices,
+            kwargs.get("nrow", 0),
+            kwargs.get("ncol", 0),
+        )
+        if columns.empty:
+            columns = None
         for key, val in kwargs.items():
-            if key not in ("ntime", "index", "columns"):
+            if key not in (
+                "ntime",
+                "index",
+                "columns",
+                "time_indices",
+                "row_indices",
+                "col_indices",
+            ):
                 self._metadata.append(key)
                 setattr(self, key, val)
                 if key not in ("nrow", "ncol"):
@@ -44,7 +68,8 @@ class Frame(
 
         for key in self._metadata:
             kwargs.pop(key, None)
-        pd.DataFrame.__init__(self, *args, **kwargs)
+
+        pd.DataFrame.__init__(self, *args, index=index, columns=columns, **kwargs)
         self.__post_init__()
 
     @property
@@ -85,7 +110,6 @@ class Frame(
     def __getitem__(self, key):
         pass
 
-    @__getitem__.register(int)
     @__getitem__.register(Iterable)
     @__getitem__.register(slice)
     def _(self, key):
@@ -95,6 +119,11 @@ class Frame(
             columns=self.columns,
             **self.user_kwargs,
         )
+
+    @__getitem__.register(int)
+    def _(self, key):
+        # bypassing pandas conversions to series when given int keys
+        return self[key : key + 1]
 
     @__getitem__.register
     def _(self, key: tuple):
@@ -117,11 +146,18 @@ class Frame(
             **self.user_kwargs,
         )
 
+    def __deepcopy__(self, *args, **kwargs):
+        return self._build_instance(
+            self.to_array(), index=self.index, columns=self.columns, **self.user_kwargs
+        )
+
 
 class DataFrame(Frame, StatsMixin):
     _series_class = DataSeries
 
     def __init__(self, *args, **kwargs):
+        self._metadata = []
+        self._user_kwargs = []
         super().__init__(*args, **kwargs)
         self._set_stats_methods()
 
@@ -138,6 +174,8 @@ class ErrorFrame(Frame, ErrorStatsMixin):
     _series_class = ErrorSeries
 
     def __init__(self, *args, **kwargs):
+        self._metadata = []
+        self._user_kwargs = []
         super().__init__(*args, **kwargs)
         self._set_errstats_methods()
 
