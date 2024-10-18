@@ -100,8 +100,20 @@ class DataProcessorMixin:
         classes = {"data": data_classes, "error": error_classes}
 
         obj_class = classes[self._type].get(data_arr.ndim, None)
-        if obj_class:
+        if obj_class in [DataCube, ErrorCube]:
             data_product = obj_class(data_arr, **self.kwargs)
+            self._check_attrs(data_product)
+        elif obj_class:
+            kwargs = deepcopy(self.kwargs)
+            # The following kwargs are assumed to be for building cubes when
+            # initializing a DataSet and are ignored if a DataSet is built
+            # with generic iterables
+            kwargs.pop("columns", None)
+            kwargs.pop("nrow", None)
+            kwargs.pop("ncol", None)
+            kwargs.pop("row_indices", None)
+            kwargs.pop("col_indices", None)
+            data_product = obj_class(data_arr, **kwargs)
             self._check_attrs(data_product)
         else:
             raise TypeError("Unrecognized format given for input.")
@@ -133,6 +145,16 @@ class DataProcessorMixin:
             If the data type is not recognized.
         """
 
+    @process_input.register(DataCube)
+    @process_input.register(DataFrame)
+    @process_input.register(DataSeries)
+    @process_input.register(ErrorCube)
+    @process_input.register(ErrorFrame)
+    @process_input.register(ErrorSeries)
+    def _(self, data_input):
+        self._check_attrs(data_input)
+        return data_input
+
     @process_input.register
     def _(self, data_input: Iterable):
         assert self._type in ["data", "error"], "Unrecognized type"
@@ -145,16 +167,6 @@ class DataProcessorMixin:
                 If giving multiple data products, provide input as a
                 dictionary and use the `update` method."""
             ) from err
-
-    @process_input.register(DataCube)
-    @process_input.register(DataFrame)
-    @process_input.register(DataSeries)
-    @process_input.register(ErrorCube)
-    @process_input.register(ErrorFrame)
-    @process_input.register(ErrorSeries)
-    def _(self, data_input):
-        self._check_attrs(data_input)
-        return data_input
 
 
 class ProductBundle(dict, DataProcessorMixin):
@@ -571,29 +583,32 @@ class DataSet:
             raise ValueError("Unrecognized key")
 
     @__getitem__.register(int)
+    @__getitem__.register(list)
+    @__getitem__.register(np.ndarray)
+    def _(self, key):
+        new_data = {}
+        for data_key, data in self.data.items():
+            new_data[data_key] = data[key]
+        new_data = DataProducts(new_data, self.data.index[np.atleast_1d(key)])
+
+        new_err = {}
+        for err_key, err in self.error.items():
+            new_err[err_key] = err[key]
+        new_err = ErrorProducts(new_err, self.error.index[np.atleast_1d(key)])
+        return self._build_instance(new_data, new_err)
+
     @__getitem__.register(slice)
     def _(self, key):
-        def set_new_data(old_data, key, new_kwargs=False):
-            new_data = {}
-            for data_key, data in old_data.items():
-                d = data[key]
-                new_data[data_key] = d.to_array()
-                if not new_kwargs:
-                    new_kwargs = self.kwargs.copy()
-                    new_kwargs["row_indices"] = {
-                        row_name: None for row_name in d.row_names
-                    }
-                    new_kwargs["col_indices"] = {
-                        col_name: None for col_name in d.col_names
-                    }
-                    new_kwargs["index"] = d.index
-                    new_kwargs["columns"] = d.columns
-            return new_data, new_kwargs
+        new_data = {}
+        for data_key, data in self.data.items():
+            new_data[data_key] = data[key]
+        new_data = DataProducts(new_data, self.data.index[key])
 
-        new_data, new_kwargs = set_new_data(self.data, key, False)
-        new_error, new_kwargs = set_new_data(self.error, key, new_kwargs)
-
-        return self._build_instance(new_data, new_error, **new_kwargs)
+        new_err = {}
+        for err_key, err in self.error.items():
+            new_err[err_key] = err[key]
+        new_err = ErrorProducts(new_err, self.error.index[key])
+        return self._build_instance(new_data, new_err)
 
     @__getitem__.register
     def _(self, key: tuple):
@@ -602,7 +617,7 @@ class DataSet:
             raise KeyError(f"Cannot parse key with {len(key)} elements.")
 
         new_data = {
-            data_key + f"{key}": data[key]
+            data_key: data[key]
             for data_key, data in self.data.items()
             if isinstance(data, DataCube)
         }
@@ -612,13 +627,19 @@ class DataSet:
             if isinstance(err, ErrorCube)
         }
 
-        # Just slicing/selecting on time, supported for all lkTypes
-        # No conversions
+        if len(new_data) > 0:
+            new_columns = list(new_data.values())[0].columns
+        elif len(new_error) > 0:
+            new_columns = list(new_error.values())[0].columns
+        else:
+            new_columns = pd.MultiIndex.from_arrays([[]], names=["series"])
+
+        # Just slicing/selecting on time for Series and Frames
         new_data.update(
             {
                 data_key: data[time_key]
                 for data_key, data in self.data.items()
-                if isinstance(data, DataSeries)
+                if isinstance(data, (DataSeries, DataFrame))
             }
         )
 
@@ -626,17 +647,20 @@ class DataSet:
             {
                 err_key: err[time_key]
                 for err_key, err in self.error.items()
-                if isinstance(err, ErrorSeries)
+                if isinstance(err, (ErrorSeries, ErrorFrame))
             }
         )
 
         if len(new_data) > 0:
             new_index = list(new_data.values())[0].index
-        else:
+        elif len(new_error) > 0:
             new_index = list(new_error.values())[0].index
+        else:
+            new_index = pd.MultiIndex.from_arrays([[]], names=["time_index"])
 
         new_kwargs = self.kwargs.copy()
         new_kwargs["index"] = new_index
+        new_kwargs["columns"] = new_columns
 
         return self._build_instance(new_data, new_error, **new_kwargs)
 

@@ -627,9 +627,125 @@ class ConvenienceMixins:
             tfull = time_indices.pop("indices")
             arrays = [t0, tfull, *list(time_indices.values())]
             names = ["mid_index", "indices", *list(time_indices.keys())]
+        else:
+            arrays = [*list(time_indices.values())]
+            names = [*list(time_indices.keys())]
 
         index = pd.MultiIndex.from_arrays(arrays, names=names)
         return index
+
+    def parse_columns(
+        self,
+        columns: pd.MultiIndex = None,
+        row_indices: dict = None,
+        col_indices: dict = None,
+        nrow: int = 0,
+        ncol: int = 0,
+        continuous=False,
+    ):
+        """Parse row and column information from given information
+
+        Parameters
+        ----------
+        columns : pd.MultiIndex, optional
+            An existing columns instance, easiest to deal with, by default None
+        row_indices : dict, optional
+            A dictionary of row arrays, by default None
+        col_indices : dict, optional
+            A dictionary of column arrays, by default None
+        nrow : int, optional
+            The number of rows, by default 0
+        ncol : int, optional
+            The number of columns, by default 0
+        continuous : bool, optional
+            Whether the rows and columns in row and col indices should be
+            interpreted as continuous.
+            If not continuous, the arrays given in row and col indices should
+            correspond to coordinates by pixel.
+            For DataCubes, the region must be continous. For DataFrames, it is
+            assumed that the region is non-contiguous, by default False.
+
+        Returns
+        -------
+        pd.MultiIndex, int, int
+            Returns a tuple of the parsed columns instance, the number of rows,
+            and the number of columns inferred from the inputs.
+        """
+        if (
+            (columns is None)
+            and (row_indices is None)
+            and (col_indices is None)
+            and (nrow == 0)
+            and (ncol == 0)
+        ):
+            return pd.MultiIndex.from_arrays([[]], names=["series"]), None, None
+
+        def flatten(value):
+            """Flatten row and column arrays"""
+            return (value * np.ones((nrow, ncol), dtype=value.dtype)).ravel()
+
+        row_indices = row_indices or {}
+        col_indices = col_indices or {}
+        if (len(row_indices) > 0) and (len(col_indices) > 0) and continuous:
+            nrow = len(list(row_indices.values())[0])
+            ncol = len(list(col_indices.values())[0])
+            for key, val in row_indices.items():
+                row_indices[key] = flatten(val[:, None])
+            for key, val in col_indices.items():
+                col_indices[key] = flatten(val)
+
+        if columns is not None:
+            parsed_columns = columns.to_frame().reset_index(drop=True)
+            for name in [name for name in columns.names if name is not None]:
+                # Attempt to parse rows and columns from columns.names
+                if "row" in name:
+                    row_indices.update({name: columns.get_level_values(name)})
+                elif "col" in name:
+                    col_indices.update({name: columns.get_level_values(name)})
+        else:
+            parsed_columns = pd.DataFrame()
+
+        # If the column names weren't parseable,
+        # and the given row and col indices were empty
+        if (len(row_indices) == 0) or (len(col_indices) == 0):
+            # Generate indices if both nrow and ncol are given
+            if (nrow > 0) and (ncol > 0) and continuous:
+                row_indices = {"row": flatten(np.arange(nrow)[:, None])}
+                col_indices = {"col": flatten(np.arange(ncol))}
+            # Otherwise just return columns, rows and columns are not parseable
+            else:
+                return columns, nrow, ncol
+        else:
+            for i, val in enumerate(row_indices.values()):
+                if i == 0:
+                    nrow = len(np.unique(val))
+                assert (
+                    len(np.unique(val)) == nrow
+                ), "Mismatch encountered in number of rows specified."
+            for i, val in enumerate(col_indices.values()):
+                if i == 0:
+                    ncol = len(np.unique(val))
+                assert (
+                    len(np.unique(val)) == ncol
+                ), "Mismatch encountered in number of columns specified."
+
+        for key, val in row_indices.items():
+            parsed_columns[key] = val
+        for key, val in col_indices.items():
+            parsed_columns[key] = val
+
+        if "series" not in parsed_columns:
+            parsed_columns["series"] = np.arange(nrow * ncol).ravel()
+
+        series_col = parsed_columns.pop("series")
+        parsed_columns.insert(0, "series", series_col)
+
+        columns = parsed_columns.set_index(
+            ["series", *row_indices.keys(), *col_indices.keys()]
+        ).index
+        self.row_names = list(row_indices.keys())
+        self.col_names = list(col_indices.keys())
+        return columns, nrow, ncol
 
     def _include_convenience_index(self):
         INDEX_DICTS = {

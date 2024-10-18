@@ -1,4 +1,5 @@
 """Classes and tools for working with 3 dimensional data."""
+
 import logging
 from abc import ABC
 from collections.abc import Iterable
@@ -39,7 +40,18 @@ class Frame(
         index = self.parse_index(index, time_indices)
         if index.empty:
             index = None
-
+        columns = kwargs.pop("columns", None)
+        row_indices = kwargs.pop("row_indices", None)
+        col_indices = kwargs.pop("col_indices", None)
+        columns, kwargs["nrow"], kwargs["ncol"] = self.parse_columns(
+            columns,
+            row_indices,
+            col_indices,
+            kwargs.get("nrow", 0),
+            kwargs.get("ncol", 0),
+        )
+        if columns.empty:
+            columns = None
         for key, val in kwargs.items():
             if key not in (
                 "ntime",
@@ -57,7 +69,7 @@ class Frame(
         for key in self._metadata:
             kwargs.pop(key, None)
 
-        pd.DataFrame.__init__(self, *args, index=index, **kwargs)
+        pd.DataFrame.__init__(self, *args, index=index, columns=columns, **kwargs)
         self.__post_init__()
 
     @property

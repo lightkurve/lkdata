@@ -386,12 +386,12 @@ class TestDataSet1(unittest.TestCase):
         self.assertIsInstance(ds["data"], DataFrame)
         self.assertIsInstance(ds["error"], ErrorFrame)
 
-    # def test_getitem_slice(self):
-    #     ds = DataSet({"data": self.data}, {"error": self.error})
-    #     sliced = ds[0:1]
-    #     self.assertIsInstance(sliced, DataSet)
-    #     np.testing.assert_array_equal(sliced.data["data"], self.data[0:1])
-    #     np.testing.assert_array_equal(sliced.error["error"], self.error[0:1])
+    def test_getitem_slice(self):
+        ds = DataSet({"data": self.data}, {"error": self.error})
+        sliced = ds[0:1]
+        self.assertIsInstance(sliced, DataSet)
+        np.testing.assert_array_equal(sliced.data["data"], self.data[0:1])
+        np.testing.assert_array_equal(sliced.error["error"], self.error[0:1])
 
     def test_getitem_invalid_key(self):
         ds = DataSet({"data": self.data}, {"error": self.error})
@@ -456,22 +456,26 @@ class TestDataSet2:
         with pytest.raises(ValueError):
             _ = sample_data["invalid_key"]
 
-    # def test_dataset_slice(self, sample_data):
-    #     sliced = sample_data[1:5]
-    #     assert all(val.shape[0] == 4 for val in sliced.data.values())
-    #     assert all(val.shape[0] == 4 for val in sliced.error.values())
+    def test_dataset_slice(self, sample_data):
+        sliced = sample_data[1:5]
+        assert all(val.shape[0] == 4 for val in sliced.data.values())
+        assert all(val.shape[0] == 4 for val in sliced.error.values())
 
-    # def test_dataset_getitem_tuple(sample_data):
-    #     data, error = sample_data
-    #     ds = DataSet(data, error)
-    #     subset = ds[1:5, :]
-    #     assert all(isinstance(val, (DataCube, DataFrame, DataSeries)) for val in subset.data.values())
-    #     assert all(isinstance(val, (ErrorCube, ErrorFrame, ErrorSeries)) for val in subset.error.values())
+    def test_dataset_getitem_tuple(self, sample_data):
+        subset = sample_data[1:5, :]
+        assert all(
+            isinstance(val, (DataCube, DataFrame, DataSeries))
+            for val in subset.data.values()
+        )
+        assert all(
+            isinstance(val, (ErrorCube, ErrorFrame, ErrorSeries))
+            for val in subset.error.values()
+        )
 
-    # def test_dataset_getitem_tuple_invalid():
-    #     ds = DataSet()
-    #     with pytest.raises(KeyError):
-    #         _ = ds[1, 2, 3, 4]
+    def test_dataset_getitem_tuple_invalid(self):
+        ds = DataSet()
+        with pytest.raises(KeyError):
+            _ = ds[1, 2, 3, 4]
 
     def test_dataset_build_instance(self, sample_data):
         data, error = sample_data.data, sample_data.error
@@ -481,37 +485,37 @@ class TestDataSet2:
         assert new_ds.custom_param == "test"
         assert new_ds.new_param == "new_test"
 
-    # def test_dataset_getitem_single_element(sample_data):
-    #     data, error = sample_data
-    #     ds = DataSet(data, error)
-    #     single_element = ds[0]
-    #     assert isinstance(single_element, DataSet)
-    #     assert all(val.shape[0] == 1 for val in single_element.data.values())
-    #     assert all(val.shape[0] == 1 for val in single_element.error.values())
+    def test_dataset_getitem_single_element(self, sample_data):
+        single_element = sample_data[0]
+        assert isinstance(single_element, DataSet)
+        assert all(val.shape[0] == 1 for val in single_element.data.values())
+        assert all(val.shape[0] == 1 for val in single_element.error.values())
 
-    # def test_dataset_getitem_tuple_single_element(sample_data):
-    #     data, error = sample_data
-    #     ds = DataSet(data, error)
-    #     single_element = ds[0, :]
-    #     assert isinstance(single_element, DataSet)
-    #     assert all(val.shape[0] == 1 for val in single_element.data.values())
-    #     assert all(val.shape[0] == 1 for val in single_element.error.values())
+    def test_dataset_getitem_tuple_single_element(self, sample_data):
+        single_element = sample_data[0, :]
+        assert isinstance(single_element, DataSet)
+        assert all(val.shape[0] == 1 for val in single_element.data.values())
+        assert all(val.shape[0] == 1 for val in single_element.error.values())
 
-    # def test_dataset_getitem_tuple_column_slice(sample_data):
-    #     data, error = sample_data
-    #     ds = DataSet(data, error)
-    #     column_slice = ds[:, 1:3]
-    #     assert isinstance(column_slice, DataSet)
-    #     assert all(val.shape[1] == 2 for val in column_slice.data.values() if isinstance(val, (DataCube, DataFrame)))
-    #     assert all(val.shape[1] == 2 for val in column_slice.error.values() if isinstance(val, (ErrorCube, ErrorFrame)))
+    def test_dataset_getitem_tuple_column_slice(self, sample_data):
+        column_slice = sample_data[:, 1:3]
+        assert isinstance(column_slice, DataSet)
+        assert all(sample_data["cube"][:, 1:3] == column_slice["cube"])
+        assert all(sample_data["errcube"][:, 1:3] == column_slice["errcube"])
 
-    # def test_dataset_getitem_tuple_3d_slice(sample_data):
-    #     data, error = sample_data
-    #     ds = DataSet(data, error)
-    #     slice_3d = ds[:, 1:3, 0]
-    #     assert isinstance(slice_3d, DataSet)
-    #     assert all(val.shape == (10, 2) for val in slice_3d.data.values() if isinstance(val, DataCube))
-    #     assert all(val.shape == (10, 2) for val in slice_3d.error.values() if isinstance(val, ErrorCube))
+    def test_dataset_getitem_tuple_3d_slice(self, sample_data):
+        slice_3d = sample_data[:, 1:3, 0]
+        assert isinstance(slice_3d, DataSet)
+        assert all(
+            val.shape == (10, 2)
+            for val in slice_3d.data.values()
+            if isinstance(val, DataCube)
+        )
+        assert all(
+            val.shape == (10, 2)
+            for val in slice_3d.error.values()
+            if isinstance(val, ErrorCube)
+        )
 
     def test_dataset_user_kwargs_preservation(self):
         ds = DataSet(custom_param1="test1", custom_param2="test2")
@@ -576,12 +580,19 @@ class TestDataSet2:
         with pytest.raises(ValueError):
             DataSet(data, error)
 
-    # def test_dataset_getitem_with_boolean_indexing(self):
-    #     data = {'series': DataSeries(np.random.rand(10))}
-    #     ds = DataSet(data)
-    #     mask = np.array([True, False] * 5)
-    #     subset = ds[mask]
-    #     assert subset.data['series'].shape[0] == 5
+    def test_dataset_getitem_with_boolean_indexing(self):
+        data = {"series": DataSeries(np.random.rand(10))}
+        ds = DataSet(data)
+        mask = np.array([True, False] * 5)
+        subset = ds[list(mask)]
+        assert subset.data["series"].shape[0] == 5
+
+    def test_dataset_getitem_with_complex_boolean_indexing(self):
+        data = {"frame": DataFrame(np.random.rand(10, 3))}
+        ds = DataSet(data)
+        mask = (ds.data["frame"].iloc[:, 0] > 0.5) & (ds.data["frame"].iloc[:, 1] < 0.7)
+        subset = ds[list(mask)]
+        assert subset.data["frame"].shape[0] == mask.sum()
 
     def test_dataset_with_inconsistent_index(self):
         data = {
@@ -590,16 +601,3 @@ class TestDataSet2:
         }
         with pytest.raises(ValueError):
             DataSet(data)
-
-    # def test_dataset_getitem_with_callable():
-    #     data = {'frame': DataFrame(np.random.rand(10, 3), columns=['A', 'B', 'C'])}
-    #     ds = DataSet(data)
-    #     subset = ds[lambda x: x.data['frame']['A'] > 0.5]
-    #     assert subset.data['frame'].shape[0] == (ds.data['frame']['A'] > 0.5).sum()
-
-    # def test_dataset_getitem_with_complex_boolean_indexing():
-    #     data = {'frame': DataFrame(np.random.rand(10, 3), columns=['A', 'B', 'C'])}
-    #     ds = DataSet(data)
-    #     mask = (ds.data['frame']['A'] > 0.5) & (ds.data['frame']['B'] < 0.7)
-    #     subset = ds[mask]
-    #     assert subset.data['frame'].shape[0] == mask.sum()

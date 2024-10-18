@@ -41,7 +41,10 @@ class Series(
         self.__post_init__()
 
     def __repr__(self):
-        return self._lk_repr() + super().__repr__()
+        return self._lk_repr()
+
+    def _repr_html_(self):
+        return self._lk_repr() + "\n" + super().__repr__()
 
     def __post_init__(self):
         def stats_post_process(result, **kwargs):
@@ -65,6 +68,10 @@ class Series(
         """Convert a pd.Series to a DataSeries"""
         return cls(data, **kwargs)
 
+    def __getitem__(self, key):
+        result = super().__getitem__(key)
+        return self.__class__(result, **self.user_kwargs)
+
 
 class DataSeries(Series, StatsMixin):
     def __init__(self, *args, **kwargs):
@@ -72,7 +79,7 @@ class DataSeries(Series, StatsMixin):
         self._set_stats_methods()
 
     def _lk_repr(self):
-        return f"📉 DataSeries {self.shape}\n"
+        return f"📉 DataSeries {self.shape}"
 
 
 class ErrorSeries(Series, ErrorStatsMixin):
@@ -81,4 +88,4 @@ class ErrorSeries(Series, ErrorStatsMixin):
         self._set_errstats_methods()
 
     def _lk_repr(self):
-        return f"📈 ErrorSeries {self.shape}\n"
+        return f"📈 ErrorSeries {self.shape}"

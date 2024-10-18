@@ -1,4 +1,5 @@
 """Classes and tools for working with 3 dimensional data."""
+
 import logging
 from abc import ABC
 from functools import singledispatchmethod
@@ -57,7 +58,9 @@ class Cube(
 
         data = self._preprocess_data(data)
         index = self.parse_index(index, time_indices, self.ntime)
-        columns = self._parse_columns(columns, row_indices, col_indices)
+        columns, self.nrow, self.ncol = self.parse_columns(
+            columns, row_indices, col_indices, self.nrow, self.ncol, continuous=True
+        )
 
         super().__init__(data, index=index, columns=columns)
         self._include_convenience_index()
@@ -87,64 +90,6 @@ class Cube(
             setattr(self, attr, val)
         elif getattr(self, attr) != val:
             raise ValueError(f"Given {attr} does not match given data shape {val}")
-
-    def _parse_columns(
-        self,
-        columns: pd.MultiIndex,
-        row_indices: dict,
-        col_indices: dict,
-    ):
-        # prefer existing columns, if available
-        if columns is not None:
-            if row_indices:
-                self.row_names = list(row_indices.keys())
-            if col_indices:
-                self.col_names = list(col_indices.keys())
-
-            row_names = getattr(self, "row_names") or []
-            col_names = getattr(self, "col_names") or []
-
-            for name in columns.names:
-                if ("row" in name) and (name not in row_names):
-                    row_names.append(name)
-                elif ("col" in name) and (name not in col_names):
-                    col_names.append(name)
-            if (len(row_names) == 0) or (len(col_names) == 0):
-                raise ValueError(
-                    """
-                row and column indices cannot be inferred from a pandas.MultiIndex,
-                specify the rows and columns in the row_indices and col_indices dicts.
-                """
-                )
-
-            row_indices = {
-                name: np.unique(columns.get_level_values(name)) for name in row_names
-            }
-            col_indices = {
-                name: np.unique(columns.get_level_values(name)) for name in col_names
-            }
-
-        if not row_indices:
-            row_indices = {"row": np.arange(self.nrow)}
-        if not col_indices:
-            col_indices = {"col": np.arange(self.ncol)}
-
-        self.row_names = list(row_indices.keys())
-        self.col_names = list(col_indices.keys())
-
-        def flatten(value):
-            """Flatten row and column arrays"""
-            return (value * np.ones((self.nrow, self.ncol), dtype=value.dtype)).ravel()
-
-        row_arrs = [flatten(value[:, None]) for value in row_indices.values()]
-        col_arrs = [flatten(value) for value in col_indices.values()]
-
-        columns = pd.MultiIndex.from_arrays(
-            arrays=[np.arange(self.nrow * self.ncol).ravel(), *row_arrs, *col_arrs],
-            names=["series", *list(row_indices.keys()), *list(col_indices.keys())],
-        )
-
-        return columns
 
     def _convert_to_series_index(self, row, col):
         # Convert row, col index to DataFrame column index
@@ -270,8 +215,6 @@ class Cube(
             self.iloc[key],
             nrow=self.nrow,
             ncol=self.ncol,
-            row_indices={name: None for name in self.row_names},
-            col_indices={name: None for name in self.col_names},
             **self.user_kwargs,
         )
 
