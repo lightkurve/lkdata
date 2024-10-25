@@ -203,10 +203,22 @@ class AggMixin:
         def wrap(*args, **kwargs):
             arr = func(*args, **kwargs)
             npdtype = type(arr[0])
-            precision = np.finfo(npdtype).precision  # noqa: E1101
+            precision = np.finfo(npdtype).precision
             return arr.round(precision)
 
         return wrap
+
+    def get_bins(self, index, nframes, right=False):
+        round_arr = self._set_precision(np.array)
+        # Find the average spacing of the index
+        dt = np.median(np.diff(index)) * nframes
+        nbins = int(np.ceil((index.max() - index.min()) / dt) + 1)
+        # Calculate what bin edges result in this spacing
+        bins = np.arange(index.min(), index.min() + nbins * dt, dt)
+        bins = round_arr(bins)
+
+        bin_edges = pd.cut(np.sort(index), bins, right=right)
+        return bin_edges
 
     def downsample(self, nframes: int = 5, level: Union[int, str] = -1):
         round_arr = self._set_precision(np.array)
@@ -217,17 +229,8 @@ class AggMixin:
         except ValueError:
             pass
 
-        # Find the average spacing of the index
-        dt = np.median(np.diff(index)) * nframes
-        nbins = int(np.ceil((index.max() - index.min()) / dt) + 1)
-        # Calculate what bin edges result in this spacing
-        bins = np.arange(index.min(), index.min() + nbins * dt, dt)
-        bins = round_arr(bins)
-
-        bin_edges_left = pd.cut(np.sort(index), bins, right=False)
-
-        # bin_edges_right = pd.cut(np.sort(index), bins, right=True)
         # groupby these bin edges
+        bin_edges_left = self.get_bins(index, nframes, right=False)
 
         # Downsampling is explicitly a sum
         if self._stats_type == "error":
