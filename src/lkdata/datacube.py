@@ -13,6 +13,7 @@ from .dataseries import DataSeries, ErrorSeries
 from .mixins import (
     StatsMixin,
     MathMixin,
+    BoolStatsMixin,
     ErrorStatsMixin,
     AggMixin,
     ConvenienceMixins,
@@ -467,3 +468,44 @@ class ErrorCube(
 
     def __repr__(self):
         return f"📕 ErrorCube {self.ntime, self.nrow, self.ncol}"
+
+
+class BoolCube(
+    Cube,
+    BoolStatsMixin,
+):
+    """A Cube object which contains boolean values with time and 2 spatial dimensions."""
+
+    _frame_class = DataFrame  # BoolFrame
+    _series_class = DataSeries  # BoolSeries
+    _pd_class = pd.DataFrame
+
+    def __init__(self, *args, **kwargs):
+        # For pandas DataFrames subclasses, new properties must
+        # be included in the _metadata list
+        self._metadata: List[str] = []
+        self._user_kwargs: List[str] = []
+        super().__init__(*args, **kwargs)
+
+    def __repr__(self):
+        return f"⚫️⚪️ BoolCube {self.ntime, self.nrow, self.ncol}"
+
+
+class BitwiseCube(
+    Cube,
+):
+    """A Cube object which contains bitwise values with time and 2 spatial dimensions."""
+
+    _frame_class = DataFrame  # BitwiseFrame
+    _series_class = DataSeries  # BitwiseSeries
+    _pd_class = pd.DataFrame
+
+    def __init__(self, *args, **kwargs):
+        # For pandas DataFrames subclasses, new properties must
+        # be included in the _metadata list
+        self._metadata: List[str] = []
+        self._user_kwargs: List[str] = []
+        super().__init__(*args, **kwargs)
+
+    def __repr__(self):
+        return f"📗 BitwiseCube {self.ntime, self.nrow, self.ncol}"

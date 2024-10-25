@@ -50,6 +50,9 @@ class StatsMixin:
 
     _stats_type = "data"
 
+    def _agg_func(self):
+        return lambda x: np.sum(x)
+
     def _set_stats_methods(self):
         for method_name in STATS_METHOD_NAMES:
             setattr(self, method_name, self._create_stats_method(method_name))
@@ -77,6 +80,9 @@ class ErrorStatsMixin:
     """Statistics mixins for error products"""
 
     _stats_type = "error"
+
+    def _agg_func(self):
+        return lambda x: np.sum(x**2) ** 0.5
 
     def _sum(self, axis=0):
         return getattr(super(pd.DataFrame, self), "sum")(axis=axis)
@@ -131,6 +137,13 @@ class ErrorStatsMixin:
             "cumsum",
         ):
             setattr(self, method, getattr(self, "new_" + method))
+
+
+class BoolStatsMixin:
+    _stats_type = "bool"
+
+    def _agg_func(self):
+        return lambda x: np.logical_or.reduce(x)
 
 
 class MathMixin:
@@ -233,12 +246,9 @@ class AggMixin:
         bin_edges_left = self.get_bins(index, nframes, right=False)
 
         # Downsampling is explicitly a sum
-        if self._stats_type == "error":
-            gb = (self**2).groupby(bin_edges_left, observed=False)
-        else:
-            gb = self.groupby(bin_edges_left, observed=False)
+        gb = self.groupby(bin_edges_left, observed=False)
+        new = gb.agg(self._agg_func())
 
-        new = gb.sum()
         # We only accept cases where the number of points in a bin is the same as the number of frames we downsample to
         if hasattr(self, "columns"):
             count = gb[int(self.columns.get_level_values(0)[0])].count()
@@ -290,8 +300,8 @@ class AggMixin:
             new_index = new_index.rename({"time_index": "mid_index"})
 
         new_data = new[bin_mask].to_numpy()
-        if self._stats_type == "error":
-            new_data = new_data**0.5
+        # if self._stats_type == "error":
+        #     new_data = new_data**0.5
         if hasattr(self, "columns"):
             if hasattr(self, "nrow") and hasattr(self, "ncol"):
                 new_obj = self._build_instance(
