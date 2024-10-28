@@ -49,19 +49,19 @@ def pytest_collection_modifyitems(config, items):
 # Make sure we use temporary directories for the config and cache
 # so that the tests are insensitive to local configuration.
 
-os.environ["XDG_CONFIG_HOME"] = tempfile.mkdtemp("lightkurve_config")
-os.mkdir(os.path.join(os.environ["XDG_CONFIG_HOME"], "lightkurve"))
+os.environ["XDG_CONFIG_HOME"] = tempfile.mkdtemp("lkdata_config")
+os.mkdir(os.path.join(os.environ["XDG_CONFIG_HOME"], "lkdata"))
 
 # Let users optionally specify XDG_CACHE_HOME for a test run
 # use case: in a local dev env, an user might want to reuse an existing dir for cache,
 # so as to speed up remote-data tests
 if os.environ.get("XDG_CACHE_HOME", "") == "":
-    os.environ["XDG_CACHE_HOME"] = tempfile.mkdtemp("lightkurve_cache")
+    os.environ["XDG_CACHE_HOME"] = tempfile.mkdtemp("lkdata_cache")
 else:
     print(
-        f"lightkurve conftest: Use user-specified XDG_CACHE_HOME: {os.environ['XDG_CACHE_HOME']}"
+        f"lkdata conftest: Use user-specified XDG_CACHE_HOME: {os.environ['XDG_CACHE_HOME']}"
     )
 
-_cache_dir = os.path.join(os.environ["XDG_CACHE_HOME"], "lightkurve")
+_cache_dir = os.path.join(os.environ["XDG_CACHE_HOME"], "lkdata")
 if not os.path.isdir(_cache_dir):
     os.mkdir(_cache_dir)

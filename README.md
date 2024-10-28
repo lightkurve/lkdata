@@ -1,4 +1,4 @@
-# Lightkurve
+# lkdata
 
 [![Installation](https://github.com/tessgi/secret/actions/workflows/install.yml/badge.svg?event=push)](https://github.com/tessgi/secret/actions/workflows/install.yml)
 [![ruff](https://github.com/tessgi/secret/actions/workflows/check.yml/badge.svg?event=push)](https://github.com/tessgi/secret/actions/workflows/check.yml)

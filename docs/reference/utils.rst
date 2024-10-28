@@ -11,21 +11,6 @@ Exceptions
    :undoc-members:
    :show-inheritance:
 
-Units
------
-
-.. automodule:: lightkurve.utils.units
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Plotting
---------
-
-.. automodule:: lightkurve.utils.plotting
-   :members:
-   :undoc-members:
-   :show-inheritance:
 
 Notebooks
 ---------
