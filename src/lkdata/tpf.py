@@ -82,14 +82,14 @@ class TargetPixelFile(DataSet):
                     "POS_CORR1": hdu[1].data["POS_CORR1"].astype(float),
                     "POS_CORR2": hdu[1].data["POS_CORR2"].astype(float),
                 }
-                flux_cube = self._prepare_cubes(cube_dict["FLUX"], time_dict)
-                flux_err_cube = self._prepare_err_cubes(
+                self.flux_cube = self._prepare_cubes(cube_dict["FLUX"], time_dict)
+                self.flux_err_cube = self._prepare_err_cubes(
                     err_cube_dict["FLUX_ERR"], time_dict
                 )
-                self.data_cubes = DataSet(
+                """self.data_cubes = DataSet(
                     {"FLUX": flux_cube},
                     {"FLUX_ERR": flux_err_cube},
-                )
+                )"""
 
                 # What to do with Quality?
 
@@ -111,8 +111,6 @@ class TargetPixelFile(DataSet):
         # Some extra things that are optional could still be captured by "args"
 
     def _prepare_cubes(self, flux, time_cube):
-        # TODO: expand to add other items to time dictionaries?
-
         return DataCube(
             flux,
             time_indices=time_cube,
