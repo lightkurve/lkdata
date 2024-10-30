@@ -703,13 +703,13 @@ class DataSet:
         data_val = getattr(self.data, "index", None)
         err_val = getattr(self.error, "index", None)
         if data_val is not None:
-            if err_val is not None:
+            if (err_val is not None) and not data_val.equals(err_val):
                 msg = f"""
                 Data and Errors have different values for `index`.
                 Data `index`: {data_val}
                 Error `index`: {err_val}
                 """
-                assert (data_val == err_val).all(), msg
+                raise ValueError(msg)
             return data_val
         elif err_val is not None:
             return err_val
