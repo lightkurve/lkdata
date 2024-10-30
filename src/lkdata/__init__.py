@@ -6,6 +6,7 @@ from .datacube import DataCube, ErrorCube  # noqa: F403, E402
 from .dataframe import DataFrame, ErrorFrame  # noqa: F403, E402
 from .dataseries import DataSeries, ErrorSeries  # noqa: F403, E402
 from .dataset import DataSet  # noqa: E402
+from .tpf import TargetPixelFile
 import os
 
 __all__ = [
@@ -16,6 +17,7 @@ __all__ = [
     "DataSeries",
     "ErrorSeries",
     "DataSet",
+    "TargetPixelFile",
 ]
 
 PACKAGEDIR = os.path.abspath(os.path.dirname(__file__))
