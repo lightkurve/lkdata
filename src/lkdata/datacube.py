@@ -115,9 +115,7 @@ class Cube(
         series_index.sort()
         return nrow, ncol, series_index
 
-    def single_frame(self, cadence: int) -> Styler:
-        """Create a stylized single cadence frame of a datacube"""
-        cadence = int(np.floor(cadence))
+    def make_cadence_label(self, cadence: int):
         if isinstance(self.index, pd.MultiIndex):
             indices = []
             for i in zip(self.index.names, self.index[cadence]):
@@ -132,7 +130,23 @@ class Cube(
             indices = [
                 f"{i[0]} {i[1]}" for i in zip(self.index.names, [self.index[cadence]])
             ]
-        str_index = "<br>" + "<br>".join(indices)
+        label = "<br>" + "<br>".join(indices)
+        return label
+
+    def single_frame(self, cadence: int) -> pd.DataFrame:
+        """Create a stylized single cadence frame of a datacube
+
+        This is distinct from to_dataframe() and from retreiving a single
+        cadence of a DataCube. The former returns a pandas DataFrame with all
+        pixels along the column axis and all cadences along the index axis.
+        The latter returns a DataCube with a single cadence, time information
+        is retained and remains the first index.
+
+        This returns a pandas DataFrame with rows on the index axis, and
+        columns along the column axis. Time information is lost.
+        """
+        cadence = int(np.floor(cadence))
+
         row = getattr(self, self.columns.names[1])
         col = getattr(self, self.columns.names[2])
         df = pd.DataFrame(
@@ -142,18 +156,21 @@ class Cube(
                 [[self.columns.names[2]], pd.Series(col[: self.ncol])]
             ),
         )
-        out = Styler(df).set_caption(str_index)
+        return df
+
+    def stylize_frame(self, df, **kwargs):
+        out = Styler(df)
+        if "label" in kwargs:
+            out = out.set_caption(kwargs.pop("label"))
         if self._stats_type == "error":
             out = out.format(precision=3)
         else:
             out = out.format(precision=0, thousands=",")
 
-        out = out.background_gradient(
-            axis=None,
-            vmin=self.to_array()[cadence].min(),
-            vmax=self.to_array()[cadence].max(),
-            cmap="gray",
-        )
+        vmin = kwargs.pop("vmin", df.min(axis=None))
+        vmax = kwargs.pop("vmax", df.max(axis=None))
+
+        out = out.background_gradient(axis=None, vmin=vmin, vmax=vmax, **kwargs)
 
         out = out.set_table_styles(
             [
@@ -175,7 +192,9 @@ class Cube(
         if hasattr(self, "_styler"):
             out0 = self.styler
         else:
-            out0 = self.single_frame(0)
+            df = self.single_frame(0)
+            label = self.make_cadence_label(0)
+            out0 = self.stylize_frame(df, label=label, cmap="gray")
             self.styler = out0
 
         if self.shape[0] > 1:
