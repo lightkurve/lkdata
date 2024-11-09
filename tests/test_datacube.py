@@ -9,6 +9,7 @@ from lkdata import (
     ErrorSeries,
     ErrorCube,
     ErrorFrame,
+    BoolCube,
 )
 from lkdata.mixins import STATS_METHOD_NAMES
 
@@ -227,3 +228,24 @@ def test_real_data():
     assert (flux_err[:, :, :-1].spatial_downsample(2) ** 2).sum().sum().round() == (
         flux_err[:, :, :-2] ** 2
     ).sum().sum().round()
+
+
+def test_bool_cube():
+    true_bool_array = np.ones(32).reshape((2, 4, 4)).astype(bool)
+    assert "BoolCube (2, 4, 4)" in repr(BoolCube(true_bool_array))
+    false_bool_array = ~true_bool_array
+    mixed_bool_array_same = np.array([[np.ones(4), np.zeros(4)] * 2] * 2, dtype=bool)
+    mixed_bool_array_opposite = mixed_bool_array_same.copy()
+    mixed_bool_array_opposite[1] = ~mixed_bool_array_opposite[0]
+
+    assert all(BoolCube(true_bool_array).downsample(2))
+    assert all(~BoolCube(false_bool_array).downsample(2))
+    assert (
+        BoolCube(mixed_bool_array_same).downsample(2).to_array()
+        == mixed_bool_array_same[0]
+    ).all()
+    assert all(BoolCube(mixed_bool_array_opposite).downsample(2))
+
+    false_append_true = np.append(false_bool_array, np.ones(16))
+    false_append_true = false_append_true.reshape((3, 4, 4))
+    assert all(BoolCube(false_append_true).downsample(3))

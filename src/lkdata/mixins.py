@@ -50,7 +50,7 @@ class StatsMixin:
 
     _stats_type = "data"
 
-    def _agg_func(self):
+    def _agg_sum(self):
         return lambda x: np.sum(x)
 
     def _set_stats_methods(self):
@@ -81,7 +81,7 @@ class ErrorStatsMixin:
 
     _stats_type = "error"
 
-    def _agg_func(self):
+    def _agg_sum(self):
         return lambda x: np.sum(x**2) ** 0.5
 
     def _sum(self, axis=0):
@@ -142,7 +142,7 @@ class ErrorStatsMixin:
 class BoolStatsMixin:
     _stats_type = "bool"
 
-    def _agg_func(self):
+    def _agg_sum(self):
         return lambda x: np.logical_or.reduce(x)
 
 
@@ -209,6 +209,33 @@ class MathMixin:
         )
 
 
+class BitwiseMixin:
+    _stats_type = "bitwise"
+
+    def _agg_sum(self):
+        def func(x):
+            all_codes = set()
+            for val in x:
+                np.array(list(bin(val))[2:], dtype=int).astype(bool)
+                all_codes.update(self.breakdown(val))
+            return sum(all_codes)
+
+        return func
+
+    def breakdown(self, val):
+        codes = set()
+        asbin = bin(val)
+        for pos, b in enumerate(asbin[:1:-1]):
+            if int(b):
+                codes.add(2 ** (pos))
+        return codes
+
+    def format_codes(self, val):
+        codes = self.breakdown(val)
+        str_codes = {self.codes.get(int(code), code) for code in codes}
+        return str_codes
+
+
 class AggMixin:
     def _set_precision(self, func):
         """np.array wrapper to strictly enforce precision."""
@@ -247,30 +274,27 @@ class AggMixin:
 
         # Downsampling is explicitly a sum
         gb = self.groupby(bin_edges_left, observed=False)
-        new = gb.agg(self._agg_func())
+        new = gb.agg(self._agg_sum())
 
-        # We only accept cases where the number of points in a bin is the same as the number of frames we downsample to
+        # We only accept cases where the number of points in a bin is the same
+        # as the number of frames we downsample to
         if hasattr(self, "columns"):
             count = gb[int(self.columns.get_level_values(0)[0])].count()
             bin_mask = np.asarray(count == nframes)[:, 0]
-
         else:
             # for DataSeries
             count = gb.count()
             bin_mask = np.asarray(count == nframes)
 
-        # We have to create a new index. We'll take the mean of each bin
+        # We have to create a new index. We take the mean of each bin.
         new_index_left = self.index.to_frame().groupby(bin_edges_left, observed=False)
 
         if "indices" in self.index.names:
 
             def repack(vals):
-                unpackvals = [
-                    list(np.array(re.findall(r"(\d+)", v), dtype=int)) for v in vals
-                ]
-                allvals = []
-                for val in unpackvals:
-                    allvals += val
+                # If previously downsampled, "indices" will contain strings that
+                # look like lists. This combines those "lists".
+                allvals = [int(num) for v in vals for num in re.findall(r"\d+", v)]
                 return str(allvals)
 
             cadences = new_index_left["indices"].apply(repack).values
@@ -401,15 +425,8 @@ class AggMixin:
         bin_edges_left_row = pd.cut(np.sort(row), bins_row, right=False)
         bin_edges_left_col = pd.cut(col, bins_col, right=False)
 
-        if self._stats_type == "error":
-            gb = (self**2).T.groupby(
-                [bin_edges_left_row, bin_edges_left_col], observed=False
-            )
-        else:
-            gb = self.T.groupby(
-                [bin_edges_left_row, bin_edges_left_col], observed=False
-            )
-        new = gb.sum()
+        gb = self.T.groupby([bin_edges_left_row, bin_edges_left_col], observed=False)
+        new = gb.agg(self._agg_sum())
 
         count = gb[int(self.index.get_level_values(0)[0])].count()
         bin_mask = np.asarray(count == row_factor * col_factor)[:, 0]
@@ -431,10 +448,7 @@ class AggMixin:
             index=self.index,
             columns=new_index[bin_mask],
         )
-        if self._stats_type == "error":
-            return new_obj**0.5
-        else:
-            return new_obj
+        return new_obj
 
     def _expand(self, row_factor, col_factor):
         """Expands each frame of a cube maintaining relative values.

@@ -8,13 +8,15 @@ from functools import singledispatchmethod
 import numpy as np
 import pandas as pd
 
-from .dataseries import DataSeries, ErrorSeries
+from .dataseries import DataSeries, ErrorSeries, BoolSeries, BitwiseSeries
 from .mixins import (
     AggMixin,
     ConvenienceMixins,
     ErrorStatsMixin,
     MathMixin,
     StatsMixin,
+    BoolStatsMixin,
+    BitwiseMixin,
 )
 
 log = logging.getLogger()
@@ -186,3 +188,38 @@ class ErrorFrame(Frame, ErrorStatsMixin):
     def from_pandas(data, **kwargs):
         """Convert a pd.DataFrame to a DataFrame"""
         return ErrorFrame(data, **kwargs)
+
+
+class BoolFrame(
+    Frame,
+    BoolStatsMixin,
+):
+    """A Cube object which contains boolean values with time and 2 spatial dimensions."""
+
+    _series_class = BoolSeries  # BoolSeries
+
+    def __init__(self, *args, **kwargs):
+        # For pandas DataFrames subclasses, new properties must
+        # be included in the _metadata list
+        self._metadata = []
+        self._user_kwargs = []
+        super().__init__(*args, **kwargs)
+
+    def __repr__(self):
+        return f"⚫️⚪️ BoolFrame {self.shape}"
+
+
+class BitwiseFrame(Frame, BitwiseMixin):
+    """A Cube object which contains bitwise values with time and 2 spatial dimensions."""
+
+    _series_class = BitwiseSeries  # BitwiseSeries
+
+    def __init__(self, *args, **kwargs):
+        # For pandas DataFrames subclasses, new properties must
+        # be included in the _metadata list
+        self._metadata = []
+        self._user_kwargs = []
+        super().__init__(*args, **kwargs)
+
+    def __repr__(self):
+        return f"📗 BitwiseFrame {self.shape}"

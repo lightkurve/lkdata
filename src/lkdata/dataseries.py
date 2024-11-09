@@ -11,6 +11,8 @@ from .mixins import (
     ErrorStatsMixin,
     MathMixin,
     StatsMixin,
+    BoolStatsMixin,
+    BitwiseMixin,
 )
 
 log = logging.getLogger()
@@ -89,3 +91,25 @@ class ErrorSeries(Series, ErrorStatsMixin):
 
     def _lk_repr(self):
         return f"📈 ErrorSeries {self.shape}"
+
+
+class BoolSeries(
+    Series,
+    BoolStatsMixin,
+):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def __repr__(self):
+        return f"⚫️⚪️ BoolSeries {self.shape}"
+
+
+class BitwiseSeries(
+    Series,
+    BitwiseMixin,
+):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def __repr__(self):
+        return f"📗 BitwiseSeries {self.shape}"

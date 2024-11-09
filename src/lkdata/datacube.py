@@ -8,12 +8,13 @@ from pandas.io.formats.style import Styler
 import numpy as np
 from typing import Union, List, Dict, Optional
 
-from .dataframe import DataFrame, ErrorFrame
-from .dataseries import DataSeries, ErrorSeries
+from .dataframe import DataFrame, ErrorFrame, BoolFrame, BitwiseFrame
+from .dataseries import DataSeries, ErrorSeries, BoolSeries, BitwiseSeries
 from .mixins import (
     StatsMixin,
     MathMixin,
     BoolStatsMixin,
+    BitwiseMixin,
     ErrorStatsMixin,
     AggMixin,
     ConvenienceMixins,
@@ -476,8 +477,8 @@ class BoolCube(
 ):
     """A Cube object which contains boolean values with time and 2 spatial dimensions."""
 
-    _frame_class = DataFrame  # BoolFrame
-    _series_class = DataSeries  # BoolSeries
+    _frame_class = BoolFrame
+    _series_class = BoolSeries
     _pd_class = pd.DataFrame
 
     def __init__(self, *args, **kwargs):
@@ -491,21 +492,84 @@ class BoolCube(
         return f"⚫️⚪️ BoolCube {self.ntime, self.nrow, self.ncol}"
 
 
-class BitwiseCube(
-    Cube,
-):
+class BitwiseCube(Cube, BitwiseMixin):
     """A Cube object which contains bitwise values with time and 2 spatial dimensions."""
 
-    _frame_class = DataFrame  # BitwiseFrame
-    _series_class = DataSeries  # BitwiseSeries
+    _frame_class = BitwiseFrame
+    _series_class = BitwiseSeries
     _pd_class = pd.DataFrame
+    _code_dict = None
 
     def __init__(self, *args, **kwargs):
         # For pandas DataFrames subclasses, new properties must
         # be included in the _metadata list
         self._metadata: List[str] = []
         self._user_kwargs: List[str] = []
+        if "codes" in kwargs:
+            self.codes = kwargs["codes"]
+        else:
+            self.codes = {}
+        self._user_kwargs += ["codes"]
         super().__init__(*args, **kwargs)
+
+    @property
+    def codes(self):
+        """Return the codes used in this BitwiseCube."""
+        return self._code_dict
+
+    @codes.setter
+    def codes(self, codes_dict):
+        self._code_dict = codes_dict
 
     def __repr__(self):
         return f"📗 BitwiseCube {self.ntime, self.nrow, self.ncol}"
+
+    def single_frame(self, cadence: int) -> Styler:
+        """
+        Overrides default to remove background gradient and to parse bitwise
+        integers to a set of codes.
+        """
+        cadence = int(np.floor(cadence))
+        if isinstance(self.index, pd.MultiIndex):
+            indices = []
+            for i in zip(self.index.names, self.index[cadence]):
+                if i[0] == "indices":
+                    strlabel = f"{i[0]}: {i[1]}"
+                elif ("cadence" in i[0]) or ("index" in i[0]):
+                    strlabel = f"{i[0]}: {int(np.floor(i[1]))}"
+                else:
+                    strlabel = f"{i[0]}: {i[1]:0.3f}"
+                indices += [strlabel]
+        else:
+            indices = [
+                f"{i[0]} {i[1]}" for i in zip(self.index.names, [self.index[cadence]])
+            ]
+        str_index = "<br>" + "<br>".join(indices)
+        row = getattr(self, self.columns.names[1])
+        col = getattr(self, self.columns.names[2])
+        df = pd.DataFrame(
+            self.to_array()[cadence],
+            index=pd.Series(row[:: self.ncol], name=self.columns.names[1]),
+            columns=pd.MultiIndex.from_product(
+                [[self.columns.names[2]], pd.Series(col[: self.ncol])]
+            ),
+        )
+        out = Styler(df).set_caption(str_index)
+
+        out = out.format(lambda x: self.format_codes(x))
+
+        out = out.set_table_styles(
+            [
+                {
+                    "selector": "caption",
+                    "props": "caption-side: bottom; font-size:1em; font-weight: bold;",
+                },
+                {"selector": "th", "props": "text-align: center;"},
+                {
+                    "selector": "td",
+                    "props": "width: 30px; height: 30px; font-size: 6pt; text-align: center;",
+                },
+                {"selector": ":hover", "props": ""},
+            ]
+        )
+        return out
