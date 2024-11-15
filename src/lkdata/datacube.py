@@ -518,18 +518,19 @@ class BitwiseCube(Cube, BitwiseMixin):
     _series_class = BitwiseSeries
     _pd_class = pd.DataFrame
     _code_dict = None
+    _values_display = None
 
     def __init__(self, *args, **kwargs):
         # For pandas DataFrames subclasses, new properties must
         # be included in the _metadata list
         self._metadata: List[str] = []
         self._user_kwargs: List[str] = []
-        if "codes" in kwargs:
-            self.codes = kwargs["codes"]
-        else:
-            self.codes = {}
-        self._user_kwargs += ["codes"]
+        self.codes = kwargs.get("codes", {})
+        values_display = kwargs.pop("values_display", "bitwise")
+        kwargs["codes"] = self.codes
         super().__init__(*args, **kwargs)
+        self.values_display = values_display
+        self._user_kwargs.append("values_display")
 
     @property
     def codes(self):
@@ -540,6 +541,20 @@ class BitwiseCube(Cube, BitwiseMixin):
     def codes(self, codes_dict):
         self._code_dict = codes_dict
 
+    @property
+    def values_display(self):
+        return self._values_display
+
+    @values_display.setter
+    def values_display(self, value):
+        allowed = {"bitwise", "parsed", "detailed"}
+        if value.lower() not in allowed:
+            raise AttributeError(f"Display must be one of {allowed}.")
+        self._values_display = value.lower()
+        df = self.single_frame(0)
+        label = self.make_cadence_label(0)
+        self.styler = self.stylize_frame(df, label=label, cmap="gray")
+
     def __repr__(self):
         return f"📗 BitwiseCube {self.ntime, self.nrow, self.ncol}"
 
@@ -549,14 +564,14 @@ class BitwiseCube(Cube, BitwiseMixin):
         integers to a set of codes.
         """
         out = Styler(df)
+
         if "label" in kwargs:
             out = out.set_caption(kwargs.pop("label"))
-        if self._stats_type == "error":
-            out = out.format(precision=3)
-        else:
-            out = out.format(precision=0, thousands=",")
 
-        out = out.format(lambda x: self.format_codes(x))
+        if self._values_display == "detailed":
+            out = out.format(lambda x: self.parse_code(x))
+        elif self._values_display == "parsed":
+            out = out.format(lambda x: self.breakdown(x))
 
         out = out.set_table_styles(
             [

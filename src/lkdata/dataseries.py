@@ -91,9 +91,6 @@ class BoolSeries(
     Series,
     BoolStatsMixin,
 ):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
     def __repr__(self):
         return f"⚫️⚪️ BoolSeries {self.shape}\n" + super().__repr__()
 
@@ -102,8 +99,42 @@ class BitwiseSeries(
     Series,
     BitwiseMixin,
 ):
+    _code_dict = None
+    _values_display = None
+
     def __init__(self, *args, **kwargs):
+        kwargs["codes"] = kwargs.get("codes", {})
+        self.codes = kwargs["codes"]
+        values_display = kwargs.pop("values_display", "bitwise")
         super().__init__(*args, **kwargs)
+        self.values_display = values_display
+        self._user_kwargs.append("values_display")
 
     def __repr__(self):
-        return f"📗 BitwiseSeries {self.shape}\n" + super().__repr__()
+        if self._values_display == "detailed":
+            display = self.apply(lambda x: self.parse_code(x)).__repr__()
+        elif self._values_display == "parsed":
+            display = self.apply(lambda x: self.breakdown(x)).__repr__()
+        else:
+            display = super().__repr__()
+        return f"📗 BitwiseSeries {self.shape}\n" + display
+
+    @property
+    def codes(self):
+        """Return the codes used in this BitwiseCube."""
+        return self._code_dict
+
+    @codes.setter
+    def codes(self, codes_dict):
+        self._code_dict = codes_dict
+
+    @property
+    def values_display(self):
+        return self._values_display
+
+    @values_display.setter
+    def values_display(self, value):
+        allowed = {"bitwise", "parsed", "detailed"}
+        if value.lower() not in allowed:
+            raise AttributeError(f"Display must be one of {allowed}.")
+        self._values_display = value.lower()

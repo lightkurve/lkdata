@@ -230,7 +230,7 @@ class BitwiseMixin:
                 codes.add(2 ** (pos))
         return codes
 
-    def format_codes(self, val):
+    def parse_code(self, val):
         codes = self.breakdown(val)
         str_codes = {self.codes.get(int(code), code) for code in codes}
         return str_codes
