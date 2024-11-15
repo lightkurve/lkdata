@@ -42,12 +42,6 @@ class Series(
         super().__init__(*args, **kwargs)
         self.__post_init__()
 
-    def __repr__(self):
-        return self._lk_repr()
-
-    def _repr_html_(self):
-        return self._lk_repr() + "\n" + super().__repr__()
-
     def __post_init__(self):
         def stats_post_process(result, **kwargs):
             return result
@@ -80,8 +74,8 @@ class DataSeries(Series, StatsMixin):
         super().__init__(*args, **kwargs)
         self._set_stats_methods()
 
-    def _lk_repr(self):
-        return f"📉 DataSeries {self.shape}"
+    def __repr__(self):
+        return f"📉 DataSeries {self.shape}\n" + super().__repr__()
 
 
 class ErrorSeries(Series, ErrorStatsMixin):
@@ -89,8 +83,8 @@ class ErrorSeries(Series, ErrorStatsMixin):
         super().__init__(*args, **kwargs)
         self._set_errstats_methods()
 
-    def _lk_repr(self):
-        return f"📈 ErrorSeries {self.shape}"
+    def __repr__(self):
+        return f"📈 ErrorSeries {self.shape}\n" + super().__repr__()
 
 
 class BoolSeries(
@@ -101,7 +95,7 @@ class BoolSeries(
         super().__init__(*args, **kwargs)
 
     def __repr__(self):
-        return f"⚫️⚪️ BoolSeries {self.shape}"
+        return f"⚫️⚪️ BoolSeries {self.shape}\n" + super().__repr__()
 
 
 class BitwiseSeries(
@@ -112,4 +106,4 @@ class BitwiseSeries(
         super().__init__(*args, **kwargs)
 
     def __repr__(self):
-        return f"📗 BitwiseSeries {self.shape}"
+        return f"📗 BitwiseSeries {self.shape}\n" + super().__repr__()

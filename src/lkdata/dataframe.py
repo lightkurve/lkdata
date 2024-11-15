@@ -7,6 +7,7 @@ from functools import singledispatchmethod
 
 import numpy as np
 import pandas as pd
+from pandas.io.formats.style import Styler
 
 from .dataseries import DataSeries, ErrorSeries, BoolSeries, BitwiseSeries
 from .mixins import (
@@ -213,13 +214,68 @@ class BitwiseFrame(Frame, BitwiseMixin):
     """A Cube object which contains bitwise values with time and 2 spatial dimensions."""
 
     _series_class = BitwiseSeries  # BitwiseSeries
+    _code_dict = None
 
     def __init__(self, *args, **kwargs):
         # For pandas DataFrames subclasses, new properties must
         # be included in the _metadata list
         self._metadata = []
         self._user_kwargs = []
+        if "codes" in kwargs:
+            self.codes = kwargs["codes"]
+        else:
+            self.codes = {}
+        self._user_kwargs += ["codes"]
         super().__init__(*args, **kwargs)
+
+    @property
+    def styler(self):
+        if hasattr(self, "_styler"):
+            return self._styler
+        return None
+
+    @styler.setter
+    def styler(self, val: Styler):
+        self._styler = val
+
+    @property
+    def codes(self):
+        """Return the codes used in this BitwiseCube."""
+        return self._code_dict
+
+    @codes.setter
+    def codes(self, codes_dict):
+        self._code_dict = codes_dict
 
     def __repr__(self):
         return f"📗 BitwiseFrame {self.shape}"
+
+    def _repr_html_(self):
+        if hasattr(self, "_styler"):
+            out0 = self.styler
+        else:
+            out0 = self.stylize_frame(self)
+            self.styler = out0
+        return f"""
+        {repr(self)}
+        {out0.to_html()}
+        Note: Flags are parsed and listed as sets of independent codes for
+        representation only, raw flags remain bitwise in data.
+        """
+
+    def raw(self):
+        out = Styler(self)
+        return out
+
+    def stylize_frame(self, df, **kwargs) -> Styler:
+        """
+        Overrides default to remove background gradient and to parse bitwise
+        integers to a set of codes.
+        """
+        out = Styler(df)
+        if "label" in kwargs:
+            out = out.set_caption(kwargs.pop("label"))
+
+        out = out.format(lambda x: self.format_codes(x))
+
+        return out

@@ -543,37 +543,18 @@ class BitwiseCube(Cube, BitwiseMixin):
     def __repr__(self):
         return f"📗 BitwiseCube {self.ntime, self.nrow, self.ncol}"
 
-    def single_frame(self, cadence: int) -> Styler:
+    def stylize_frame(self, df, **kwargs) -> Styler:
         """
         Overrides default to remove background gradient and to parse bitwise
         integers to a set of codes.
         """
-        cadence = int(np.floor(cadence))
-        if isinstance(self.index, pd.MultiIndex):
-            indices = []
-            for i in zip(self.index.names, self.index[cadence]):
-                if i[0] == "indices":
-                    strlabel = f"{i[0]}: {i[1]}"
-                elif ("cadence" in i[0]) or ("index" in i[0]):
-                    strlabel = f"{i[0]}: {int(np.floor(i[1]))}"
-                else:
-                    strlabel = f"{i[0]}: {i[1]:0.3f}"
-                indices += [strlabel]
+        out = Styler(df)
+        if "label" in kwargs:
+            out = out.set_caption(kwargs.pop("label"))
+        if self._stats_type == "error":
+            out = out.format(precision=3)
         else:
-            indices = [
-                f"{i[0]} {i[1]}" for i in zip(self.index.names, [self.index[cadence]])
-            ]
-        str_index = "<br>" + "<br>".join(indices)
-        row = getattr(self, self.columns.names[1])
-        col = getattr(self, self.columns.names[2])
-        df = pd.DataFrame(
-            self.to_array()[cadence],
-            index=pd.Series(row[:: self.ncol], name=self.columns.names[1]),
-            columns=pd.MultiIndex.from_product(
-                [[self.columns.names[2]], pd.Series(col[: self.ncol])]
-            ),
-        )
-        out = Styler(df).set_caption(str_index)
+            out = out.format(precision=0, thousands=",")
 
         out = out.format(lambda x: self.format_codes(x))
 
