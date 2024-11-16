@@ -210,21 +210,19 @@ class BoolFrame(
         return f"⚫️⚪️ BoolFrame {self.shape}"
 
 
-class BitwiseFrame(Frame, BitwiseMixin):
+class BitwiseFrame(BitwiseMixin, Frame):
     """A Cube object which contains bitwise values with time and 2 spatial dimensions."""
 
     _series_class = BitwiseSeries
-    _code_dict = None
-    _values_display = None
 
     def __init__(self, *args, **kwargs):
         # For pandas DataFrames subclasses, new properties must
         # be included in the _metadata list
         self._metadata = []
         self._user_kwargs = []
-        self.codes = kwargs.get("codes", {})
+        kwargs["codes"] = kwargs.get("codes", {})
+        self.codes = kwargs["codes"]
         values_display = kwargs.pop("values_display", "bitwise")
-        kwargs["codes"] = self.codes
         super().__init__(*args, **kwargs)
         self.values_display = values_display
         self._user_kwargs.append("values_display")
@@ -239,27 +237,6 @@ class BitwiseFrame(Frame, BitwiseMixin):
     def styler(self, val: Styler):
         self._styler = val
 
-    @property
-    def codes(self):
-        """Return the codes used in this BitwiseCube."""
-        return self._code_dict
-
-    @codes.setter
-    def codes(self, codes_dict):
-        self._code_dict = codes_dict
-
-    @property
-    def values_display(self):
-        return self._values_display
-
-    @values_display.setter
-    def values_display(self, value):
-        allowed = {"bitwise", "parsed", "detailed"}
-        if value.lower() not in allowed:
-            raise AttributeError(f"Display must be one of {allowed}.")
-        self._values_display = value.lower()
-        self.styler = self.stylize_frame(self)
-
     def __repr__(self):
         return f"📗 BitwiseFrame {self.shape}"
 
@@ -273,18 +250,3 @@ class BitwiseFrame(Frame, BitwiseMixin):
         {repr(self)}
         {out0.to_html()}
         """
-
-    def stylize_frame(self, df, **kwargs) -> Styler:
-        """
-        Overrides default to remove background gradient and to parse bitwise
-        integers to a set of codes.
-        """
-        out = Styler(df)
-        if "label" in kwargs:
-            out = out.set_caption(kwargs.pop("label"))
-        if self._values_display == "detailed":
-            out = out.format(lambda x: self.parse_code(x))
-        elif self._values_display == "parsed":
-            out = out.format(lambda x: self.breakdown(x))
-
-        return out

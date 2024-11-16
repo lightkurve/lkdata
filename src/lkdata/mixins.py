@@ -6,6 +6,7 @@ from typing import Union
 
 import numpy as np
 import pandas as pd
+from pandas.io.formats.style import Styler
 
 __all__ = ["StatsMixin", "MathMixin", "ErrorStatsMixin"]
 
@@ -211,6 +212,8 @@ class MathMixin:
 
 class BitwiseMixin:
     _stats_type = "bitwise"
+    _code_dict = None
+    _values_display = None
 
     def _agg_sum(self):
         def func(x):
@@ -221,6 +224,27 @@ class BitwiseMixin:
             return sum(all_codes)
 
         return func
+
+    @property
+    def values_display(self):
+        return self._values_display
+
+    @values_display.setter
+    def values_display(self, value):
+        allowed = {"bitwise", "parsed", "detailed"}
+        if value.lower() not in allowed:
+            raise AttributeError(f"Display must be one of {allowed}.")
+        self._values_display = value.lower()
+        self.styler = self.stylize_frame(self)
+
+    @property
+    def codes(self):
+        """Return the codes used in this Bitwise."""
+        return self._code_dict
+
+    @codes.setter
+    def codes(self, codes_dict):
+        self._code_dict = codes_dict
 
     def breakdown(self, val):
         codes = set()
@@ -234,6 +258,35 @@ class BitwiseMixin:
         codes = self.breakdown(val)
         str_codes = {self.codes.get(int(code), code) for code in codes}
         return str_codes
+
+    def stylize_frame(self, df, **kwargs) -> Styler:
+        """
+        Overrides default to remove background gradient and to parse bitwise
+        integers to a set of codes.
+        """
+        out = Styler(df)
+        if "label" in kwargs:
+            out = out.set_caption(kwargs.pop("label"))
+        if self._values_display == "detailed":
+            out = out.format(lambda x: self.parse_code(x))
+        elif self._values_display == "parsed":
+            out = out.format(lambda x: self.breakdown(x))
+
+        out = out.set_table_styles(
+            [
+                {
+                    "selector": "caption",
+                    "props": "caption-side: bottom; font-size:1em; font-weight: bold;",
+                },
+                {"selector": "th", "props": "text-align: center;"},
+                {
+                    "selector": "td",
+                    "props": "height: 30px; text-align: center;",
+                },
+                {"selector": ":hover", "props": ""},
+            ]
+        )
+        return out
 
 
 class AggMixin:

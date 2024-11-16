@@ -511,35 +511,27 @@ class BoolCube(
         return f"⚫️⚪️ BoolCube {self.ntime, self.nrow, self.ncol}"
 
 
-class BitwiseCube(Cube, BitwiseMixin):
+class BitwiseCube(BitwiseMixin, Cube):
     """A Cube object which contains bitwise values with time and 2 spatial dimensions."""
 
     _frame_class = BitwiseFrame
     _series_class = BitwiseSeries
     _pd_class = pd.DataFrame
-    _code_dict = None
-    _values_display = None
 
     def __init__(self, *args, **kwargs):
         # For pandas DataFrames subclasses, new properties must
         # be included in the _metadata list
         self._metadata: List[str] = []
         self._user_kwargs: List[str] = []
-        self.codes = kwargs.get("codes", {})
+        kwargs["codes"] = kwargs.get("codes", {})
+        self.codes = kwargs["codes"]
         values_display = kwargs.pop("values_display", "bitwise")
-        kwargs["codes"] = self.codes
         super().__init__(*args, **kwargs)
         self.values_display = values_display
         self._user_kwargs.append("values_display")
 
-    @property
-    def codes(self):
-        """Return the codes used in this BitwiseCube."""
-        return self._code_dict
-
-    @codes.setter
-    def codes(self, codes_dict):
-        self._code_dict = codes_dict
+    def __repr__(self):
+        return f"📗 BitwiseCube {self.ntime, self.nrow, self.ncol}"
 
     @property
     def values_display(self):
@@ -554,37 +546,3 @@ class BitwiseCube(Cube, BitwiseMixin):
         df = self.single_frame(0)
         label = self.make_cadence_label(0)
         self.styler = self.stylize_frame(df, label=label, cmap="gray")
-
-    def __repr__(self):
-        return f"📗 BitwiseCube {self.ntime, self.nrow, self.ncol}"
-
-    def stylize_frame(self, df, **kwargs) -> Styler:
-        """
-        Overrides default to remove background gradient and to parse bitwise
-        integers to a set of codes.
-        """
-        out = Styler(df)
-
-        if "label" in kwargs:
-            out = out.set_caption(kwargs.pop("label"))
-
-        if self._values_display == "detailed":
-            out = out.format(lambda x: self.parse_code(x))
-        elif self._values_display == "parsed":
-            out = out.format(lambda x: self.breakdown(x))
-
-        out = out.set_table_styles(
-            [
-                {
-                    "selector": "caption",
-                    "props": "caption-side: bottom; font-size:1em; font-weight: bold;",
-                },
-                {"selector": "th", "props": "text-align: center;"},
-                {
-                    "selector": "td",
-                    "props": "width: 30px; height: 30px; font-size: 6pt; text-align: center;",
-                },
-                {"selector": ":hover", "props": ""},
-            ]
-        )
-        return out
