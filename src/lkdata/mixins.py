@@ -324,10 +324,7 @@ class AggMixin:
 
         # groupby these bin edges
         bin_edges_left = self.get_bins(index, nframes, right=False)
-
-        # Downsampling is explicitly a sum
         gb = self.groupby(bin_edges_left, observed=False)
-        new = gb.agg(self._agg_sum())
 
         # We only accept cases where the number of points in a bin is the same
         # as the number of frames we downsample to
@@ -339,6 +336,8 @@ class AggMixin:
             count = gb.count()
             bin_mask = np.asarray(count == nframes)
 
+        # Downsampling is explicitly a sum
+        new = gb.agg(self._agg_sum())[bin_mask]
         # We have to create a new index. We take the mean of each bin.
         new_index_left = self.index.to_frame().groupby(bin_edges_left, observed=False)
 
@@ -351,6 +350,7 @@ class AggMixin:
                 return str(allvals)
 
             cadences = new_index_left["indices"].apply(repack).values
+            cadences = cadences[bin_mask]
             new_index_left = (
                 self.index.to_frame()
                 .drop(["indices"], axis=1)
@@ -363,8 +363,9 @@ class AggMixin:
                 .apply(lambda val: str(np.unique(val)))
                 .values
             )
+            cadences = cadences[bin_mask]
         # if the old index was time based, use the mean of the bin for the new index
-        new_index_left = new_index_left.mean().reset_index(drop=True)
+        new_index_left = new_index_left.mean().reset_index(drop=True)[bin_mask]
         index_names = list(self.index.names)
         if ("time_index" in new_index_left) or ("mid_index" in new_index_left):
             new_index_left["indices"] = cadences
@@ -376,28 +377,25 @@ class AggMixin:
             )
             new_index = new_index.rename({"time_index": "mid_index"})
 
-        new_data = new[bin_mask].to_numpy()
-        # if self._stats_type == "error":
-        #     new_data = new_data**0.5
         if hasattr(self, "columns"):
             if hasattr(self, "nrow") and hasattr(self, "ncol"):
                 new_obj = self._build_instance(
-                    new_data,
-                    index=new_index[bin_mask],
+                    new.to_numpy(),
+                    index=new_index,
                     columns=self.columns,
                     nrow=self.nrow,
                     ncol=self.ncol,
                 )
             else:
                 new_obj = self._build_instance(
-                    new_data,
-                    index=new_index[bin_mask],
+                    new.to_numpy(),
+                    index=new_index,
                     columns=self.columns,
                 )
         else:
             new_obj = self._build_instance(
-                new_data,
-                index=new_index[bin_mask],
+                new.to_numpy(),
+                index=new_index,
             )
         return new_obj
 
