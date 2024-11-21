@@ -249,3 +249,91 @@ def test_bool_cube():
     false_append_true = np.append(false_bool_array, np.ones(16))
     false_append_true = false_append_true.reshape((3, 4, 4))
     assert all(BoolCube(false_append_true).downsample(3))
+
+
+def test_bit_cube():
+    from lkdata import BitwiseCube, BitwiseFrame, BitwiseSeries
+
+    def strip(string):
+        return string.replace(" ", "").replace("\n", "")
+
+    flags = np.arange(32)
+    flags = flags.reshape((2, 4, 4))
+    code_dict = {i: f"C{i}" for i in [1, 2, 4, 8, 16]}
+    bitcube = BitwiseCube(flags, codes=code_dict)
+    assert (bitcube.to_array() == flags).all()
+    # Default repr shows data as given
+    bitwise_str = strip(bitcube.styler.to_string())
+    assert bitwise_str == "col0123row00123145672891011312131415"
+    # Parsed repr shows codes individually, without description
+    bitcube.values_display = "parsed"
+    parsed_str = strip(bitcube.styler.to_string())
+    assert (
+        parsed_str
+        == "col0123row0{}{1}{2}{1,2}1{4}{1,4}{2,4}{1,2,4}2{8}{1,8}{2,8}{1,2,8}3{4,8}{1,4,8}{2,4,8}{1,2,4,8}"
+    )
+    # Detailed repr parses and replaces codes with descriptions in given code_dict
+    bitcube.values_display = "detailed"
+    detailed_str = strip(bitcube.styler.to_string())
+    assert (
+        detailed_str
+        == "col0123row0{}{1:'C1'}{2:'C2'}{1:'C1',2:'C2'}1{4:'C4'}{1:'C1',4:'C4'}{2:'C2',4:'C4'}{1:'C1',2:'C2',4:'C4'}2{8:'C8'}{1:'C1',8:'C8'}{2:'C2',8:'C8'}{1:'C1',2:'C2',8:'C8'}3{4:'C4',8:'C8'}{1:'C1',4:'C4',8:'C8'}{2:'C2',4:'C4',8:'C8'}{1:'C1',2:'C2',4:'C4',8:'C8'}"
+    )
+    bitcube.codes = {i: f"New{i}" for i in [1, 2, 4, 8, 16]}
+    detailed_str = strip(bitcube.styler.to_string())
+    assert (
+        detailed_str
+        == "col0123row0{}{1:'New1'}{2:'New2'}{1:'New1',2:'New2'}1{4:'New4'}{1:'New1',4:'New4'}{2:'New2',4:'New4'}{1:'New1',2:'New2',4:'New4'}2{8:'New8'}{1:'New1',8:'New8'}{2:'New2',8:'New8'}{1:'New1',2:'New2',8:'New8'}3{4:'New4',8:'New8'}{1:'New1',4:'New4',8:'New8'}{2:'New2',4:'New4',8:'New8'}{1:'New1',2:'New2',4:'New4',8:'New8'}"
+    )
+    # reset codes
+    bitcube.codes = code_dict
+
+    # Downsampling should combine codes without repetition (bitwise or)
+    assert (bitcube.downsample(2).to_array() == np.arange(16, 32).reshape(4, 4)).all()
+    assert (
+        bitcube.spatial_downsample(2).to_array()
+        == np.array([[[5, 7], [13, 15]], [[21, 23], [29, 31]]])
+    ).all()
+
+    # Frames
+    assert isinstance(bitcube[:, [0, 1, 2, 3], :], BitwiseFrame)
+    bitframe = bitcube[:, [0, 1, 2, 3], :]
+    assert bitframe.shape == (2, 16)
+    # Ensure codes and values_display transferred to derivative product
+    detailed_str = strip(bitframe.styler.to_string())
+    assert (
+        detailed_str
+        == "series0123456789101112131415row0000111122223333col0123012301230123time_index0{}{1:'C1'}{2:'C2'}{1:'C1',2:'C2'}{4:'C4'}{1:'C1',4:'C4'}{2:'C2',4:'C4'}{1:'C1',2:'C2',4:'C4'}{8:'C8'}{1:'C1',8:'C8'}{2:'C2',8:'C8'}{1:'C1',2:'C2',8:'C8'}{4:'C4',8:'C8'}{1:'C1',4:'C4',8:'C8'}{2:'C2',4:'C4',8:'C8'}{1:'C1',2:'C2',4:'C4',8:'C8'}1{16:'C16'}{1:'C1',16:'C16'}{2:'C2',16:'C16'}{1:'C1',2:'C2',16:'C16'}{4:'C4',16:'C16'}{1:'C1',4:'C4',16:'C16'}{2:'C2',4:'C4',16:'C16'}{1:'C1',2:'C2',4:'C4',16:'C16'}{8:'C8',16:'C16'}{1:'C1',8:'C8',16:'C16'}{2:'C2',8:'C8',16:'C16'}{1:'C1',2:'C2',8:'C8',16:'C16'}{4:'C4',8:'C8',16:'C16'}{1:'C1',4:'C4',8:'C8',16:'C16'}{2:'C2',4:'C4',8:'C8',16:'C16'}{1:'C1',2:'C2',4:'C4',8:'C8',16:'C16'}"
+    )
+
+    bitframe = BitwiseFrame(np.arange(0, 32).reshape(2, 16))
+    # New bitframe has no codes_dict, detailed display should be the same as parsed
+    bitframe.values_display = "parsed"
+    parsed_str = strip(bitframe.styler.to_string())
+    assert (
+        parsed_str
+        == "01234567891011121314150{}{1}{2}{1,2}{4}{1,4}{2,4}{1,2,4}{8}{1,8}{2,8}{1,2,8}{4,8}{1,4,8}{2,4,8}{1,2,4,8}1{16}{1,16}{2,16}{1,2,16}{4,16}{1,4,16}{2,4,16}{1,2,4,16}{8,16}{1,8,16}{2,8,16}{1,2,8,16}{4,8,16}{1,4,8,16}{2,4,8,16}{1,2,4,8,16}"
+    )
+    bitframe.values_display = "detailed"
+    detailed_str = strip(bitframe.styler.to_string())
+    assert detailed_str == parsed_str
+    # The values should match the derivative product from the cube
+    assert (bitframe.to_array() == bitcube[:, [0, 1, 2, 3], :]).all(axis=None)
+
+    # Series
+    assert isinstance(bitcube[:, 0, 0], BitwiseSeries)
+    bitseries = BitwiseSeries(np.arange(0, 16), codes=code_dict)
+    bitwise_str = strip(repr(bitseries))[19:-12]
+    assert bitwise_str == "0011223344556677889910101111121213131414151"
+    bitseries.values_display = "parsed"
+    parsed_str = strip(repr(bitseries))[19:-12]
+    assert (
+        parsed_str
+        == "0{}1{1}2{2}3{1,2}4{4}5{1,4}6{2,4}7{1,2,4}8{8}9{1,8}10{2,8}11{1,2,8}12{4,8}13{1,4,8}14{2,4,8}15{1,2,4,8}"
+    )
+    bitseries.values_display = "detailed"
+    detailed_str = strip(repr(bitseries))[19:-12]
+    assert (
+        detailed_str
+        == "0{}1{1:'C1'}2{2:'C2'}3{1:'C1',2:'C2'}4{4:'C4'}5{1:'C1',4:'C4'}6{2:'C2',4:'C4'}7{1:'C1',2:'C2',4:'C4'}8{8:'C8'}9{1:'C1',8:'C8'}10{2:'C2',8:'C8'}11{1:'C1',2:'C2',8:'C8'}12{4:'C4',8:'C8'}13{1:'C1',4:'C4',8:'C8'}14{2:'C2',4:'C4',8:'C8'}15{1:'C1',2:'C2',4:'C4',8:'C8'}"
+    )

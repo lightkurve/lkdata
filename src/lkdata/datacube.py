@@ -302,7 +302,9 @@ class Cube(
         # To be a a 3D dataset needs to pass slices or integers as row/column
         if isinstance(row, int) & isinstance(col, int):
             _, _, series = self._convert_to_series_index(row, col)
-            return DataSeries(self.iloc[time, int(series[0])], **self.user_kwargs)
+            return self._series_class(
+                self.iloc[time, int(series[0])], **self.user_kwargs
+            )
         elif (not isinstance(row, (slice))) | (not isinstance(col, (slice))):
             return self[time].to_dataframe(row, col, **self.user_kwargs)
         elif (isinstance(row, slice) & (row.step not in [None, 1])) | (

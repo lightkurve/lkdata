@@ -211,6 +211,10 @@ class MathMixin:
 
 
 class BitwiseMixin:
+    """
+    Mixin class that provides functionality for handling and displaying bitwise data.
+    """
+
     _stats_type = "bitwise"
     _code_dict = None
     _values_display = None
@@ -227,6 +231,22 @@ class BitwiseMixin:
 
     @property
     def values_display(self):
+        """
+        Get the current display mode for bitwise values.
+
+        Returns
+        -------
+        str
+            The current display mode for bitwise values. Possible values are:
+            - 'bitwise': Display the raw integer values.
+            - 'parsed': Display the values as sets of powers of 2.
+            - 'detailed': Display the values as dictionaries mapping powers of 2 to their corresponding codes.
+
+        Notes
+        -----
+        This property is used to control how bitwise values are displayed in the object's string representation
+        and in any generated output (e.g., when using Jupyter notebooks).
+        """
         return self._values_display
 
     @values_display.setter
@@ -239,7 +259,7 @@ class BitwiseMixin:
 
     @property
     def codes(self):
-        """Return the codes used in this Bitwise."""
+        """Return the code dictionary used in this Bitwise product."""
         return self._code_dict
 
     @codes.setter
@@ -247,16 +267,22 @@ class BitwiseMixin:
         self._code_dict = codes_dict
 
     def breakdown(self, val):
-        codes = set()
+        """
+        Breaks down an integer into its constituent powers of 2.
+        """
+        codes = []
         asbin = bin(val)
         for pos, b in enumerate(asbin[:1:-1]):
             if int(b):
-                codes.add(2 ** (pos))
+                codes.append(2 ** (pos))
         return codes
 
     def parse_code(self, val):
+        """
+        Parse a bitwise integer value into a dictionary of corresponding codes.
+        """
         codes = self.breakdown(val)
-        str_codes = {self.codes.get(int(code), code) for code in codes}
+        str_codes = {code: self.codes.get(int(code), code) for code in codes}
         return str_codes
 
     def stylize_frame(self, df, **kwargs) -> Styler:
@@ -267,10 +293,13 @@ class BitwiseMixin:
         out = Styler(df)
         if "label" in kwargs:
             out = out.set_caption(kwargs.pop("label"))
-        if self._values_display == "detailed":
-            out = out.format(lambda x: self.parse_code(x))
-        elif self._values_display == "parsed":
-            out = out.format(lambda x: self.breakdown(x))
+
+        if (self._values_display == "parsed") or (self.codes == {}):
+            out = out.format(
+                lambda x: str(self.breakdown(x)).replace("[", "{").replace("]", "}")
+            )
+        elif self._values_display == "detailed":
+            out = out.format(self.parse_code)
 
         out = out.set_table_styles(
             [
@@ -290,6 +319,8 @@ class BitwiseMixin:
 
 
 class AggMixin:
+    """ "Mixin class for data aggregation methods"""
+
     def _set_precision(self, func):
         """np.array wrapper to strictly enforce precision."""
 

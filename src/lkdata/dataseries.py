@@ -32,6 +32,10 @@ class Series(
 
     def __init__(self, *args, **kwargs):
         self._user_kwargs = []
+        index = kwargs.get("index", None)
+        time_indices = kwargs.pop("time_indices", None)
+        index = self.parse_index(index, time_indices, args[0].shape[0])
+
         for key, val in kwargs.items():
             if key not in ("ntime", "index"):
                 self._user_kwargs.append(key)
@@ -39,6 +43,7 @@ class Series(
                 setattr(self, key, val)
         for key in self._user_kwargs:
             kwargs.pop(key)
+
         super().__init__(*args, **kwargs)
         self.__post_init__()
 
@@ -112,7 +117,9 @@ class BitwiseSeries(BitwiseMixin, Series):
         if self._values_display == "detailed":
             display = self.apply(lambda x: self.parse_code(x)).__repr__()
         elif self._values_display == "parsed":
-            display = self.apply(lambda x: self.breakdown(x)).__repr__()
+            display = self.apply(
+                lambda x: str(self.breakdown(x)).replace("[", "{").replace("]", "}")
+            ).__repr__()
         else:
             display = super().__repr__()
         return f"📗 BitwiseSeries {self.shape}\n" + display
