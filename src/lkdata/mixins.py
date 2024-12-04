@@ -51,8 +51,13 @@ class StatsMixin:
 
     _stats_type = "data"
 
-    def _agg_sum(self):
-        return lambda x: np.sum(x)
+    def gb_agg(self, *args, **kwargs):
+        if kwargs.pop("T", False):
+            data = self.T
+        else:
+            data = self
+        gb = data.groupby(*args, **kwargs)
+        return gb.agg("sum")
 
     def _set_stats_methods(self):
         for method_name in STATS_METHOD_NAMES:
@@ -82,8 +87,14 @@ class ErrorStatsMixin:
 
     _stats_type = "error"
 
-    def _agg_sum(self):
-        return lambda x: np.sum(x**2) ** 0.5
+    def gb_agg(self, *args, **kwargs):
+        if kwargs.pop("T", False):
+            data = self.T
+        else:
+            data = self
+        gb = (data**2).groupby(*args, **kwargs)
+        new = gb.agg("sum")
+        return new**0.5
 
     def _sum(self, axis=0):
         return getattr(super(pd.DataFrame, self), "sum")(axis=axis)
@@ -143,8 +154,14 @@ class ErrorStatsMixin:
 class BoolStatsMixin:
     _stats_type = "bool"
 
-    def _agg_sum(self):
-        return lambda x: np.logical_or.reduce(x)
+    def gb_agg(self, *args, **kwargs):
+        if kwargs.pop("T", False):
+            data = self.T
+        else:
+            data = self
+        gb = data.groupby(*args, **kwargs)
+        new = gb.agg(np.logical_or.reduce)
+        return new
 
 
 class MathMixin:
@@ -219,15 +236,17 @@ class BitwiseMixin:
     _code_dict = None
     _values_display = None
 
-    def _agg_sum(self):
-        def func(x):
-            all_codes = set()
-            for val in x:
-                np.array(list(bin(val))[2:], dtype=int).astype(bool)
-                all_codes.update(self.breakdown(val))
-            return sum(all_codes)
+    def gb_agg(self, *args, **kwargs):
+        if kwargs.pop("T", False):
+            data = self.T
+        else:
+            data = self
 
-        return func
+        # breakdown separates an integer flag into bitwise codes
+        gb = (data.map(self.breakdown)).groupby(*args, **kwargs)
+        # first sum combines lists, second sum adds unique codes together
+        new = gb.agg(lambda x: np.sum(np.unique(np.sum(x)), dtype=int))
+        return new
 
     @property
     def values_display(self):
@@ -367,8 +386,9 @@ class AggMixin:
             count = gb.count()
             bin_mask = np.asarray(count == nframes)
 
-        # Downsampling is explicitly a sum
-        new = gb.agg(self._agg_sum())[bin_mask]
+        # Downsampling aggregation depends on data type. See relevant mixin for details.
+        new = self.gb_agg(bin_edges_left, observed=False)[bin_mask]
+
         # We have to create a new index. We take the mean of each bin.
         new_index_left = self.index.to_frame().groupby(bin_edges_left, observed=False)
 
@@ -508,10 +528,9 @@ class AggMixin:
         bin_edges_left_col = pd.cut(col, bins_col, right=False)
 
         gb = self.T.groupby([bin_edges_left_row, bin_edges_left_col], observed=False)
-        new = gb.agg(self._agg_sum())
-
         count = gb[int(self.index.get_level_values(0)[0])].count()
         bin_mask = np.asarray(count == row_factor * col_factor)[:, 0]
+
         new_index_left = self.columns.to_frame().groupby(
             [bin_edges_left_row, bin_edges_left_col], observed=False
         )
@@ -523,8 +542,13 @@ class AggMixin:
             new_index_left = new_index_left.mean().reset_index(drop=True)
 
         new_index = new_index_left.set_index(self.columns.names).index
+
+        new_data = self.gb_agg(
+            [bin_edges_left_row, bin_edges_left_col], T=True, observed=False
+        )
+
         new_obj = self._build_instance(
-            new[bin_mask].T.to_numpy(),
+            new_data[bin_mask].T.to_numpy(),
             nrow=len(new_index[bin_mask].get_level_values(row_name).unique()),
             ncol=len(new_index[bin_mask].get_level_values(col_name).unique()),
             index=self.index,
