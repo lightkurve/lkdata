@@ -250,3 +250,13 @@ class BitwiseFrame(BitwiseMixin, Frame):
         {repr(self)}
         {out0.to_html()}
         """
+
+
+class LkFrame:
+    """A lightkurve class with Data, Error, Bool, and Bit Frames.
+
+    This product contains only Frame products and supports all methods for
+    a Frame product, applying to all contained products.
+    """
+
+    ...

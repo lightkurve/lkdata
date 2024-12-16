@@ -2,7 +2,8 @@
 
 import re
 from copy import deepcopy
-from typing import Union
+from typing import Union, Iterable
+from collections.abc import MutableSet, Hashable
 
 import numpy as np
 import pandas as pd
@@ -46,6 +47,72 @@ STATS_METHOD_NAMES = [
 CUM_METHOD_NAMES = ["cumsum", "cummin", "cummax", "cumprod"]
 
 
+class MathMixin:
+    """Math mixins for lightkurve data objects."""
+
+    def _process_math_val(self, val):
+        if isinstance(val, (np.ndarray, float)):
+            return val
+        elif isinstance(val, (int, np.int64)):
+            return float(val)
+        elif isinstance(val, (pd.DataFrame, pd.Series)):
+            return val.to_numpy()
+        else:
+            raise TypeError(f"Can not perform math operations with type {type(val)}.")
+
+    def _get_math_kwargs(self):
+        if not (isinstance(self, pd.DataFrame) or isinstance(self, pd.Series)):
+            raise TypeError(f"Unsupported type {type(self)}")
+        kwargs = {"index": self.index}
+        if isinstance(self, pd.DataFrame):
+            kwargs["columns"] = self.columns
+        if hasattr(self, "nrow") and hasattr(self, "ncol"):
+            kwargs["nrow"] = self.nrow
+            kwargs["ncol"] = self.ncol
+        return kwargs
+
+    def __add__(self, val):
+        if self._stats_type == "error":
+            if isinstance(val, self.__class__):
+                return self._build_instance(
+                    (self.to_numpy() ** 2 + val.to_numpy() ** 2) ** 0.5,
+                    **self._get_math_kwargs(),
+                )
+            else:
+                raise TypeError(
+                    f"Adding {type(val)} to an error product is not supported."
+                )
+        else:
+            return self._build_instance(
+                self.to_numpy() + self._process_math_val(val),
+                **self._get_math_kwargs(),
+            )
+
+    def __sub__(self, val):
+        return self.__add__(-val)
+
+    def __mul__(self, val):
+        return self._build_instance(
+            self.to_numpy() * self._process_math_val(val),
+            **self._get_math_kwargs(),
+        )
+
+    def __div__(self, val):
+        return self.__mul__(1 / val)
+
+    def __pow__(self, val):
+        return self._build_instance(
+            self.to_numpy() ** self._process_math_val(val),
+            **self._get_math_kwargs(),
+        )
+
+    def __mod__(self, val):
+        return self._build_instance(
+            self.to_numpy() % self._process_math_val(val),
+            **self._get_math_kwargs(),
+        )
+
+
 class StatsMixin:
     """Defines a mixin class which will let us postprocess all our pandas stats"""
 
@@ -80,6 +147,267 @@ class StatsMixin:
             return self._build_instance(new.to_numpy())
 
         return _method
+
+
+class ErrMathMixin(MathMixin):
+    """Math mixins for lightkurve error objects."""
+
+    def __add__(self, val):
+        if isinstance(val, self.__class__()):
+            val = abs(val)
+            return self._build_instance(
+                (self.to_numpy() ** 2 + val.to_numpy() ** 2) ** 0.5,
+                **self._get_math_kwargs(),
+            )
+        else:
+            return super().__add__(val)
+
+    def __sub__(self, val):
+        return self.__add__(-val)
+
+
+class BoolMathMixin(MathMixin):
+    """Math mixins for lightkurve bool objects.
+
+    All operators should simply return the "logical or" for each element.
+    """
+
+    def __add__(self, val):
+        if isinstance(val, self.__class__()):
+            return self._build_instance(
+                np.logical_or(self.to_numpy(), val.to_numpy()),
+                **self._get_math_kwargs(),
+            )
+        else:
+            raise TypeError(f"Adding value type {type(val)} is not supported.")
+
+    def __sub__(self, val):
+        return self.__add__(val)
+
+    def __mul__(self, val):
+        return self.__add__(val)
+
+
+class BitSet(MutableSet, Hashable):
+    """A dataclass for bitwise objects.
+
+    This datatype combines the utility of sets and the succinct representation
+    of integer numbers as used for data quality flags in astronomical data.
+    """
+
+    name = "bitwise"
+    type = int
+
+    __hash__ = MutableSet._hash
+
+    wrap_wo_mod = (
+        "clear",
+        "copy",
+        "pop",
+    )
+
+    wrap_w_breakdown_bools = (
+        "isdisjoint",
+        "issubset",
+        "issuperset",
+    )
+
+    wrap_w_breakdown = (
+        "difference",
+        "discard",
+        "intersection",
+        "symmetric_difference",
+        "union",
+    )
+
+    wrap_w_breakdown_mod = (
+        "difference_update",
+        "intersection_update",
+        "remove",
+        "symmetric_difference_update",
+        "update",
+    )
+
+    @staticmethod
+    def breakdown(item: Union[int, Iterable]):
+        """Breaks down a given item into a single set of bitwise components
+
+        Parameters
+        ----------
+        item : Union[int, Iterable]
+            An integer or collection of integers to be broken down
+        """
+
+        def breakdown_int(val):
+            """
+            Breaks down an integer into its constituent powers of 2.
+            """
+            codes = set()
+            asbin = bin(val)
+            for pos, b in enumerate(asbin[:1:-1]):
+                if int(b):
+                    codes.add(2 ** (pos))
+            return codes
+
+        if isinstance(item, Iterable):
+            codes = set()
+            for v in item:
+                codes.update(breakdown_int(v))
+            return codes
+        else:
+            return breakdown_int(item)
+
+    def __new__(cls, iterable=None):
+        selfobj = super(BitSet, cls).__new__(BitSet)
+
+        selfobj._set = set() if iterable is None else BitSet.breakdown(iterable)
+
+        for method_name in cls.wrap_wo_mod:
+            setattr(selfobj, method_name, cls._wrap_method(method_name, selfobj))
+        for method_name in cls.wrap_w_breakdown_mod:
+            setattr(
+                selfobj,
+                method_name,
+                cls._wrap_breakdown_method(method_name, selfobj, return_type="none"),
+            )
+        for method_name in cls.wrap_w_breakdown:
+            setattr(
+                selfobj,
+                method_name,
+                cls._wrap_breakdown_method(method_name, selfobj, return_type="bitset"),
+            )
+        for method_name in cls.wrap_w_breakdown_bools:
+            setattr(
+                selfobj,
+                method_name,
+                cls._wrap_breakdown_method(method_name, selfobj, return_type="bool"),
+            )
+        return selfobj
+
+    @classmethod
+    def _wrap_method(cls, method_name, obj):
+        def method(*args, **kwargs):
+            result = getattr(obj._set, method_name)(*args, **kwargs)
+            return BitSet(result)
+
+        return method
+
+    @classmethod
+    def _wrap_breakdown_method(cls, method_name, obj, return_type="none"):
+        def method(value):
+            valset = BitSet.breakdown(value)
+            result = getattr(obj._set, method_name)(valset)
+            if return_type == "none":
+                return None
+            elif return_type == "bitset":
+                return BitSet(result)
+            elif return_type == "bool":
+                return result
+
+        return method
+
+    def __repr__(self):
+        return f"BitSet {repr(self._set)}"
+
+    def __getattr__(self, attr):
+        return getattr(self._set, attr)
+
+    def __contains__(self, val):
+        valset = self.breakdown(val)
+        return valset.issubset(self._set)
+
+    def __len__(self):
+        return len(self._set)
+
+    def __int__(self):
+        return sum(self._set)
+
+    def __str__(self):
+        return bin(int(self))
+
+    def __iter__(self):
+        return iter(self._set)
+
+    def add(self, value):
+        valset = self.breakdown(value)
+        self._set.update(valset)
+
+    def discard(self, value):
+        valset = self.breakdown(value)
+        self._set = self._set - valset
+
+    def __add__(self, value):
+        valset = self.breakdown(value)
+        valset.update(self._set)
+        return BitSet(valset)
+
+    def __sub__(self, value):
+        valset = self.breakdown(value)
+        new = self._set - valset
+        return BitSet(new)
+
+    def _bitset_method(self, method_name, value):
+        valset = BitSet.breakdown(value)
+        result = getattr(self._set, method_name)(valset)
+        return result
+
+    def __eq__(self, value):
+        return self._bitset_method("__eq__", value)
+
+    def __ge__(self, value):
+        return self._bitset_method("__ge__", value)
+
+    def __gt__(self, value):
+        return self._bitset_method("__gt__", value)
+
+    def __le__(self, value):
+        return self._bitset_method("__le__", value)
+
+    def __lt__(self, value):
+        return self._bitset_method("__lt__", value)
+
+    def __ne__(self, value):
+        return self._bitset_method("__ne__", value)
+
+    def __and__(self, other):
+        return BitSet(self._bitset_method("__and__", other))
+
+    def __or__(self, other):
+        return BitSet(self._bitset_method("__or__", other))
+
+    def __xor__(self, other):
+        return BitSet(self._bitset_method("__xor__", other))
+
+    def __rand__(self, other):
+        return BitSet(self._bitset_method("__rand__", other))
+
+    def __ror__(self, other):
+        return BitSet(self._bitset_method("__ror__", other))
+
+    def __rxor__(self, other):
+        return BitSet(self._bitset_method("__xor__", other))
+
+
+class BitwiseMathMixin:
+    """Math mixins for lightkurve bool objects."""
+
+    def __add__(self, val):
+        if isinstance(val, self.__class__()):
+            return self._build_instance(
+                np.logical_or(self.to_numpy(), val.to_numpy()),
+                **self._get_math_kwargs(),
+            )
+        else:
+            raise TypeError(f"Adding value type {type(val)} is not supported.")
+
+    def __sub__(self, val):
+        return self.__add__(val)
+
+    def __mul__(self, val):
+        return self.__add__(val)
+
+    def __div__(self, val):
+        return self.__add__(val)
 
 
 class ErrorStatsMixin:
@@ -164,70 +492,7 @@ class BoolStatsMixin:
         return new
 
 
-class MathMixin:
-    """Math mixins for lightkurve data objects."""
-
-    def _process_math_val(self, val):
-        if isinstance(val, (np.ndarray, float)):
-            return val
-        elif isinstance(val, (int, np.int64)):
-            return float(val)
-        elif isinstance(val, (pd.DataFrame, pd.Series)):
-            return val.to_numpy()
-        else:
-            raise TypeError(f"Can not perform math operations with type {type(val)}.")
-
-    def _get_math_kwargs(self):
-        if not (isinstance(self, pd.DataFrame) or isinstance(self, pd.Series)):
-            raise TypeError(f"Unsupported type {type(self)}")
-        kwargs = {"index": self.index}
-        if isinstance(self, pd.DataFrame):
-            kwargs["columns"] = self.columns
-        if hasattr(self, "nrow") and hasattr(self, "ncol"):
-            kwargs["nrow"] = self.nrow
-            kwargs["ncol"] = self.ncol
-        return kwargs
-
-    def __add__(self, val):
-        if self._stats_type == "error":
-            if isinstance(val, self.__class__):
-                return self._build_instance(
-                    (self.to_numpy() ** 2 + val.to_numpy() ** 2) ** 0.5,
-                    **self._get_math_kwargs(),
-                )
-            else:
-                raise TypeError(
-                    f"Adding {type(val)} to an error product is not supported."
-                )
-        else:
-            return self._build_instance(
-                self.to_numpy() + self._process_math_val(val),
-                **self._get_math_kwargs(),
-            )
-
-    def __sub__(self, val):
-        return self.__add__(-val)
-
-    def __mul__(self, val):
-        return self._build_instance(
-            self.to_numpy() * self._process_math_val(val),
-            **self._get_math_kwargs(),
-        )
-
-    def __pow__(self, val):
-        return self._build_instance(
-            self.to_numpy() ** self._process_math_val(val),
-            **self._get_math_kwargs(),
-        )
-
-    def __mod__(self, val):
-        return self._build_instance(
-            self.to_numpy() % self._process_math_val(val),
-            **self._get_math_kwargs(),
-        )
-
-
-class BitwiseMixin:
+class BitwiseMixin(MathMixin):
     """
     Mixin class that provides functionality for handling and displaying bitwise data.
     """
@@ -295,6 +560,48 @@ class BitwiseMixin:
             if int(b):
                 codes.append(2 ** (pos))
         return codes
+
+    def __add__(self, val):
+        if isinstance(val, self.__class__):
+            new_data = val.map(val.breakdown)
+            orig_data = self.map(val.breakdown)
+            updated_data = new_data.to_numpy() + orig_data.to_numpy()
+            updated_data = updated_data.map(np.unique)
+            return self._build_instance(
+                updated_data,
+                **self._get_math_kwargs(),
+            )
+        elif isinstance(val, int):
+            orig_data = self.map(val.breakdown)
+            updated_data = self.map(lambda x: x.append(val).to_numpy())
+            updated_data = updated_data.map(np.unique)
+            return self._build_instance(
+                updated_data,
+                **self._get_math_kwargs(),
+            )
+        else:
+            raise TypeError(f"Adding value of type {type(val)} is not supported.")
+
+    def __sub__(self, val):
+        if isinstance(val, self.__class__):
+            new_data = val.map(bin)
+            orig_data = self.map(bin)
+            updated_data = new_data.to_numpy() - orig_data.to_numpy()
+            updated_data = updated_data.map(np.unique)
+            return self._build_instance(
+                updated_data,
+                **self._get_math_kwargs(),
+            )
+        elif isinstance(val, int):
+            orig_data = self.map(val.breakdown)
+            updated_data = self.map(lambda x: x.append(val).to_numpy())
+            updated_data = updated_data.map(np.unique)
+            return self._build_instance(
+                updated_data,
+                **self._get_math_kwargs(),
+            )
+        else:
+            raise TypeError(f"Adding value of type {type(val)} is not supported.")
 
     def parse_code(self, val):
         """

@@ -123,3 +123,13 @@ class BitwiseSeries(BitwiseMixin, Series):
         else:
             display = super().__repr__()
         return f"📗 BitwiseSeries {self.shape}\n" + display
+
+
+class LkSeries:
+    """A lightkurve class with Data, Error, Bool, and Bit Series.
+
+    This product contains only Series products and supports all methods for
+    a Series product, applying to all contained products.
+    """
+
+    ...

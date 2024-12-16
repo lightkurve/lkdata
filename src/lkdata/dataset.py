@@ -9,13 +9,15 @@ from warnings import warn
 import numpy as np
 import pandas as pd
 
-from .datacube import DataCube, ErrorCube
-from .dataframe import DataFrame, ErrorFrame
-from .dataseries import DataSeries, ErrorSeries
+from .datacube import DataCube, ErrorCube, BoolCube, BitwiseCube
+from .dataframe import DataFrame, ErrorFrame, BoolFrame, BitwiseFrame
+from .dataseries import DataSeries, ErrorSeries, BoolSeries, BitwiseSeries
 
-lkDataTypes = Union[DataCube, DataFrame, DataSeries]
-lkErrorTypes = Union[ErrorCube, ErrorFrame, ErrorSeries]
-lkTypes = Union[lkDataTypes, lkErrorTypes]
+LkDataTypes = Union[DataCube, DataFrame, DataSeries]
+LkErrorTypes = Union[ErrorCube, ErrorFrame, ErrorSeries]
+LkBoolTypes = Union[BoolCube, BoolFrame, BoolSeries]
+LkBitwiseTypes = Union[BitwiseCube, BitwiseFrame, BitwiseSeries]
+LkTypes = Union[LkDataTypes, LkErrorTypes, LkBoolTypes, LkBitwiseTypes]
 
 
 class DataProcessorMixin:
@@ -120,7 +122,7 @@ class DataProcessorMixin:
         return data_product
 
     @singledispatchmethod
-    def process_input(self, data_input) -> lkTypes:
+    def process_input(self, data_input) -> LkTypes:
         """
         Process the input data and convert it to the appropriate data product.
 
@@ -194,7 +196,7 @@ class ProductBundle(dict, DataProcessorMixin):
     def __init__(
         self,
         data: Union[
-            Dict[str, Union[Iterable, lkDataTypes]], Iterable, lkDataTypes
+            Dict[str, Union[Iterable, LkDataTypes]], Iterable, LkDataTypes
         ] = None,
         index: pd.MultiIndex = None,
     ):
@@ -292,7 +294,7 @@ class DataProducts(ProductBundle):
     def __init__(
         self,
         data: Union[
-            Dict[str, Union[Iterable, lkDataTypes]], lkDataTypes, Iterable
+            Dict[str, Union[Iterable, LkDataTypes]], LkDataTypes, Iterable
         ] = None,
         index: pd.MultiIndex = None,
         **kwargs,
@@ -324,13 +326,43 @@ class ErrorProducts(ProductBundle):
     def __init__(
         self,
         error: Union[
-            Dict[str, Union[Iterable, lkErrorTypes]], Iterable, lkErrorTypes
+            Dict[str, Union[Iterable, LkErrorTypes]], Iterable, LkErrorTypes
         ] = None,
         index: pd.MultiIndex = None,
         **kwargs,
     ):
         self.kwargs = kwargs
         super().__init__(error, index)
+
+
+class BoolProducts(ProductBundle):
+    _type = "bool"
+
+    def __init__(
+        self,
+        bools: Union[
+            Dict[str, Union[Iterable, LkBoolTypes]], Iterable, LkBoolTypes
+        ] = None,
+        index: pd.MultiIndex = None,
+        **kwargs,
+    ):
+        self.kwargs = kwargs
+        super().__init__(bools, index)
+
+
+class BitwiseProducts(ProductBundle):
+    _type = "bitwise"
+
+    def __init__(
+        self,
+        bitwise: Union[
+            Dict[str, Union[Iterable, LkBitwiseTypes]], Iterable, LkBitwiseTypes
+        ] = None,
+        index: pd.MultiIndex = None,
+        **kwargs,
+    ):
+        self.kwargs = kwargs
+        super().__init__(bitwise, index)
 
 
 class DataSet:
@@ -364,14 +396,23 @@ class DataSet:
     def __init__(
         self,
         data: Union[
-            Iterable, lkDataTypes, DataProducts, Dict[str, Union[Iterable, lkDataTypes]]
+            Iterable, LkDataTypes, DataProducts, Dict[str, Union[Iterable, LkDataTypes]]
         ] = None,
         error: Union[
             list,
             np.ndarray,
-            lkErrorTypes,
+            LkErrorTypes,
             ErrorProducts,
-            Dict[str, Union[Iterable, lkErrorTypes]],
+            Dict[str, Union[Iterable, LkErrorTypes]],
+        ] = None,
+        bools: Union[
+            Iterable, LkBoolTypes, BoolProducts, Dict[str, Union[Iterable, LkBoolTypes]]
+        ] = None,
+        bitwise: Union[
+            Iterable,
+            LkBitwiseTypes,
+            BitwiseProducts,
+            Dict[str, Union[Iterable, LkBitwiseTypes]],
         ] = None,
         index: pd.MultiIndex = None,
         time_indices: Dict[str, Iterable] = None,
@@ -424,6 +465,9 @@ class DataSet:
             val.index = self.index
         for val in self.error.values():
             val.index = self.index
+
+    def __len__(self):
+        return len(self.data) + len(self.error)
 
     @property
     def cubes(self) -> dict:

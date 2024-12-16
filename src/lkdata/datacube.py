@@ -548,3 +548,13 @@ class BitwiseCube(BitwiseMixin, Cube):
         df = self.single_frame(0)
         label = self.make_cadence_label(0)
         self.styler = self.stylize_frame(df, label=label, cmap="gray")
+
+
+class LkSeries:
+    """A lightkurve class with Data, Error, Bool, and Bit Cubes.
+
+    This product contains only Cube products and supports all methods for
+    a Cube , applying to all contained products.
+    """
+
+    ...
