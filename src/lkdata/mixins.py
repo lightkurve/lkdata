@@ -2,8 +2,8 @@
 
 import re
 from copy import deepcopy
-from typing import Union, Iterable
-from collections.abc import MutableSet, Hashable
+from typing import Union
+from .uncertainty import NDUncertainty, StdDevUncertainty
 
 import numpy as np
 import pandas as pd
@@ -48,7 +48,40 @@ CUM_METHOD_NAMES = ["cumsum", "cummin", "cummax", "cumprod"]
 
 
 class MathMixin:
-    """Math mixins for lightkurve data objects."""
+    """
+    Mixin class to add arithmetic to an lightkurve data objects.
+
+    Notes
+    -----
+    This class only aims at covering the most common cases so there are certain
+    restrictions on the saved attributes::
+
+        - ``uncertainty`` : has to be something that has a `NDUncertainty`-like
+          interface for uncertainty propagation
+
+    But there is a workaround that allows to disable handling a specific
+    attribute and to simply set the results attribute to ``None`` or to
+    copy the existing attribute (and neglecting the other).
+    For example for uncertainties not representing an `NDUncertainty`-like
+    interface you can alter the ``propagate_uncertainties`` parameter in
+    :meth:`NDArithmeticMixin.add`. ``None`` means that the result will have no
+    uncertainty, ``False`` means it takes the uncertainty of the first operand
+    (if this does not exist from the second operand) as the result's
+    uncertainty. This behavior is also explained in the docstring for the
+    different arithmetic operations.
+    """
+
+    _uncertainty = None
+
+    @property
+    def uncertainty(self):
+        return self._uncertainty
+
+    @uncertainty.setter
+    def uncertainty(self, value):
+        if not hasattr(value, "uncertainty_type"):
+            value = StdDevUncertainty(value)
+        self._uncertainty = value
 
     def _process_math_val(self, val):
         if isinstance(val, (np.ndarray, float)):
@@ -71,46 +104,257 @@ class MathMixin:
             kwargs["ncol"] = self.ncol
         return kwargs
 
-    def __add__(self, val):
-        if self._stats_type == "error":
-            if isinstance(val, self.__class__):
-                return self._build_instance(
-                    (self.to_numpy() ** 2 + val.to_numpy() ** 2) ** 0.5,
-                    **self._get_math_kwargs(),
-                )
+    def _arithmetic(
+        self,
+        operation,
+        operand,
+        propagate_uncertainties=True,
+        uncertainty_correlation=0,
+        axis=None,
+        **kwargs,
+    ):
+        """
+        Base method which calculates the result of the arithmetic operation.
+
+        This method determines the result of the arithmetic operation on the
+        ``data`` including their units and then forwards to other methods
+        to calculate the other properties for the result (like uncertainty).
+
+        Parameters
+        ----------
+        operation : callable
+            The operation that is performed on the `NDData`. Supported are
+            `numpy.add`, `numpy.subtract`, `numpy.multiply` and
+            `numpy.true_divide`.
+
+        operand : same type (class) as self
+            see :meth:`NDArithmeticMixin.add`
+
+        propagate_uncertainties : `bool` or ``None``, optional
+            see :meth:`NDArithmeticMixin.add`
+
+        uncertainty_correlation : ``Number`` or `~numpy.ndarray`, optional
+            see :meth:`NDArithmeticMixin.add`
+
+        operation_ignores_mask : bool, optional
+            When True, masked values will be excluded from operations;
+            otherwise the operation will be performed on all values,
+            including masked ones.
+
+        axis : int or tuple of ints, optional
+            axis or axes over which to perform collapse operations like min, max, sum or mean.
+
+        kwargs :
+            Any other parameter that should be passed to the
+            different :meth:`NDArithmeticMixin._arithmetic_mask` (or wcs, ...)
+            methods.
+
+        Returns
+        -------
+        result : ndarray or `~astropy.units.Quantity`
+            The resulting data as array (in case both operands were without
+            unit) or as quantity if at least one had a unit.
+
+        kwargs : `dict`
+            The kwargs should contain all the other attributes (besides data
+            and unit) needed to create a new instance for the result. Creating
+            the new instance is up to the calling method, for example
+            :meth:`NDArithmeticMixin.add`.
+
+        """
+        # Find the appropriate keywords for the appropriate method (not sure
+        # if data and uncertainty are ever used ...)
+        kwds2 = {"data": {}, "uncertainty": {}}
+        for i, kwd in kwargs.items():
+            splitted = i.split("_", 1)
+            try:
+                kwds2[splitted[0]][splitted[1]] = kwd
+            except KeyError as exc:
+                raise KeyError(
+                    f"Unknown prefix {splitted[0]} for parameter {i}"
+                ) from exc
+
+        kwargs = {}
+
+        result = self._arithmetic_data(operation, operand, **kwds2["data"])
+
+        # Determine the other properties
+        if propagate_uncertainties is None:
+            kwargs["uncertainty"] = None
+        elif not propagate_uncertainties:
+            if self.uncertainty is None:
+                kwargs["uncertainty"] = deepcopy(operand.uncertainty)
             else:
-                raise TypeError(
-                    f"Adding {type(val)} to an error product is not supported."
-                )
+                kwargs["uncertainty"] = deepcopy(self.uncertainty)
         else:
-            return self._build_instance(
-                self.to_numpy() + self._process_math_val(val),
-                **self._get_math_kwargs(),
+            kwargs["uncertainty"] = self._arithmetic_uncertainty(
+                operation,
+                operand,
+                result,
+                uncertainty_correlation,
+                axis=axis,
+                **kwds2["uncertainty"],
             )
 
-    def __sub__(self, val):
-        return self.__add__(-val)
+        return result, kwargs
 
-    def __mul__(self, val):
-        return self._build_instance(
-            self.to_numpy() * self._process_math_val(val),
-            **self._get_math_kwargs(),
-        )
+    def _arithmetic_data(self, operation, operand, **kwargs) -> np.ndarray:
+        """
+        Calculate the resulting data.
 
-    def __div__(self, val):
-        return self.__mul__(1 / val)
+        Parameters
+        ----------
+        operation : callable
+            see `NDArithmeticMixin._arithmetic` parameter description.
+
+        operand : `NDData`-like instance
+            The second operand wrapped in an instance of the same class as
+            self.
+
+        kwargs :
+            Additional parameters.
+
+        Returns
+        -------
+        ndarray
+        """
+        return operation(self.to_numpy(), self._process_math_val(operand), **kwargs)
+
+    def _arithmetic_uncertainty(self, operation, operand, result, correlation, **kwds):
+        """
+        Calculate the resulting uncertainty.
+
+        Parameters
+        ----------
+        operation : callable
+            see :meth:`NDArithmeticMixin._arithmetic` parameter description.
+
+        operand : `NDData`-like instance
+            The second operand wrapped in an instance of the same class as
+            self.
+
+        result : `~astropy.units.Quantity` or `~numpy.ndarray`
+            The result of :meth:`NDArithmeticMixin._arithmetic_data`.
+
+        correlation : number or `~numpy.ndarray`
+            see :meth:`NDArithmeticMixin.add` parameter description.
+
+        kwds :
+            Additional parameters.
+
+        Returns
+        -------
+        result_uncertainty : `NDUncertainty` subclass instance or None
+            The resulting uncertainty already saved in the same `NDUncertainty`
+            subclass that ``self`` had (or ``operand`` if self had no
+            uncertainty). ``None`` only if both had no uncertainty.
+        """
+        # Make sure these uncertainties are NDUncertainties so this kind of
+        # propagation is possible.
+        if self.uncertainty is not None and not isinstance(
+            self.uncertainty, NDUncertainty
+        ):
+            raise TypeError(
+                "Uncertainty propagation is only defined for "
+                "subclasses of NDUncertainty."
+            )
+        if (
+            operand is not None
+            and operand.uncertainty is not None
+            and not isinstance(operand.uncertainty, NDUncertainty)
+        ):
+            raise TypeError(
+                "Uncertainty propagation is only defined for "
+                "subclasses of NDUncertainty."
+            )
+
+        # Now do the uncertainty propagation
+        # TODO: There is no enforced requirement that actually forbids the
+        # uncertainty to have negative entries but with correlation the
+        # sign of the uncertainty DOES matter.
+        if self.uncertainty is None and (
+            not hasattr(operand, "uncertainty") or operand.uncertainty is None
+        ):
+            # Neither has uncertainties so the result should have none.
+            return None
+        elif self.uncertainty is None:
+            # Create a temporary uncertainty to allow uncertainty propagation
+            # to yield the correct results. (issue #4152)
+            self.uncertainty = operand.uncertainty.__class__(None)
+            result_uncert = self.uncertainty.propagate(
+                operation, operand, result, correlation
+            )
+            # Delete the temporary uncertainty again.
+            self.uncertainty = None
+            return result_uncert
+
+        elif operand is not None and operand.uncertainty is None:
+            # As with self.uncertainty is None but the other way around.
+            operand.uncertainty = self.uncertainty.__class__(None)
+            result_uncert = self.uncertainty.propagate(
+                operation, operand, result, correlation
+            )
+            operand.uncertainty = None
+            return result_uncert
+
+        else:
+            # Both have uncertainties so just propagate.
+
+            # only supply the axis kwarg if one has been specified for a collapsing operation
+            axis_kwarg = dict(axis=kwds["axis"]) if "axis" in kwds else dict()
+            return self.uncertainty.propagate(
+                operation, operand, result, correlation, **axis_kwarg
+            )
+
+    def __add__(self, other):
+        result = self._prepare_then_do_arithmetic(np.add, other)
+        return result
+
+    def __sub__(self, other):
+        result = self._prepare_then_do_arithmetic(np.subtract, other)
+        return result
+
+    def __mul__(self, other):
+        result = self._prepare_then_do_arithmetic(np.multiply, other)
+        return result
+
+    def __truediv__(self, other):
+        result = self._prepare_then_do_arithmetic(np.true_divide, other)
+        return result
 
     def __pow__(self, val):
-        return self._build_instance(
-            self.to_numpy() ** self._process_math_val(val),
-            **self._get_math_kwargs(),
-        )
+        result = self._prepare_then_do_arithmetic(np.pow, val)
+        return result
 
     def __mod__(self, val):
-        return self._build_instance(
-            self.to_numpy() % self._process_math_val(val),
-            **self._get_math_kwargs(),
-        )
+        result = self._prepare_then_do_arithmetic(np.mod, val)
+        return result
+
+    def _prepare_then_do_arithmetic(self, operation, operand):
+        """Intermediate method called by public arithmetic (i.e. ``add``)
+        before the processing method (``_arithmetic``) is invoked.
+
+        .. warning::
+            Do not override this method in subclasses.
+
+        Parameters
+        ----------
+        operation : callable
+            The operation (normally a numpy-ufunc) that represents the
+            appropriate action.
+
+        operand, operand2, kwargs :
+            See for example ``add``.
+
+        Result
+        ------
+        result : `~lkdata.Data`-like
+        """
+        # Now call the _arithmetics method to do the arithmetic.
+        result, init_kwds = self._arithmetic(operation, operand)
+        init_kwds.update(self._get_math_kwargs())
+        # Return a new class based on the result
+        return self._build_instance(result, **init_kwds)
 
 
 class StatsMixin:
@@ -186,206 +430,6 @@ class BoolMathMixin(MathMixin):
 
     def __mul__(self, val):
         return self.__add__(val)
-
-
-class BitSet(MutableSet, Hashable):
-    """A dataclass for bitwise objects.
-
-    This datatype combines the utility of sets and the succinct representation
-    of integer numbers as used for data quality flags in astronomical data.
-    """
-
-    name = "bitwise"
-    type = int
-
-    __hash__ = MutableSet._hash
-
-    wrap_wo_mod = (
-        "clear",
-        "copy",
-        "pop",
-    )
-
-    wrap_w_breakdown_bools = (
-        "isdisjoint",
-        "issubset",
-        "issuperset",
-    )
-
-    wrap_w_breakdown = (
-        "difference",
-        "discard",
-        "intersection",
-        "symmetric_difference",
-        "union",
-    )
-
-    wrap_w_breakdown_mod = (
-        "difference_update",
-        "intersection_update",
-        "remove",
-        "symmetric_difference_update",
-        "update",
-    )
-
-    @staticmethod
-    def breakdown(item: Union[int, Iterable]):
-        """Breaks down a given item into a single set of bitwise components
-
-        Parameters
-        ----------
-        item : Union[int, Iterable]
-            An integer or collection of integers to be broken down
-        """
-
-        def breakdown_int(val):
-            """
-            Breaks down an integer into its constituent powers of 2.
-            """
-            codes = set()
-            asbin = bin(val)
-            for pos, b in enumerate(asbin[:1:-1]):
-                if int(b):
-                    codes.add(2 ** (pos))
-            return codes
-
-        if isinstance(item, Iterable):
-            codes = set()
-            for v in item:
-                codes.update(breakdown_int(v))
-            return codes
-        else:
-            return breakdown_int(item)
-
-    def __new__(cls, iterable=None):
-        selfobj = super(BitSet, cls).__new__(BitSet)
-
-        selfobj._set = set() if iterable is None else BitSet.breakdown(iterable)
-
-        for method_name in cls.wrap_wo_mod:
-            setattr(selfobj, method_name, cls._wrap_method(method_name, selfobj))
-        for method_name in cls.wrap_w_breakdown_mod:
-            setattr(
-                selfobj,
-                method_name,
-                cls._wrap_breakdown_method(method_name, selfobj, return_type="none"),
-            )
-        for method_name in cls.wrap_w_breakdown:
-            setattr(
-                selfobj,
-                method_name,
-                cls._wrap_breakdown_method(method_name, selfobj, return_type="bitset"),
-            )
-        for method_name in cls.wrap_w_breakdown_bools:
-            setattr(
-                selfobj,
-                method_name,
-                cls._wrap_breakdown_method(method_name, selfobj, return_type="bool"),
-            )
-        return selfobj
-
-    @classmethod
-    def _wrap_method(cls, method_name, obj):
-        def method(*args, **kwargs):
-            result = getattr(obj._set, method_name)(*args, **kwargs)
-            return BitSet(result)
-
-        return method
-
-    @classmethod
-    def _wrap_breakdown_method(cls, method_name, obj, return_type="none"):
-        def method(value):
-            valset = BitSet.breakdown(value)
-            result = getattr(obj._set, method_name)(valset)
-            if return_type == "none":
-                return None
-            elif return_type == "bitset":
-                return BitSet(result)
-            elif return_type == "bool":
-                return result
-
-        return method
-
-    def __repr__(self):
-        return f"BitSet {repr(self._set)}"
-
-    def __getattr__(self, attr):
-        return getattr(self._set, attr)
-
-    def __contains__(self, val):
-        valset = self.breakdown(val)
-        return valset.issubset(self._set)
-
-    def __len__(self):
-        return len(self._set)
-
-    def __int__(self):
-        return sum(self._set)
-
-    def __str__(self):
-        return bin(int(self))
-
-    def __iter__(self):
-        return iter(self._set)
-
-    def add(self, value):
-        valset = self.breakdown(value)
-        self._set.update(valset)
-
-    def discard(self, value):
-        valset = self.breakdown(value)
-        self._set = self._set - valset
-
-    def __add__(self, value):
-        valset = self.breakdown(value)
-        valset.update(self._set)
-        return BitSet(valset)
-
-    def __sub__(self, value):
-        valset = self.breakdown(value)
-        new = self._set - valset
-        return BitSet(new)
-
-    def _bitset_method(self, method_name, value):
-        valset = BitSet.breakdown(value)
-        result = getattr(self._set, method_name)(valset)
-        return result
-
-    def __eq__(self, value):
-        return self._bitset_method("__eq__", value)
-
-    def __ge__(self, value):
-        return self._bitset_method("__ge__", value)
-
-    def __gt__(self, value):
-        return self._bitset_method("__gt__", value)
-
-    def __le__(self, value):
-        return self._bitset_method("__le__", value)
-
-    def __lt__(self, value):
-        return self._bitset_method("__lt__", value)
-
-    def __ne__(self, value):
-        return self._bitset_method("__ne__", value)
-
-    def __and__(self, other):
-        return BitSet(self._bitset_method("__and__", other))
-
-    def __or__(self, other):
-        return BitSet(self._bitset_method("__or__", other))
-
-    def __xor__(self, other):
-        return BitSet(self._bitset_method("__xor__", other))
-
-    def __rand__(self, other):
-        return BitSet(self._bitset_method("__rand__", other))
-
-    def __ror__(self, other):
-        return BitSet(self._bitset_method("__ror__", other))
-
-    def __rxor__(self, other):
-        return BitSet(self._bitset_method("__xor__", other))
 
 
 class BitwiseMathMixin:

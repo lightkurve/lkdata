@@ -458,12 +458,29 @@ class DataCube(
     _series_class = DataSeries
     _pd_class = pd.DataFrame
 
-    def __init__(self, *args, **kwargs):
+    def __init__(
+        self,
+        data: Union[List, np.ndarray],
+        uncertainty: Union[List, np.ndarray] = None,
+        time_indices: Union[Dict, List, None] = None,
+        row_indices: Union[Dict, List, None] = None,
+        col_indices: Union[Dict, List, None] = None,
+        **kwargs,
+    ):
         # For pandas DataFrames subclasses, new properties must
         # be included in the _metadata list
-        self._metadata: List[str] = []
+        self._metadata: List[str] = ["uncertainty"]
         self._user_kwargs: List[str] = []
-        super().__init__(*args, **kwargs)
+        self.uncertainty = uncertainty
+
+        super().__init__(
+            data=data,
+            time_indices=time_indices,
+            row_indices=row_indices,
+            col_indices=col_indices,
+            **kwargs,
+        )
+
         self._set_stats_methods()
 
     def __repr__(self):
@@ -548,13 +565,3 @@ class BitwiseCube(BitwiseMixin, Cube):
         df = self.single_frame(0)
         label = self.make_cadence_label(0)
         self.styler = self.stylize_frame(df, label=label, cmap="gray")
-
-
-class LkSeries:
-    """A lightkurve class with Data, Error, Bool, and Bit Cubes.
-
-    This product contains only Cube products and supports all methods for
-    a Cube , applying to all contained products.
-    """
-
-    ...
