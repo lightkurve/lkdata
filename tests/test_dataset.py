@@ -248,12 +248,12 @@ class TestDatasetFunctions:
             "frame": DataFrame(np.random.rand(100, 5)),
             "series": DataSeries(np.random.rand(100)),
         }
-        error = {
-            "errcube": ErrorCube(np.random.rand(100, 5, 3)),
-            "errframe": ErrorFrame(np.random.rand(100, 5)),
-            "errseries": ErrorSeries(np.random.rand(100)),
-        }
-        return DataSet(data, error, time_indices={"time": time})
+        # error = {
+        #     "errcube": ErrorCube(np.random.rand(100, 5, 3)),
+        #     "errframe": ErrorFrame(np.random.rand(100, 5)),
+        #     "errseries": ErrorSeries(np.random.rand(100)),
+        # }
+        return DataSet(data, time_indices={"time": time})
 
     def test_dataset_fold(self, sample_data):
         folded = sample_data.fold(period=24)

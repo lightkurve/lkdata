@@ -25,7 +25,6 @@ log = logging.getLogger()
 
 class Cube(
     ABC,
-    MathMixin,
     AggMixin,
     ConvenienceMixins,
     pd.DataFrame,
@@ -450,6 +449,7 @@ class Cube(
 
 class DataCube(
     Cube,
+    MathMixin,
     StatsMixin,
 ):
     """A Cube object which contains data with time and 2 spatial dimensions."""

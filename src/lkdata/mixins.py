@@ -323,7 +323,7 @@ class MathMixin:
         return result
 
     def __pow__(self, val):
-        result = self._prepare_then_do_arithmetic(np.pow, val)
+        result = self._prepare_then_do_arithmetic(np.power, val)
         return result
 
     def __mod__(self, val):
