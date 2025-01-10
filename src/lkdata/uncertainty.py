@@ -14,7 +14,7 @@ __all__ = [
     "MissingDataAssociationException",
     "IncompatibleUncertaintiesException",
     "NDUncertainty",
-    "StdDevUncertainty",
+    "Error",
     "UnknownUncertainty",
     "VarianceUncertainty",
     "InverseVariance",
@@ -711,13 +711,13 @@ class _VariancePropagationMixin:
             return from_variance(left + right + correlation_sign * corr)
 
 
-class StdDevUncertainty(_VariancePropagationMixin, NDUncertainty):
+class Error(_VariancePropagationMixin, NDUncertainty):
     """Standard deviation uncertainty assuming first order gaussian error
     propagation.
 
     This class implements uncertainty propagation for ``addition``,
     ``subtraction``, ``multiplication`` and ``division`` with other instances
-    of `StdDevUncertainty`.
+    of `Error`.
     Also support for correlation is possible but requires the
     correlation as input. It cannot handle correlation determination itself.
 
@@ -728,31 +728,36 @@ class StdDevUncertainty(_VariancePropagationMixin, NDUncertainty):
 
     Examples
     --------
-    `StdDevUncertainty` should always be associated with an `NDData`-like
+    `Error` should always be associated with an `NDData`-like
     instance, either by creating it during initialization::
 
-        >>> from astropy.nddata import NDData, StdDevUncertainty
+        >>> from astropy.nddata import NDData, Error
         >>> ndd = NDData([1,2,3],
-        ...              uncertainty=StdDevUncertainty([0.1, 0.1, 0.1]))
+        ...              uncertainty=Error([0.1, 0.1, 0.1]))
         >>> ndd.uncertainty  # doctest: +FLOAT_CMP
-        StdDevUncertainty([0.1, 0.1, 0.1])
+        Error([0.1, 0.1, 0.1])
 
     or by setting it manually on the `NDData` instance::
 
-        >>> ndd.uncertainty = StdDevUncertainty([0.2], copy=True)
+        >>> ndd.uncertainty = Error([0.2], copy=True)
         >>> ndd.uncertainty  # doctest: +FLOAT_CMP
-        StdDevUncertainty([0.2])
+        Error([0.2])
 
     the uncertainty ``array`` can also be set directly::
 
         >>> ndd.uncertainty.array = 2
         >>> ndd.uncertainty
-        StdDevUncertainty(2)
+        Error(2)
+
+    Note
+    ----
+    This class was originally StdDevUncertainty from
+    astropy.nddata.nduncertainty and has been renamed Error for lkdata
     """
 
     @property
     def supports_correlated(self):
-        """`True` : `StdDevUncertainty` allows to propagate correlated \
+        """`True` : `Error` allows to propagate correlated \
                     uncertainties.
 
         ``correlation`` must be given, this class does not implement computing
@@ -762,11 +767,11 @@ class StdDevUncertainty(_VariancePropagationMixin, NDUncertainty):
 
     @property
     def uncertainty_type(self):
-        """``"std"`` : `StdDevUncertainty` implements standard deviation."""
+        """``"std"`` : `Error` implements standard deviation."""
         return "std"
 
     def _convert_uncertainty(self, other_uncert):
-        if isinstance(other_uncert, StdDevUncertainty):
+        if isinstance(other_uncert, Error):
             return other_uncert
         else:
             raise IncompatibleUncertaintiesException
@@ -843,9 +848,9 @@ class VarianceUncertainty(_VariancePropagationMixin, NDUncertainty):
 
     Examples
     --------
-    Compare this example to that in `StdDevUncertainty`; the uncertainties
+    Compare this example to that in `Error`; the uncertainties
     in the examples below are equivalent to the uncertainties in
-    `StdDevUncertainty`.
+    `Error`.
 
     `VarianceUncertainty` should always be associated with an `NDData`-like
     instance, either by creating it during initialization::
@@ -936,9 +941,9 @@ class InverseVariance(_VariancePropagationMixin, NDUncertainty):
 
     Examples
     --------
-    Compare this example to that in `StdDevUncertainty`; the uncertainties
+    Compare this example to that in `Error`; the uncertainties
     in the examples below are equivalent to the uncertainties in
-    `StdDevUncertainty`.
+    `Error`.
 
     `InverseVariance` should always be associated with an `NDData`-like
     instance, either by creating it during initialization::

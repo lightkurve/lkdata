@@ -6,9 +6,9 @@ from lkdata import (
     DataCube,
     DataFrame,
     DataSeries,
-    ErrorCube,
     BoolCube,
 )
+from lkdata.uncertainty import Error
 from lkdata.mixins import STATS_METHOD_NAMES
 
 
@@ -164,24 +164,20 @@ def make_test_data():
 
     flux = DataCube(
         flux_array,
+        uncertainty=flux_err_array,
         time_indices={"btjd": time, "spacecraft_time": time - time_corr},
         row_indices={"row": row},
         col_indices={"column": col},
     )
 
-    flux_err = ErrorCube(
-        flux_err_array,
-        time_indices={"btjd": time, "spacecraft_time": time - time_corr},
-        row_indices={"row": row},
-        col_indices={"column": col},
-    )
-    return flux, flux_err, aper, bkg_aper, time_mask
+    return flux, aper, bkg_aper, time_mask
 
 
 def test_real_data():
-    flux, flux_err, aper, bkg_aper, time_mask = make_test_data()
+    flux, aper, bkg_aper, time_mask = make_test_data()
 
     assert isinstance(flux, DataCube)
+    assert isinstance(flux.uncertainty, Error)
     # assert isinstance(flux_err, ErrorCube)
 
     assert flux.to_array().shape == (50, 6, 6)

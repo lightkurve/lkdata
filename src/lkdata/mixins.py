@@ -3,7 +3,7 @@
 import re
 from copy import deepcopy
 from typing import Union
-from .uncertainty import NDUncertainty, StdDevUncertainty
+from .uncertainty import NDUncertainty, Error
 
 import numpy as np
 import pandas as pd
@@ -80,7 +80,7 @@ class MathMixin:
     @uncertainty.setter
     def uncertainty(self, value):
         if not hasattr(value, "uncertainty_type"):
-            value = StdDevUncertainty(value)
+            value = Error(value)
         self._uncertainty = value
 
     def _process_math_val(self, val):
@@ -737,8 +737,15 @@ class AggMixin:
             count = gb.count()
             bin_mask = np.asarray(count == nframes)
 
-        # Downsampling aggregation depends on data type. See relevant mixin for details.
-        new = self.gb_agg(bin_edges_left, observed=False)[bin_mask]
+        # # Downsampling aggregation depends on data type. See relevant mixin for details.
+        # new = self.gb_agg(bin_edges_left, observed=False)[bin_mask]
+        new = gb.agg("sum")[bin_mask]
+        if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
+            error = self.uncertainty.array.reshape(self.shape)
+            error = pd.DataFrame(error**2)
+            error = error.groupby(bin_edges_left, observed=False)
+            error = error.agg("sum")[bin_mask].to_numpy()
+            error = error**0.5
 
         # We have to create a new index. We take the mean of each bin.
         new_index_left = self.index.to_frame().groupby(bin_edges_left, observed=False)
@@ -799,6 +806,10 @@ class AggMixin:
                 new.to_numpy(),
                 index=new_index,
             )
+
+        if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
+            new_obj.uncertainty = error.reshape(new_obj.to_array().shape)
+
         return new_obj
 
     def spatial_downsample(
