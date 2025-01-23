@@ -231,26 +231,43 @@ class Cube(
     @__getitem__.register(range)
     def _(self, key):
         # Simple slice in time, results in DataCube
+        init_kwds = self.user_kwargs.copy()
+        if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
+            init_kwds["uncertainty"] = self.uncertainty[key]
         return self.__class__.from_pandas(
             self.iloc[key],
             nrow=self.nrow,
             ncol=self.ncol,
-            **self.user_kwargs,
+            **init_kwds,
         )
 
     @__getitem__.register
     def _(self, key: int):
         # Integer time, currently results in DataCube
+        init_kwds = self.user_kwargs.copy()
+        if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
+            init_kwds["uncertainty"] = self.uncertainty[key]
         return self.__class__.from_pandas(
             self.iloc[np.atleast_1d(key)],
             nrow=self.nrow,
             ncol=self.ncol,
-            **self.user_kwargs,
+            **init_kwds,
         )
 
     @__getitem__.register
     def _(self, key: tuple):
         time = key[0]
+        init_kwds = self.user_kwargs.copy()
+        if len(key) == 1:
+            if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
+                init_kwds["uncertainty"] = self.uncertainty[key]
+            return self.__class__.from_pandas(
+                self.iloc[time],
+                nrow=self.nrow,
+                ncol=self.ncol,
+                **init_kwds,
+            )
+
         if isinstance(key[0], (int, list, np.ndarray)):
             time = np.atleast_1d(time)
         elif isinstance(key[0], slice):
@@ -258,17 +275,12 @@ class Cube(
         else:
             raise ValueError(f"Can not parse time {key[0]}")
 
-        if len(key) == 1:
-            return self.__class__.from_pandas(
-                self.iloc[time],
-                nrow=self.nrow,
-                ncol=self.ncol,
-                **self.user_kwargs,
-            )
         # If only two things passed
         if len(key) == 2:
             if isinstance(key[1], int):
-                return DataSeries(self.iloc[time, key[1]], **self.user_kwargs)
+                if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
+                    init_kwds["uncertainty"] = self.uncertainty[key[0], key[1]]
+                return DataSeries(self.iloc[time, key[1]], **init_kwds)
             elif isinstance(key[1], slice):
                 row = key[1]
                 col = slice(self.ncol + 1)
@@ -279,7 +291,7 @@ class Cube(
                 # aper = Cube.sum(axis=1) > 10000
                 # Cube[:, aper]
                 # needs to become frame of time-series
-                return self[time].to_dataframe(*np.where(aperture), **self.user_kwargs)
+                return self[time].to_dataframe(*np.where(aperture), **init_kwds)
 
             elif len(key[1]) == self.ncol * self.nrow:
                 # Passed an aperture with shape(nrow*ncol)
@@ -292,7 +304,7 @@ class Cube(
                     self.iloc[time, key[1]],
                     nrow=nrow,
                     ncol=ncol,
-                    **self.user_kwargs,
+                    **init_kwds,
                 )
 
         if len(key) == 3:
@@ -301,22 +313,23 @@ class Cube(
         # To be a a 3D dataset needs to pass slices or integers as row/column
         if isinstance(row, int) & isinstance(col, int):
             _, _, series = self._convert_to_series_index(row, col)
-            return self._series_class(
-                self.iloc[time, int(series[0])], **self.user_kwargs
-            )
+            if hasattr(self, "uncertainty") and self.uncertainty is not None:
+                init_kwds["uncertainty"] = self.uncertainty[key[0], series]
+            return self._series_class(self.iloc[time, int(series[0])], **init_kwds)
         elif (not isinstance(row, (slice))) | (not isinstance(col, (slice))):
-            return self[time].to_dataframe(row, col, **self.user_kwargs)
+            return self[time].to_dataframe(row, col, **init_kwds)
         elif (isinstance(row, slice) & (row.step not in [None, 1])) | (
             isinstance(col, slice) & (col.step not in [None, 1])
         ):
-            return self[time].to_dataframe(row, col, **self.user_kwargs)
-
+            return self[time].to_dataframe(row, col, **init_kwds)
         nrow, ncol, series_index = self._convert_to_series_index(row, col)
+        if hasattr(self, "uncertainty") and self.uncertainty is not None:
+            init_kwds["uncertainty"] = self.uncertainty[key[0], series_index]
         return self.__class__.from_pandas(
             self.iloc[time, series_index],
             nrow=nrow,
             ncol=ncol,
-            **self.user_kwargs,
+            **init_kwds,
         )
 
     def describe_cube(self, **printoptions):
@@ -388,10 +401,19 @@ class Cube(
 
     def stats_post_process(self, result, **kwargs):
         """Statistics post processer to format return data."""
-        if kwargs.get("axis") in [0, "time"]:
-            return result.to_numpy().reshape(self.nrow, self.ncol)
-        elif kwargs.get("axis") in [1, "series"]:
-            return self._series_class(result)
+        axis = kwargs.pop("axis")
+        if axis in [0, "time"]:
+            if "uncertainty" in kwargs:
+                return (
+                    result.reshape(self.nrow, self.ncol),
+                    kwargs["uncertainty"].array.reshape(self.nrow, self.ncol),
+                )
+            else:
+                return result.reshape(self.nrow, self.ncol)
+        elif axis in [1, "series"]:
+            index = kwargs.get("index", None)
+            uncertainty = kwargs.get("uncertainty", None)
+            return self._series_class(result, uncertainty=uncertainty, index=index)
         else:
             return result
 
@@ -416,14 +438,18 @@ class Cube(
             A Frame object of the same type as the input data, either
             DataFrame or ErrorFrame.
         """
+        init_kwds = kwargs.copy()
         nrow, ncol, series_index = self._convert_to_series_index(row, col)
+        if hasattr(self, "uncertainty") and self.uncertainty is not None:
+            init_kwds["uncertainty"] = self.uncertainty[:, series_index]
+
         return self._frame_class(
             self.iloc[:, series_index],
             index=self.index,
             columns=self.columns[series_index],
             nrow=nrow,
             ncol=ncol,
-            **kwargs,
+            **init_kwds,
         )
 
     def to_array(self) -> np.ndarray:
@@ -471,7 +497,6 @@ class DataCube(
         # be included in the _metadata list
         self._metadata: List[str] = ["uncertainty"]
         self._user_kwargs: List[str] = []
-        self.uncertainty = uncertainty
 
         super().__init__(
             data=data,
@@ -480,7 +505,9 @@ class DataCube(
             col_indices=col_indices,
             **kwargs,
         )
-
+        if uncertainty is not None:
+            uncertainty = uncertainty.reshape(self.to_numpy().shape)
+        self.uncertainty = uncertainty
         self._set_stats_methods()
 
     def __repr__(self):

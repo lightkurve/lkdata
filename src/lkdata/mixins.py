@@ -3,7 +3,7 @@
 import re
 from copy import deepcopy
 from typing import Union
-from .uncertainty import NDUncertainty, Error
+from .uncertainty import NDUncertainty, Uncertainty
 
 import numpy as np
 import pandas as pd
@@ -80,7 +80,7 @@ class MathMixin:
     @uncertainty.setter
     def uncertainty(self, value):
         if not hasattr(value, "uncertainty_type"):
-            value = Error(value)
+            value = Uncertainty(value)
         self._uncertainty = value
 
     def _process_math_val(self, val):
@@ -151,7 +151,7 @@ class MathMixin:
 
         Returns
         -------
-        result : ndarray or `~astropy.units.Quantity`
+        result : ndarray
             The resulting data as array (in case both operands were without
             unit) or as quantity if at least one had a unit.
 
@@ -192,7 +192,6 @@ class MathMixin:
                 operand,
                 result,
                 uncertainty_correlation,
-                axis=axis,
                 **kwds2["uncertainty"],
             )
 
@@ -218,7 +217,10 @@ class MathMixin:
         -------
         ndarray
         """
-        return operation(self.to_numpy(), self._process_math_val(operand), **kwargs)
+        if operand is not None:
+            return operation(self.to_numpy(), self._process_math_val(operand), **kwargs)
+        else:
+            return operation(self.to_numpy(), **kwargs)
 
     def _arithmetic_uncertainty(self, operation, operand, result, correlation, **kwds):
         """
@@ -233,7 +235,7 @@ class MathMixin:
             The second operand wrapped in an instance of the same class as
             self.
 
-        result : `~astropy.units.Quantity` or `~numpy.ndarray`
+        result : `~numpy.ndarray`
             The result of :meth:`NDArithmeticMixin._arithmetic_data`.
 
         correlation : number or `~numpy.ndarray`
@@ -378,9 +380,16 @@ class StatsMixin:
 
     def _create_stats_method(self, method_name):
         def _method(*args, **kwargs):
-            pandas_method = getattr(super(self._pd_class, self), method_name)
-            axis = kwargs.get("axis", 0)
-            return self.stats_post_process(pandas_method(*args, **kwargs), axis=axis)
+            axis = kwargs.pop("axis", 0)
+            np_method = getattr(np, method_name)
+            result, init_kwds = self._arithmetic(
+                np_method, operand=None, data_axis=axis, uncertainty_axis=axis, **kwargs
+            )
+            init_kwds.update(self._get_math_kwargs())
+            result = self.stats_post_process(result, axis=axis, **init_kwds)
+            return result
+            # pandas_method = getattr(super(self._pd_class, self), method_name)
+            # return self.stats_post_process(pandas_method(*args, **kwargs), axis=axis)
 
         return _method
 
@@ -909,6 +918,15 @@ class AggMixin:
             [bin_edges_left_row, bin_edges_left_col], T=True, observed=False
         )
 
+        if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
+            error = self.uncertainty.array.reshape(self.shape)
+            error = pd.DataFrame(error**2)
+            error = error.groupby(
+                [bin_edges_left_row, bin_edges_left_col], observed=False
+            )
+            error = error.agg("sum")[bin_mask].to_numpy()
+            error = error**0.5
+
         new_obj = self._build_instance(
             new_data[bin_mask].T.to_numpy(),
             nrow=len(new_index[bin_mask].get_level_values(row_name).unique()),
@@ -916,6 +934,10 @@ class AggMixin:
             index=self.index,
             columns=new_index[bin_mask],
         )
+
+        if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
+            new_obj.uncertainty = error.reshape(new_obj.to_array().shape)
+
         return new_obj
 
     def _expand(self, row_factor, col_factor):

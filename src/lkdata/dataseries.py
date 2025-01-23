@@ -71,10 +71,15 @@ class Series(
     def __getitem__(self, key):
         result_data = super().__getitem__(key)
         result_index = self.index[key]
+        init_kwds = self.user_kwargs.copy()
+        if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
+            init_kwds["uncertainty"] = self.uncertainty[key]
         if isinstance(key, int):
+            if "uncertainty" in init_kwds:
+                return result_data, init_kwds["uncertainty"]
             return result_data
         else:
-            return self.__class__(result_data, index=result_index, **self.user_kwargs)
+            return self.__class__(result_data, index=result_index, **init_kwds)
 
 
 class DataSeries(Series, MathMixin, StatsMixin):

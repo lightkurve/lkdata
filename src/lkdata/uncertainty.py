@@ -14,7 +14,7 @@ __all__ = [
     "MissingDataAssociationException",
     "IncompatibleUncertaintiesException",
     "NDUncertainty",
-    "Error",
+    "Uncertainty",
     "UnknownUncertainty",
     "VarianceUncertainty",
     "InverseVariance",
@@ -389,6 +389,15 @@ class NDUncertainty(metaclass=ABCMeta):
             )
         return from_variance(as_variance())
 
+    def reshape(self, *args, **kwargs):
+        """See NDUncertainty.array.reshape()"""
+        return self.__class__(self.array.reshape(*args, **kwargs))
+
+    @property
+    def shape(self):
+        """NDUncertainty.array.shape"""
+        return self.array.shape
+
 
 class UnknownUncertainty(NDUncertainty):
     """This class implements any unknown uncertainty type.
@@ -480,10 +489,8 @@ class _VariancePropagationMixin:
                 # numpy operation:
                 to_variance = collapse_to_variance_mapping[numpy_operation]
                 from_variance = collapse_from_variance_mapping[numpy_operation]
-                masked_uncertainty = np.ma.masked_array(
-                    self.array, self.parent_nddata.mask
-                )
-                this = to_variance(masked_uncertainty)
+
+                this = to_variance(self.array)
 
                 return from_variance(this, axis=axis)
 
@@ -711,13 +718,13 @@ class _VariancePropagationMixin:
             return from_variance(left + right + correlation_sign * corr)
 
 
-class Error(_VariancePropagationMixin, NDUncertainty):
+class Uncertainty(_VariancePropagationMixin, NDUncertainty):
     """Standard deviation uncertainty assuming first order gaussian error
     propagation.
 
     This class implements uncertainty propagation for ``addition``,
     ``subtraction``, ``multiplication`` and ``division`` with other instances
-    of `Error`.
+    of `Uncertainty`.
     Also support for correlation is possible but requires the
     correlation as input. It cannot handle correlation determination itself.
 
@@ -728,36 +735,36 @@ class Error(_VariancePropagationMixin, NDUncertainty):
 
     Examples
     --------
-    `Error` should always be associated with an `NDData`-like
+    `Uncertainty` should always be associated with an `NDData`-like
     instance, either by creating it during initialization::
 
-        >>> from astropy.nddata import NDData, Error
+        >>> from astropy.nddata import NDData, Uncertainty
         >>> ndd = NDData([1,2,3],
-        ...              uncertainty=Error([0.1, 0.1, 0.1]))
+        ...              uncertainty=Uncertainty([0.1, 0.1, 0.1]))
         >>> ndd.uncertainty  # doctest: +FLOAT_CMP
-        Error([0.1, 0.1, 0.1])
+        Uncertainty([0.1, 0.1, 0.1])
 
     or by setting it manually on the `NDData` instance::
 
-        >>> ndd.uncertainty = Error([0.2], copy=True)
+        >>> ndd.uncertainty = Uncertainty([0.2], copy=True)
         >>> ndd.uncertainty  # doctest: +FLOAT_CMP
-        Error([0.2])
+        Uncertainty([0.2])
 
     the uncertainty ``array`` can also be set directly::
 
         >>> ndd.uncertainty.array = 2
         >>> ndd.uncertainty
-        Error(2)
+        Uncertainty(2)
 
     Note
     ----
     This class was originally StdDevUncertainty from
-    astropy.nddata.nduncertainty and has been renamed Error for lkdata
+    astropy.nddata.nduncertainty and has been renamed Uncertainty for lkdata
     """
 
     @property
     def supports_correlated(self):
-        """`True` : `Error` allows to propagate correlated \
+        """`True` : `Uncertainty` allows to propagate correlated \
                     uncertainties.
 
         ``correlation`` must be given, this class does not implement computing
@@ -767,11 +774,11 @@ class Error(_VariancePropagationMixin, NDUncertainty):
 
     @property
     def uncertainty_type(self):
-        """``"std"`` : `Error` implements standard deviation."""
+        """``"std"`` : `Uncertainty` implements standard deviation."""
         return "std"
 
     def _convert_uncertainty(self, other_uncert):
-        if isinstance(other_uncert, Error):
+        if isinstance(other_uncert, Uncertainty):
             return other_uncert
         else:
             raise IncompatibleUncertaintiesException

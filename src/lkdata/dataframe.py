@@ -84,25 +84,19 @@ class Frame(
         return repr(self) + super()._repr_html_()
 
     def __post_init__(self):
-        def make_pixelseries(result):
-            # log.debug("Modified result for pixelseries shape.")
-            return self._series_class.from_pandas(result)
-
-        def make_timeseries(result):
-            # log.debug("Modified result for timeseries shape.")
-            return self._series_class.from_pandas(result)
-
-        def stats_post_process(result, **kwargs):
-            if kwargs.get("axis") in [0, "time"]:
-                return make_pixelseries(result)
-            elif kwargs.get("axis") in [1, "pixel"]:
-                return make_timeseries(result)
-            else:
-                return result
-
-        self.stats_post_process = stats_post_process
         self._include_convenience_index()
         self._include_convenience_columns()
+
+    def stats_post_process(self, result, **kwargs):
+        axis = kwargs.pop("axis")
+        if axis in [0, "time"]:
+            if "uncertainty" in kwargs:
+                return result, kwargs["uncertainty"]
+            return result
+        if axis in [1, "pixel"]:
+            return self._series_class(result, **kwargs)
+        else:
+            return result
 
     @property
     def ntime(self):
@@ -116,11 +110,14 @@ class Frame(
     @__getitem__.register(Iterable)
     @__getitem__.register(slice)
     def _(self, key):
+        init_kwds = self.user_kwargs.copy()
+        if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
+            init_kwds["uncertainty"] = self.uncertainty[key]
         return self.__class__.from_pandas(
             self.iloc[key],
             index=self.index[key],
             columns=self.columns,
-            **self.user_kwargs,
+            **init_kwds,
         )
 
     @__getitem__.register(int)
@@ -131,6 +128,10 @@ class Frame(
     @__getitem__.register
     def _(self, key: tuple):
         time_key = key[0]
+        init_kwds = self.user_kwargs.copy()
+        if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
+            init_kwds["uncertainty"] = self.uncertainty[key]
+
         if isinstance(key[1], slice):
             series_index = np.arange(self.nseries)[key[1]]
         elif isinstance(key[1], Iterable):
@@ -139,14 +140,14 @@ class Frame(
             return self._series_class(
                 self.iloc[time_key, key[1]],
                 index=self.index[time_key],
-                **self.user_kwargs,
+                **init_kwds,
             )
 
         return self.__class__.from_pandas(
             self.iloc[time_key, series_index],
             index=self.index[time_key],
             columns=self.columns[series_index],
-            **self.user_kwargs,
+            **init_kwds,
         )
 
     def __deepcopy__(self, *args, **kwargs):
@@ -159,6 +160,7 @@ class DataFrame(Frame, StatsMixin):
     _series_class = DataSeries
 
     def __init__(self, *args, **kwargs):
+        self.uncertainty = kwargs.get("uncertainty", None)
         self._metadata = []
         self._user_kwargs = []
         super().__init__(*args, **kwargs)

@@ -8,7 +8,7 @@ from lkdata import (
     DataSeries,
     BoolCube,
 )
-from lkdata.uncertainty import Error
+from lkdata.uncertainty import Uncertainty
 from lkdata.mixins import STATS_METHOD_NAMES
 
 
@@ -115,11 +115,11 @@ def test_downsample():
     ntime, nrow, ncol = 200, 10, 14
     test_data = np.ones((ntime, nrow, ncol))
     test_data = np.ones((ntime, nrow, ncol))
-    df = DataCube(test_data)
+    df = DataCube(test_data, uncertainty=test_data)
     # df_err = ErrorCube(test_data)
     # Time downsample
     assert (df.downsample(2).to_array() == 2).all()
-    # assert (df_err.downsample(4).to_array() == 2).all()
+    assert (df.downsample(4).uncertainty.array == 2).all()
 
     # Spatial downsample
     assert df.spatial_downsample(2).to_array().shape == (200, 5, 7)
@@ -136,17 +136,17 @@ def test_downsample():
     ).all()
     assert df[:, :-1, :].spatial_downsample(2).to_array().shape == (200, 4, 7)
 
-    # assert df_err.spatial_downsample(2).to_array().shape == (200, 5, 7)
-    # assert (df_err.spatial_downsample(2).to_array() == 2).all()
-    # assert df_err[:, :, :-1].spatial_downsample(2).to_array().shape == (200, 5, 6)
-    # assert (
-    #     df_err[:, :, :-1].spatial_downsample(2).to_array()
-    #     == df_err[:, :, :-2].spatial_downsample(2).to_array()
-    # ).all()
-    # assert df_err[:, :-1, :].spatial_downsample(2).to_array().shape == (200, 4, 7)
+    assert df.spatial_downsample(2).uncertainty.array.shape == (200, 5, 7)
+    assert (df.spatial_downsample(2).uncertainty.array == 2).all()
+    assert df[:, :, :-1].spatial_downsample(2).uncertainty.array.shape == (200, 5, 6)
+    assert (
+        df[:, :, :-1].spatial_downsample(2).uncertainty.array
+        == df[:, :, :-2].spatial_downsample(2).uncertainty.array
+    ).all()
+    assert df[:, :-1, :].spatial_downsample(2).uncertainty.array.shape == (200, 4, 7)
 
     assert (df.spatial_aggregate(5, 7).to_array().round() == 4).all()
-    # assert (df_err.spatial_aggregate(5, 7).to_array().round() == 2).all()  #
+    assert (df.spatial_aggregate(5, 7).uncertainty.array.round() == 2).all()  #
 
 
 def make_test_data():
@@ -174,54 +174,58 @@ def make_test_data():
 
 
 def test_real_data():
-    flux, aper, bkg_aper, time_mask = make_test_data()
+    flux, aper, _, _ = make_test_data()
 
     assert isinstance(flux, DataCube)
-    assert isinstance(flux.uncertainty, Error)
-    # assert isinstance(flux_err, ErrorCube)
+    assert isinstance(flux.uncertainty, Uncertainty)
 
     assert flux.to_array().shape == (50, 6, 6)
-    # assert flux_err.to_array().shape == (50, 6, 6)
+    assert flux.uncertainty.array.shape == (50, 36)
 
     assert flux.downsample(5).to_array().shape == (8, 6, 6)
-    # assert flux_err.downsample(5).to_array().shape == (8, 6, 6)
+    assert flux.downsample(5).uncertainty.array.shape == (8, 36)
 
     assert isinstance(flux[:, aper], DataFrame)
-    # assert isinstance(flux_err[:, aper], ErrorFrame)
+    assert isinstance(flux[:, aper].uncertainty, Uncertainty)
 
     assert isinstance(flux[:, aper].sum(axis=1), DataSeries)
-    # assert isinstance(flux_err[:, aper].sum(axis=1), ErrorSeries)
+    assert isinstance(flux[:, aper].sum(axis=1).uncertainty, Uncertainty)
 
     assert flux.spatial_downsample(2).to_array().shape == (50, 3, 3)
+    assert flux.spatial_downsample(2).uncertainty.shape == (50, 9)
+
     assert flux.spatial_downsample(2).to_array()[0, 0, 0] == flux[0, :2, :2].sum().sum()
+    assert (
+        flux.spatial_downsample(2).uncertainty.array[0, 0, 0]
+        == ((flux[0, :2, :2].uncertainty.array ** 2).sum().sum()) ** 0.5
+    )
+
     assert (
         flux.spatial_downsample(2).to_array()[0, -1, -1]
         == flux[0, -2:, -2:].sum().sum()
     )
+    assert (
+        flux.spatial_downsample(2).uncertainty.array[0, -1, -1]
+        == ((flux[0, -2:, -2:].uncertainty.array ** 2).sum().sum()) ** 0.5
+    )
+
     assert flux.spatial_downsample(2).sum().sum() == flux.sum().sum()
+    assert (flux.spatial_downsample(2).uncertainty.array ** 2).sum().sum().round() == (
+        flux.uncertainty.array**2
+    ).sum().sum().round()
+
     assert flux[:, :-1].spatial_downsample(2).sum().sum() == flux[:, :-2].sum().sum()
+    assert (
+        flux[:, :-1].spatial_downsample(2).uncertainty.array ** 2
+    ).sum().sum().round() == (flux[:, :-2].uncertainty.array ** 2).sum().sum().round()
     assert (
         flux[:, :, :-1].spatial_downsample(2).sum().sum() == flux[:, :, :-2].sum().sum()
     )
-
-    # assert flux_err.spatial_downsample(2).to_array().shape == (50, 3, 3)
-    # assert (
-    #     flux_err.spatial_downsample(2).to_array()[0, 0, 0]
-    #     == ((flux_err[0, :2, :2] ** 2).sum().sum()) ** 0.5
-    # )
-    # assert (
-    #     flux_err.spatial_downsample(2).to_array()[0, -1, -1]
-    #     == ((flux_err[0, -2:, -2:] ** 2).sum().sum()) ** 0.5
-    # )
-    # assert (flux_err.spatial_downsample(2) ** 2).sum().sum().round() == (
-    #     flux_err**2
-    # ).sum().sum().round()
-    # assert (flux_err[:, :-1].spatial_downsample(2) ** 2).sum().sum().round() == (
-    #     flux_err[:, :-2] ** 2
-    # ).sum().sum().round()
-    # assert (flux_err[:, :, :-1].spatial_downsample(2) ** 2).sum().sum().round() == (
-    #     flux_err[:, :, :-2] ** 2
-    # ).sum().sum().round()
+    assert (
+        flux[:, :, :-1].spatial_downsample(2).uncertainty.array ** 2
+    ).sum().sum().round() == (
+        flux[:, :, :-2].uncertainty.array ** 2
+    ).sum().sum().round()
 
 
 def test_bool_cube():
