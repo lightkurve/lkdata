@@ -183,7 +183,7 @@ def test_real_data():
     assert flux.uncertainty.array.shape == (50, 36)
 
     assert flux.downsample(5).to_array().shape == (8, 6, 6)
-    assert flux.downsample(5).uncertainty.array.shape == (8, 36)
+    assert flux.downsample(5).uncertainty.array.shape == (8, 6, 6)
 
     assert isinstance(flux[:, aper], DataFrame)
     assert isinstance(flux[:, aper].uncertainty, Uncertainty)
@@ -192,21 +192,22 @@ def test_real_data():
     assert isinstance(flux[:, aper].sum(axis=1).uncertainty, Uncertainty)
 
     assert flux.spatial_downsample(2).to_array().shape == (50, 3, 3)
-    assert flux.spatial_downsample(2).uncertainty.shape == (50, 9)
+    assert flux.spatial_downsample(2).uncertainty.shape == (50, 3, 3)
 
-    assert flux.spatial_downsample(2).to_array()[0, 0, 0] == flux[0, :2, :2].sum().sum()
+    assert flux.spatial_downsample(2).to_array()[0, 0, 0] == flux[0, :2, :2].sum(
+        axis=None
+    )
     assert (
         flux.spatial_downsample(2).uncertainty.array[0, 0, 0]
         == ((flux[0, :2, :2].uncertainty.array ** 2).sum().sum()) ** 0.5
     )
 
-    assert (
-        flux.spatial_downsample(2).to_array()[0, -1, -1]
-        == flux[0, -2:, -2:].sum().sum()
+    assert flux.spatial_downsample(2).to_array()[0, -1, -1] == flux[0, -2:, -2:].sum(
+        axis=None
     )
     assert (
         flux.spatial_downsample(2).uncertainty.array[0, -1, -1]
-        == ((flux[0, -2:, -2:].uncertainty.array ** 2).sum().sum()) ** 0.5
+        == ((flux[0, -2:, -2:].uncertainty.array ** 2).sum(axis=None)) ** 0.5
     )
 
     assert flux.spatial_downsample(2).sum().sum() == flux.sum().sum()

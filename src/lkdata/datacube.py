@@ -8,14 +8,13 @@ from pandas.io.formats.style import Styler
 import numpy as np
 from typing import Union, List, Dict, Optional
 
-from .dataframe import DataFrame, ErrorFrame, BoolFrame, BitwiseFrame
-from .dataseries import DataSeries, ErrorSeries, BoolSeries, BitwiseSeries
+from .dataframe import DataFrame, BoolFrame, BitwiseFrame
+from .dataseries import DataSeries, BoolSeries, BitwiseSeries
 from .mixins import (
     StatsMixin,
     MathMixin,
     BoolStatsMixin,
     BitwiseMixin,
-    ErrorStatsMixin,
     AggMixin,
     ConvenienceMixins,
 )
@@ -313,7 +312,7 @@ class Cube(
         # To be a a 3D dataset needs to pass slices or integers as row/column
         if isinstance(row, int) & isinstance(col, int):
             _, _, series = self._convert_to_series_index(row, col)
-            if hasattr(self, "uncertainty") and self.uncertainty is not None:
+            if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
                 init_kwds["uncertainty"] = self.uncertainty[key[0], series]
             return self._series_class(self.iloc[time, int(series[0])], **init_kwds)
         elif (not isinstance(row, (slice))) | (not isinstance(col, (slice))):
@@ -323,7 +322,7 @@ class Cube(
         ):
             return self[time].to_dataframe(row, col, **init_kwds)
         nrow, ncol, series_index = self._convert_to_series_index(row, col)
-        if hasattr(self, "uncertainty") and self.uncertainty is not None:
+        if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
             init_kwds["uncertainty"] = self.uncertainty[key[0], series_index]
         return self.__class__.from_pandas(
             self.iloc[time, series_index],
@@ -389,6 +388,10 @@ class Cube(
         self._flux_units = str(unit)
 
     @property
+    def values(self):
+        return super().values
+
+    @property
     def styler(self):
         """The pandas.DataFrame styler for single cadence frames."""
         if hasattr(self, "_styler"):
@@ -402,17 +405,17 @@ class Cube(
     def stats_post_process(self, result, **kwargs):
         """Statistics post processer to format return data."""
         axis = kwargs.pop("axis")
+        uncertainty = kwargs.pop("uncertainty", None)
         if axis in [0, "time"]:
-            if "uncertainty" in kwargs:
+            if uncertainty is not None and uncertainty.array is not None:
                 return (
                     result.reshape(self.nrow, self.ncol),
-                    kwargs["uncertainty"].array.reshape(self.nrow, self.ncol),
+                    uncertainty.array.reshape(self.nrow, self.ncol),
                 )
             else:
                 return result.reshape(self.nrow, self.ncol)
         elif axis in [1, "series"]:
             index = kwargs.get("index", None)
-            uncertainty = kwargs.get("uncertainty", None)
             return self._series_class(result, uncertainty=uncertainty, index=index)
         else:
             return result
@@ -422,8 +425,8 @@ class Cube(
         row: Union[int, float, list, slice],
         col: Union[int, float, list, slice],
         **kwargs,
-    ) -> Union[DataFrame, ErrorFrame]:
-        """Convert Cube to Frame with the given row and column indices.
+    ) -> DataFrame:
+        """Convert lk Cube to lk Frame with the given row and column indices.
 
         Parameters
         ----------
@@ -434,13 +437,12 @@ class Cube(
 
         Returns
         -------
-        Union[DataFrame, ErrorFrame]
-            A Frame object of the same type as the input data, either
-            DataFrame or ErrorFrame.
+        Frame
+            A Frame object of the same type as the input data.
         """
         init_kwds = kwargs.copy()
         nrow, ncol, series_index = self._convert_to_series_index(row, col)
-        if hasattr(self, "uncertainty") and self.uncertainty is not None:
+        if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
             init_kwds["uncertainty"] = self.uncertainty[:, series_index]
 
         return self._frame_class(
@@ -474,9 +476,9 @@ class Cube(
 
 
 class DataCube(
-    Cube,
     MathMixin,
     StatsMixin,
+    Cube,
 ):
     """A Cube object which contains data with time and 2 spatial dimensions."""
 
@@ -505,40 +507,20 @@ class DataCube(
             col_indices=col_indices,
             **kwargs,
         )
+        self.array = self.to_array()
         if uncertainty is not None:
-            uncertainty = uncertainty.reshape(self.to_numpy().shape)
+            uncertainty = uncertainty.reshape(self.array.shape)
         self.uncertainty = uncertainty
+        self.uncertainty.parent_nddata = self.array
         self._set_stats_methods()
 
     def __repr__(self):
         return f"📘 DataCube {self.ntime, self.nrow, self.ncol}"
 
 
-class ErrorCube(
-    Cube,
-    ErrorStatsMixin,
-):
-    """A Cube object which contains errors with time and 2 spatial dimensions."""
-
-    _frame_class = ErrorFrame
-    _series_class = ErrorSeries
-    _pd_class = pd.DataFrame
-
-    def __init__(self, *args, **kwargs):
-        # For pandas DataFrames subclasses, new properties must
-        # be included in the _metadata list
-        self._metadata: List[str] = []
-        self._user_kwargs: List[str] = []
-        super().__init__(*args, **kwargs)
-        self._set_errstats_methods()
-
-    def __repr__(self):
-        return f"📕 ErrorCube {self.ntime, self.nrow, self.ncol}"
-
-
 class BoolCube(
-    Cube,
     BoolStatsMixin,
+    Cube,
 ):
     """A Cube object which contains boolean values with time and 2 spatial dimensions."""
 

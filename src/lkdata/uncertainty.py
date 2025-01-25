@@ -68,7 +68,6 @@ def from_variance_for_mean(x, axis):
 collapse_from_variance_mapping = {
     np.sum: lambda x, axis: np.sqrt(np.ma.sum(x, axis)),
     np.mean: from_variance_for_mean,
-    np.median: None,
 }
 
 
@@ -212,8 +211,8 @@ class NDUncertainty(metaclass=ABCMeta):
             return self._array, None
 
     def __setstate__(self, state):
-        if len(state) != 3:
-            raise TypeError("The state should contain 3 items.")
+        if len(state) != 2:
+            raise TypeError("The state should contain 2 items.")
         self._array = state[0]
 
         parent = state[1]
@@ -487,8 +486,12 @@ class _VariancePropagationMixin:
             else:
                 # lookup the mapping for to_variance and from_variance for this
                 # numpy operation:
-                to_variance = collapse_to_variance_mapping[numpy_operation]
-                from_variance = collapse_from_variance_mapping[numpy_operation]
+                to_variance = collapse_to_variance_mapping.get(
+                    numpy_operation, lambda x: x
+                )
+                from_variance = collapse_from_variance_mapping.get(
+                    numpy_operation, numpy_operation
+                )
 
                 this = to_variance(self.array)
 
@@ -529,10 +532,7 @@ class _VariancePropagationMixin:
 
         # collapse an ND array over arbitrary dimensions:
         preserve_axes = [ax for ax in all_axes if ax not in axis]
-        meas = np.ma.masked_array(
-            _move_preserved_axes_first(self.parent_nddata.data, preserve_axes),
-            _move_preserved_axes_first(self.parent_nddata.mask, preserve_axes),
-        )
+        meas = _move_preserved_axes_first(self.parent_nddata, preserve_axes)
         err = _move_preserved_axes_first(self.array, preserve_axes)
 
         result = np.array(

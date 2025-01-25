@@ -9,11 +9,10 @@ import numpy as np
 import pandas as pd
 from pandas.io.formats.style import Styler
 
-from .dataseries import DataSeries, ErrorSeries, BoolSeries, BitwiseSeries
+from .dataseries import DataSeries, BoolSeries, BitwiseSeries
 from .mixins import (
     AggMixin,
     ConvenienceMixins,
-    ErrorStatsMixin,
     MathMixin,
     StatsMixin,
     BoolStatsMixin,
@@ -89,12 +88,13 @@ class Frame(
 
     def stats_post_process(self, result, **kwargs):
         axis = kwargs.pop("axis")
+        uncertainty = kwargs.pop("uncertainty", None)
         if axis in [0, "time"]:
-            if "uncertainty" in kwargs:
+            if uncertainty is not None and uncertainty.array is not None:
                 return result, kwargs["uncertainty"]
             return result
         if axis in [1, "pixel"]:
-            return self._series_class(result, **kwargs)
+            return self._series_class(result, uncertainty=uncertainty, **kwargs)
         else:
             return result
 
@@ -156,7 +156,7 @@ class Frame(
         )
 
 
-class DataFrame(Frame, StatsMixin):
+class DataFrame(StatsMixin, Frame):
     _series_class = DataSeries
 
     def __init__(self, *args, **kwargs):
@@ -175,27 +175,9 @@ class DataFrame(Frame, StatsMixin):
         return DataFrame(data, **kwargs)
 
 
-class ErrorFrame(Frame, ErrorStatsMixin):
-    _series_class = ErrorSeries
-
-    def __init__(self, *args, **kwargs):
-        self._metadata = []
-        self._user_kwargs = []
-        super().__init__(*args, **kwargs)
-        self._set_errstats_methods()
-
-    def __repr__(self):
-        return f"🟥 ErrorFrame {self.shape}"
-
-    @staticmethod
-    def from_pandas(data, **kwargs):
-        """Convert a pd.DataFrame to a DataFrame"""
-        return ErrorFrame(data, **kwargs)
-
-
 class BoolFrame(
-    Frame,
     BoolStatsMixin,
+    Frame,
 ):
     """A Cube object which contains boolean values with time and 2 spatial dimensions."""
 

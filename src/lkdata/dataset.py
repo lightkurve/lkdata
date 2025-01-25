@@ -9,15 +9,14 @@ from warnings import warn
 import numpy as np
 import pandas as pd
 
-from .datacube import DataCube, ErrorCube, BoolCube, BitwiseCube
-from .dataframe import DataFrame, ErrorFrame, BoolFrame, BitwiseFrame
-from .dataseries import DataSeries, ErrorSeries, BoolSeries, BitwiseSeries
+from .datacube import DataCube, BoolCube, BitwiseCube
+from .dataframe import DataFrame, BoolFrame, BitwiseFrame
+from .dataseries import DataSeries, BoolSeries, BitwiseSeries
 
 LkDataTypes = Union[DataCube, DataFrame, DataSeries]
-LkErrorTypes = Union[ErrorCube, ErrorFrame, ErrorSeries]
 LkBoolTypes = Union[BoolCube, BoolFrame, BoolSeries]
 LkBitwiseTypes = Union[BitwiseCube, BitwiseFrame, BitwiseSeries]
-LkTypes = Union[LkDataTypes, LkErrorTypes, LkBoolTypes, LkBitwiseTypes]
+LkTypes = Union[LkDataTypes, LkBoolTypes, LkBitwiseTypes]
 
 
 class DataProcessorMixin:
@@ -59,11 +58,8 @@ class DataProcessorMixin:
 
     CLASS_CHECKS = {
         DataCube: {"ntime", "nrow", "ncol", "index", "columns"},
-        ErrorCube: {"ntime", "nrow", "ncol", "index", "columns"},
         DataFrame: {"ntime", "index"},
-        ErrorFrame: {"ntime", "index"},
         DataSeries: {"ntime", "index"},
-        ErrorSeries: {"ntime", "index"},
     }
     _data = {}
     _error = {}
@@ -98,11 +94,10 @@ class DataProcessorMixin:
     def _build_data_product(self, data_arr: Iterable):
         data_arr = np.asarray(data_arr)
         data_classes = {3: DataCube, 2: DataFrame, 1: DataSeries}
-        error_classes = {3: ErrorCube, 2: ErrorFrame, 1: ErrorSeries}
-        classes = {"data": data_classes, "error": error_classes}
+        classes = {"data": data_classes}
 
         obj_class = classes[self._type].get(data_arr.ndim, None)
-        if obj_class in [DataCube, ErrorCube]:
+        if obj_class in [DataCube]:
             data_product = obj_class(data_arr, **self.kwargs)
             self._check_attrs(data_product)
         elif obj_class:
@@ -150,9 +145,6 @@ class DataProcessorMixin:
     @process_input.register(DataCube)
     @process_input.register(DataFrame)
     @process_input.register(DataSeries)
-    @process_input.register(ErrorCube)
-    @process_input.register(ErrorFrame)
-    @process_input.register(ErrorSeries)
     def _(self, data_input):
         self._check_attrs(data_input)
         return data_input
@@ -218,9 +210,6 @@ class ProductBundle(dict, DataProcessorMixin):
     @_unpack_data.register(DataCube)
     @_unpack_data.register(DataFrame)
     @_unpack_data.register(DataSeries)
-    @_unpack_data.register(ErrorCube)
-    @_unpack_data.register(ErrorFrame)
-    @_unpack_data.register(ErrorSeries)
     def _(self, data):
         return {"flux_" + self._type: data}
 
@@ -303,38 +292,6 @@ class DataProducts(ProductBundle):
         super().__init__(data, index)
 
 
-class ErrorProducts(ProductBundle):
-    """
-    A dict-like class for managing and processing error products.
-
-    This class inherits from ProductBundle and is specifically designed to handle
-    error (as opposed to data) products. It provides a container for various types
-    of data arrays or data objects, with methods for processing and validating inputs.
-
-    Parameters
-    ----------
-    error : Union[Dict, List, np.ndarray].
-        The input data to be processed. Can be a dictionary of named error products,
-        a list, or a numpy array.
-    **kwargs
-        Additional keyword arguments to be passed to the data product constructors.
-
-    """
-
-    _type = "error"
-
-    def __init__(
-        self,
-        error: Union[
-            Dict[str, Union[Iterable, LkErrorTypes]], Iterable, LkErrorTypes
-        ] = None,
-        index: pd.MultiIndex = None,
-        **kwargs,
-    ):
-        self.kwargs = kwargs
-        super().__init__(error, index)
-
-
 class BoolProducts(ProductBundle):
     _type = "bool"
 
@@ -398,13 +355,6 @@ class DataSet:
         data: Union[
             Iterable, LkDataTypes, DataProducts, Dict[str, Union[Iterable, LkDataTypes]]
         ] = None,
-        error: Union[
-            list,
-            np.ndarray,
-            LkErrorTypes,
-            ErrorProducts,
-            Dict[str, Union[Iterable, LkErrorTypes]],
-        ] = None,
         bools: Union[
             Iterable, LkBoolTypes, BoolProducts, Dict[str, Union[Iterable, LkBoolTypes]]
         ] = None,
@@ -439,35 +389,15 @@ class DataSet:
         else:
             self.data = DataProducts(index=index, **kwargs)
 
-        if error is not None:
-            if isinstance(error, ErrorProducts):
-                self.error = error
-            else:
-                self.error = ErrorProducts(error, index, **kwargs)
-            self._data_types.update(self.error._data_types)
-        else:
-            self.error = ErrorProducts(index=index, **kwargs)
-
         if not hasattr(self.data, "index"):
-            if not hasattr(self.error, "index"):
-                self.data.ntime = 0
-                self.data.index = parsed_index
-                self.error.ntime = 0
-                self.error.index = parsed_index
-            else:
-                self.data.ntime = self.error.ntime
-                self.data.index = self.error.index
-        elif not hasattr(self.error, "index"):
-            self.error.ntime = self.data.ntime
-            self.error.index = self.data.index
+            self.data.ntime = 0
+            self.data.index = parsed_index
 
         for val in self.data.values():
             val.index = self.index
-        for val in self.error.values():
-            val.index = self.index
 
     def __len__(self):
-        return len(self.data) + len(self.error)
+        return len(self.data)
 
     @property
     def cubes(self) -> dict:
@@ -485,13 +415,7 @@ class DataSet:
             for key, value in self._data_types.items()
             if "DataCube" in str(value)
         }
-        cubes.update(
-            {
-                key: self.error[key]
-                for key, value in self._data_types.items()
-                if "ErrorCube" in str(value)
-            }
-        )
+
         return cubes
 
     @property
@@ -510,13 +434,6 @@ class DataSet:
             for key, value in self._data_types.items()
             if "DataFrame" in str(value)
         }
-        frames.update(
-            {
-                key: self.error[key]
-                for key, value in self._data_types.items()
-                if "ErrorFrame" in str(value)
-            }
-        )
         return frames
 
     @property
@@ -535,13 +452,6 @@ class DataSet:
             for key, value in self._data_types.items()
             if "DataSeries" in str(value)
         }
-        series.update(
-            {
-                key: self.error[key]
-                for key, value in self._data_types.items()
-                if "ErrorSeries" in str(value)
-            }
-        )
         return series
 
     def fold(
@@ -591,15 +501,11 @@ class DataSet:
     def _batch_wrapper(self, func):
         def new_func(*args, **kwargs):
             newdata = dict(deepcopy(self.data))
-            newerror = dict(deepcopy(self.error))
             for key, val in newdata.items():
                 obj_func = getattr(val, func)
                 newdata[key] = obj_func(*args, **kwargs)
 
-            for key, val in newerror.items():
-                obj_func = getattr(val, func)
-                newerror[key] = obj_func(*args, **kwargs)
-            return self._build_instance(newdata, newerror)
+            return self._build_instance(newdata)
 
         return new_func
 
@@ -621,8 +527,6 @@ class DataSet:
     def _(self, key: str):
         if key in self.data:
             return self.data[key]
-        elif key in self.error:
-            return self.error[key]
         else:
             raise ValueError("Unrecognized key")
 
@@ -634,12 +538,7 @@ class DataSet:
         for data_key, data in self.data.items():
             new_data[data_key] = data[key]
         new_data = DataProducts(new_data, self.data.index[np.atleast_1d(key)])
-
-        new_err = {}
-        for err_key, err in self.error.items():
-            new_err[err_key] = err[key]
-        new_err = ErrorProducts(new_err, self.error.index[np.atleast_1d(key)])
-        return self._build_instance(new_data, new_err)
+        return self._build_instance(new_data)
 
     @__getitem__.register(slice)
     def _(self, key):
@@ -647,12 +546,7 @@ class DataSet:
         for data_key, data in self.data.items():
             new_data[data_key] = data[key]
         new_data = DataProducts(new_data, self.data.index[key])
-
-        new_err = {}
-        for err_key, err in self.error.items():
-            new_err[err_key] = err[key]
-        new_err = ErrorProducts(new_err, self.error.index[key])
-        return self._build_instance(new_data, new_err)
+        return self._build_instance(new_data)
 
     @__getitem__.register
     def _(self, key: tuple):
@@ -665,16 +559,9 @@ class DataSet:
             for data_key, data in self.data.items()
             if isinstance(data, DataCube)
         }
-        new_error = {
-            err_key: err[key]
-            for err_key, err in self.error.items()
-            if isinstance(err, ErrorCube)
-        }
 
         if len(new_data) > 0:
             new_columns = list(new_data.values())[0].columns
-        elif len(new_error) > 0:
-            new_columns = list(new_error.values())[0].columns
         else:
             new_columns = pd.MultiIndex.from_arrays([[]], names=["series"])
 
@@ -687,18 +574,8 @@ class DataSet:
             }
         )
 
-        new_error.update(
-            {
-                err_key: err[time_key]
-                for err_key, err in self.error.items()
-                if isinstance(err, (ErrorSeries, ErrorFrame))
-            }
-        )
-
         if len(new_data) > 0:
             new_index = list(new_data.values())[0].index
-        elif len(new_error) > 0:
-            new_index = list(new_error.values())[0].index
         else:
             new_index = pd.MultiIndex.from_arrays([[]], names=["time_index"])
 
@@ -706,7 +583,7 @@ class DataSet:
         new_kwargs["index"] = new_index
         new_kwargs["columns"] = new_columns
 
-        return self._build_instance(new_data, new_error, **new_kwargs)
+        return self._build_instance(new_data, **new_kwargs)
 
     @property
     def user_kwargs(self):
@@ -715,23 +592,12 @@ class DataSet:
 
     def _attr_override(self, attr, val):
         setattr(self.data, attr, val)
-        setattr(self.error, attr, val)
 
     @property
     def ntime(self):
         data_val = getattr(self.data, "ntime", None)
-        err_val = getattr(self.error, "ntime", None)
         if data_val:
-            if err_val:
-                msg = f"""
-                Data and Errors have different values for `ntime`.
-                Data `ntime`: {data_val}
-                Error `ntime`: {err_val}
-                """
-                assert data_val == err_val, msg
             return data_val
-        elif err_val:
-            return err_val
         else:
             return 0
 
@@ -745,18 +611,9 @@ class DataSet:
     @property
     def index(self):
         data_val = getattr(self.data, "index", None)
-        err_val = getattr(self.error, "index", None)
         if data_val is not None:
-            if (err_val is not None) and not data_val.equals(err_val):
-                msg = f"""
-                Data and Errors have different values for `index`.
-                Data `index`: {data_val}
-                Error `index`: {err_val}
-                """
-                raise ValueError(msg)
             return data_val
-        elif err_val is not None:
-            return err_val
+
         else:
             return None
 
@@ -764,10 +621,10 @@ class DataSet:
     def index(self, val):
         self._attr_override("index", val)
 
-    def _build_instance(self, newdata, newerror, **kwargs):
+    def _build_instance(self, newdata, **kwargs):
         all_kwargs = self.user_kwargs.copy()
         all_kwargs.update(**kwargs)
-        return self.__class__(newdata, newerror, **all_kwargs)
+        return self.__class__(newdata, **all_kwargs)
 
     def __repr__(self):
         if hasattr(self, "data"):

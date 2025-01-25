@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 from pandas.io.formats.style import Styler
 
-__all__ = ["StatsMixin", "MathMixin", "ErrorStatsMixin"]
+__all__ = ["StatsMixin", "MathMixin"]
 
 _AGG_ERROR_FUNCS = {
     "agg_mean": lambda x: (np.sum(x**2) ** 0.5) / len(x),
@@ -38,16 +38,244 @@ STATS_METHOD_NAMES = [
     "min",
     "max",
     "prod",
-    "sem",
-    "skew",
-    "kurt",
+    # "sem",
+    # "skew",
+    # "kurt",
 ]
 
 
 CUM_METHOD_NAMES = ["cumsum", "cummin", "cummax", "cumprod"]
 
 
-class MathMixin:
+class IndexProcessor:
+    """Mixins to handle index processing"""
+
+    def _get_math_kwargs(self):
+        if not (isinstance(self, pd.DataFrame) or isinstance(self, pd.Series)):
+            raise TypeError(f"Unsupported type {type(self)}")
+        kwargs = {"index": self.index}
+        if isinstance(self, pd.DataFrame):
+            kwargs["columns"] = self.columns
+        if hasattr(self, "nrow") and hasattr(self, "ncol"):
+            kwargs["nrow"] = self.nrow
+            kwargs["ncol"] = self.ncol
+        return kwargs
+
+    @classmethod
+    def parse_index(
+        cls, index: pd.MultiIndex = None, time_indices: dict = None, ntime: int = 0
+    ):
+        """Parse given indices and return a single pandas MultiIndex"""
+        if time_indices:
+            ntime_inds = len(list(time_indices.values())[0])
+            if ("time_index" not in time_indices.keys()) and (
+                "mid_index" not in time_indices.keys()
+            ):
+                time_indices.update({"time_index": np.arange(ntime_inds)})
+        else:
+            time_indices = {}
+
+        if isinstance(index, pd.MultiIndex):
+            time_names = index.names
+            time_indices.update(
+                {name: index.get_level_values(name) for name in time_names}
+            )
+
+            ntime_index = len(index)
+            if ("time_index" not in time_indices.keys()) and (
+                "mid_index" not in time_indices.keys()
+            ):
+                time_indices.update({"time_index": np.arange(ntime_index)})
+
+        if time_indices == {}:
+            time_indices.update({"time_index": np.arange(ntime)})
+
+        if "time_index" in time_indices:
+            t0 = time_indices.pop("time_index")
+            arrays = [t0, *list(time_indices.values())]
+            names = ["time_index", *list(time_indices.keys())]
+        elif "mid_index" in time_indices:
+            t0 = time_indices.pop("mid_index")
+            tfull = time_indices.pop("indices")
+            arrays = [t0, tfull, *list(time_indices.values())]
+            names = ["mid_index", "indices", *list(time_indices.keys())]
+        else:
+            arrays = [*list(time_indices.values())]
+            names = [*list(time_indices.keys())]
+
+        index = pd.MultiIndex.from_arrays(arrays, names=names)
+        return index
+
+    def parse_columns(
+        self,
+        columns: pd.MultiIndex = None,
+        row_indices: dict = None,
+        col_indices: dict = None,
+        nrow: int = 0,
+        ncol: int = 0,
+        continuous=False,
+    ):
+        """Parse row and column information from given information
+
+        Parameters
+        ----------
+        columns : pd.MultiIndex, optional
+            An existing columns instance, easiest to deal with, by default None
+        row_indices : dict, optional
+            A dictionary of row arrays, by default None
+        col_indices : dict, optional
+            A dictionary of column arrays, by default None
+        nrow : int, optional
+            The number of rows, by default 0
+        ncol : int, optional
+            The number of columns, by default 0
+        continuous : bool, optional
+            Whether the rows and columns in row and col indices should be
+            interpreted as continuous.
+            If not continuous, the arrays given in row and col indices should
+            correspond to coordinates by pixel.
+            For DataCubes, the region must be continous. For DataFrames, it is
+            assumed that the region is non-contiguous, by default False.
+
+        Returns
+        -------
+        pd.MultiIndex, int, int
+            Returns a tuple of the parsed columns instance, the number of rows,
+            and the number of columns inferred from the inputs.
+        """
+        if (
+            (columns is None)
+            and (row_indices is None)
+            and (col_indices is None)
+            and (nrow == 0)
+            and (ncol == 0)
+        ):
+            return pd.MultiIndex.from_arrays([[]], names=["series"]), None, None
+
+        def flatten(value):
+            """Flatten row and column arrays"""
+            return (value * np.ones((nrow, ncol), dtype=value.dtype)).ravel()
+
+        row_indices = row_indices or {}
+        col_indices = col_indices or {}
+        if (len(row_indices) > 0) and (len(col_indices) > 0) and continuous:
+            nrow = len(list(row_indices.values())[0])
+            ncol = len(list(col_indices.values())[0])
+            for key, val in row_indices.items():
+                row_indices[key] = flatten(val[:, None])
+            for key, val in col_indices.items():
+                col_indices[key] = flatten(val)
+
+        if columns is not None:
+            parsed_columns = columns.to_frame().reset_index(drop=True)
+            for name in [name for name in columns.names if name is not None]:
+                # Attempt to parse rows and columns from columns.names
+                if "row" in name:
+                    row_indices.update({name: columns.get_level_values(name)})
+                elif "col" in name:
+                    col_indices.update({name: columns.get_level_values(name)})
+        else:
+            parsed_columns = pd.DataFrame()
+
+        # If the column names weren't parseable,
+        # and the given row and col indices were empty
+        if (len(row_indices) == 0) or (len(col_indices) == 0):
+            # Generate indices if both nrow and ncol are given
+            if (nrow > 0) and (ncol > 0) and continuous:
+                row_indices = {"row": flatten(np.arange(nrow)[:, None])}
+                col_indices = {"col": flatten(np.arange(ncol))}
+            # Otherwise just return columns, rows and columns are not parseable
+            else:
+                return columns, nrow, ncol
+        else:
+            for i, val in enumerate(row_indices.values()):
+                if i == 0:
+                    nrow = len(np.unique(val))
+                assert (
+                    len(np.unique(val)) == nrow
+                ), "Mismatch encountered in number of rows specified."
+            for i, val in enumerate(col_indices.values()):
+                if i == 0:
+                    ncol = len(np.unique(val))
+                assert (
+                    len(np.unique(val)) == ncol
+                ), "Mismatch encountered in number of columns specified."
+
+        for key, val in row_indices.items():
+            parsed_columns[key] = val
+        for key, val in col_indices.items():
+            parsed_columns[key] = val
+
+        if "series" not in parsed_columns:
+            parsed_columns["series"] = np.arange(nrow * ncol).ravel()
+
+        series_col = parsed_columns.pop("series")
+        parsed_columns.insert(0, "series", series_col)
+
+        columns = parsed_columns.set_index(
+            ["series", *row_indices.keys(), *col_indices.keys()]
+        ).index
+        self.row_names = list(row_indices.keys())
+        self.col_names = list(col_indices.keys())
+        return columns, nrow, ncol
+
+    def _fold_index(self, period, t0, level, label):
+        index = deepcopy(self.index)
+        if len(self.index.names) == 1:
+            # Cadence is typically level 0 and datetimes levels 1+
+            level = 0
+
+        if label in index.names:
+            index = index.droplevel(label)
+
+        time = index.get_level_values(level)
+        if t0:
+            time = time - t0
+        else:
+            time = time - time.min()
+
+        phase = time % period / period
+        indices = index.to_frame()
+        indices[label] = phase
+        return indices
+
+    def sort_index(self, *args, **kwargs):
+        if "inplace" in kwargs:
+            inplace = kwargs["inplace"]
+            kwargs["inplace"] = False
+        else:
+            inplace = False
+        df = super(self._pd_class, self).sort_index(*args, **kwargs)
+        if inplace:
+            super(self._pd_class, self).__init__(df)
+        else:
+            return self[df.index.get_level_values(0).values]
+
+    def droplevel(self, level, axis=0):
+        # pylint: disable:overridden-final-method
+        if level in [0, "time_index", "series"]:
+            raise ValueError("0-index levels cannot be dropped from Cubes.")
+        if axis == 1:
+            raise NotImplementedError(
+                "Dropping column indices is not currently supported."
+            )
+        pdframe = super(self._pd_class, self).droplevel(level, axis)
+
+        if hasattr(self, "ncol"):
+            return self.from_pandas(
+                pdframe,
+                nrow=self.nrow,
+                ncol=self.ncol,
+                **self.user_kwargs,
+            )
+        else:
+            return self.from_pandas(
+                pdframe,
+                **self.user_kwargs,
+            )
+
+
+class MathMixin(IndexProcessor):
     """
     Mixin class to add arithmetic to an lightkurve data objects.
 
@@ -72,6 +300,15 @@ class MathMixin:
     """
 
     _uncertainty = None
+    _array = None
+
+    @property
+    def array(self):
+        return self._array
+
+    @array.setter
+    def array(self, arr):
+        self._array = np.array(arr)
 
     @property
     def uncertainty(self):
@@ -92,17 +329,6 @@ class MathMixin:
             return val.to_numpy()
         else:
             raise TypeError(f"Can not perform math operations with type {type(val)}.")
-
-    def _get_math_kwargs(self):
-        if not (isinstance(self, pd.DataFrame) or isinstance(self, pd.Series)):
-            raise TypeError(f"Unsupported type {type(self)}")
-        kwargs = {"index": self.index}
-        if isinstance(self, pd.DataFrame):
-            kwargs["columns"] = self.columns
-        if hasattr(self, "nrow") and hasattr(self, "ncol"):
-            kwargs["nrow"] = self.nrow
-            kwargs["ncol"] = self.ncol
-        return kwargs
 
     def _arithmetic(
         self,
@@ -177,6 +403,9 @@ class MathMixin:
         kwargs = {}
 
         result = self._arithmetic_data(operation, operand, **kwds2["data"])
+
+        if not hasattr(operand, "uncertainty"):
+            propagate_uncertainties = False
 
         # Determine the other properties
         if propagate_uncertainties is None:
@@ -364,7 +593,7 @@ class StatsMixin:
 
     _stats_type = "data"
 
-    def gb_agg(self, *args, **kwargs):
+    def ds_agg(self, *args, **kwargs):
         if kwargs.pop("T", False):
             data = self.T
         else:
@@ -402,24 +631,7 @@ class StatsMixin:
         return _method
 
 
-class ErrMathMixin(MathMixin):
-    """Math mixins for lightkurve error objects."""
-
-    def __add__(self, val):
-        if isinstance(val, self.__class__()):
-            val = abs(val)
-            return self._build_instance(
-                (self.to_numpy() ** 2 + val.to_numpy() ** 2) ** 0.5,
-                **self._get_math_kwargs(),
-            )
-        else:
-            return super().__add__(val)
-
-    def __sub__(self, val):
-        return self.__add__(-val)
-
-
-class BoolMathMixin(MathMixin):
+class BoolMathMixin(IndexProcessor):
     """Math mixins for lightkurve bool objects.
 
     All operators should simply return the "logical or" for each element.
@@ -463,79 +675,10 @@ class BitwiseMathMixin:
         return self.__add__(val)
 
 
-class ErrorStatsMixin:
-    """Statistics mixins for error products"""
-
-    _stats_type = "error"
-
-    def gb_agg(self, *args, **kwargs):
-        if kwargs.pop("T", False):
-            data = self.T
-        else:
-            data = self
-        gb = (data**2).groupby(*args, **kwargs)
-        new = gb.agg("sum")
-        return new**0.5
-
-    def _sum(self, axis=0):
-        return getattr(super(pd.DataFrame, self), "sum")(axis=axis)
-
-    def _mean(self, axis=0):
-        return getattr(super(pd.DataFrame, self), "mean")(axis=axis)
-
-    def _median(self, axis=0):
-        return getattr(super(pd.DataFrame, self), "median")(axis=axis)
-
-    def _cumsum(self, axis=0):
-        return getattr(super(pd.DataFrame, self), "cumsum")(axis=axis)
-
-    def new_sum(self, axis=0):
-        """Returns the standard error"""
-        return self.stats_post_process((self**2)._sum(axis=axis) ** 0.5, axis=axis)
-
-    def new_std(self, axis=0):
-        if axis in [0, "time"]:
-            n = self.ntime
-            return self.stats_post_process(
-                (self._median(axis=axis) / (np.sqrt(2 * n))).reshape(
-                    self.nrow, self.ncol
-                ),
-                axis=axis,
-            )
-        else:
-            n = self.nseries
-            return self.stats_post_process(
-                self._median(axis=axis) / (np.sqrt(2 * n)), axis=axis
-            )
-
-    def new_mean(self, axis=0):
-        if axis in [0, "time"]:
-            n = self.ntime
-        else:
-            n = self.nseries
-        return self.stats_post_process(self.sum(axis=axis) / n, axis=axis)
-
-    def new_median(self, axis=0):
-        return self.stats_post_process(self.mean(axis=axis), axis=axis)
-
-    def new_cumsum(self, axis=0):
-        return self.stats_post_process((self**2)._cumsum(axis=axis) ** 0.5, axis=axis)
-
-    def _set_errstats_methods(self):
-        for method in (
-            "sum",
-            "std",
-            "mean",
-            "median",
-            "cumsum",
-        ):
-            setattr(self, method, getattr(self, "new_" + method))
-
-
-class BoolStatsMixin:
+class BoolStatsMixin(IndexProcessor):
     _stats_type = "bool"
 
-    def gb_agg(self, *args, **kwargs):
+    def ds_agg(self, *args, **kwargs):
         if kwargs.pop("T", False):
             data = self.T
         else:
@@ -545,7 +688,7 @@ class BoolStatsMixin:
         return new
 
 
-class BitwiseMixin(MathMixin):
+class BitwiseMixin(IndexProcessor):
     """
     Mixin class that provides functionality for handling and displaying bitwise data.
     """
@@ -554,7 +697,7 @@ class BitwiseMixin(MathMixin):
     _code_dict = None
     _values_display = None
 
-    def gb_agg(self, *args, **kwargs):
+    def ds_agg(self, *args, **kwargs):
         if kwargs.pop("T", False):
             data = self.T
         else:
@@ -697,6 +840,49 @@ class BitwiseMixin(MathMixin):
         return out
 
 
+def _expand_frame(data, row_factor, col_factor):
+    """Expands a frame maintaining relative values.
+
+    For an element (m, n) in the original frame with a value C, the
+    corresponding (m_0...m_rf, n_0...n_cf) values will be C/(rf*cf),
+    where rf is the row_factor and cf is the col_factor.
+    """
+
+    frame_size = data.shape[0] * data.shape[1]
+    # Flatten to tile columns
+    expanded = np.tile(data.reshape(frame_size, 1), (1, col_factor))
+    # Reshape to new columns
+    expanded = expanded.reshape(data.shape[0], data.shape[1] * col_factor)
+    # Tile rows
+    expanded = np.tile(expanded, (1, row_factor))
+    # Reshape to expanded frame
+    expanded = expanded.reshape(data.shape[0] * row_factor, data.shape[1] * col_factor)
+    return expanded / (row_factor * col_factor)
+
+
+def _expand_cube_frames(data, row_factor, col_factor):
+    """Expands each frame of a cube maintaining relative values.
+
+    For an element (m, n) in the original frame with a value C, the
+    corresponding (m_0...m_rf, n_0...n_cf) values will be C/(rf*cf),
+    where rf is the row_factor and cf is the col_factor.
+    """
+    frame_size = data.shape[1] * data.shape[2]
+    # Flatten to tile columns
+    expanded = np.tile(data.reshape(data.shape[0], frame_size, 1), (1, 1, col_factor))
+    # Reshape to new columns
+    expanded = expanded.reshape(
+        data.shape[0], data.shape[1], data.shape[2] * col_factor
+    )
+    # Tile rows
+    expanded = np.tile(expanded, (1, 1, row_factor))
+    # Reshape to expanded frame
+    expanded = expanded.reshape(
+        data.shape[0], data.shape[1] * row_factor, data.shape[2] * col_factor
+    )
+    return expanded / (row_factor * col_factor)
+
+
 class AggMixin:
     """ "Mixin class for data aggregation methods"""
 
@@ -746,9 +932,9 @@ class AggMixin:
             count = gb.count()
             bin_mask = np.asarray(count == nframes)
 
-        # # Downsampling aggregation depends on data type. See relevant mixin for details.
-        # new = self.gb_agg(bin_edges_left, observed=False)[bin_mask]
-        new = gb.agg("sum")[bin_mask]
+        # Downsampling aggregation depends on data type. See relevant mixin for details.
+        new = self.ds_agg(bin_edges_left, observed=False)[bin_mask]
+        # new = gb.agg("sum")[bin_mask]
         if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
             error = self.uncertainty.array.reshape(self.shape)
             error = pd.DataFrame(error**2)
@@ -914,13 +1100,13 @@ class AggMixin:
 
         new_index = new_index_left.set_index(self.columns.names).index
 
-        new_data = self.gb_agg(
+        new_data = self.ds_agg(
             [bin_edges_left_row, bin_edges_left_col], T=True, observed=False
         )
 
         if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
             error = self.uncertainty.array.reshape(self.shape)
-            error = pd.DataFrame(error**2)
+            error = pd.DataFrame(error**2).T
             error = error.groupby(
                 [bin_edges_left_row, bin_edges_left_col], observed=False
             )
@@ -940,90 +1126,6 @@ class AggMixin:
 
         return new_obj
 
-    def _expand(self, row_factor, col_factor):
-        """Expands each frame of a cube maintaining relative values.
-
-        For an element (m, n) in the original frame with a value C, the
-        corresponding (m_0...m_rf, n_0...n_cf) values will be C/(rf*cf),
-        where rf is the row_factor and cf is the col_factor.
-        """
-
-        data = self.to_array()
-        if self._stats_type == "error":
-            data = data**2
-        frame_size = data.shape[1] * data.shape[2]
-        # Flatten to tile columns
-        expanded = np.tile(
-            data.reshape(data.shape[0], frame_size, 1), (1, 1, col_factor)
-        )
-        # Reshape to new columns
-        expanded = expanded.reshape(
-            data.shape[0], data.shape[1], data.shape[2] * col_factor
-        )
-        # Tile rows
-        expanded = np.tile(expanded, (1, 1, row_factor))
-        # Reshape to expanded frame
-        expanded = expanded.reshape(
-            data.shape[0], data.shape[1] * row_factor, data.shape[2] * col_factor
-        )
-        if self._stats_type == "error":
-            return (expanded / (row_factor * col_factor)) ** 0.5
-        return expanded / (row_factor * col_factor)
-
-    def _expand_frame(self, row_factor, col_factor):
-        """Expands a frame maintaining relative values.
-
-        For an element (m, n) in the original frame with a value C, the
-        corresponding (m_0...m_rf, n_0...n_cf) values will be C/(rf*cf),
-        where rf is the row_factor and cf is the col_factor.
-        """
-        data = self.to_array()
-        if self._stats_type == "error":
-            data = data**2
-        frame_size = data.shape[0] * data.shape[1]
-        # Flatten to tile columns
-        expanded = np.tile(data.reshape(frame_size, 1), (1, col_factor))
-        # Reshape to new columns
-        expanded = expanded.reshape(data.shape[0], data.shape[1] * col_factor)
-        # Tile rows
-        expanded = np.tile(expanded, (1, row_factor))
-        # Reshape to expanded frame
-        expanded = expanded.reshape(
-            data.shape[0] * row_factor, data.shape[1] * col_factor
-        )
-        if self._stats_type == "error":
-            return (expanded / (row_factor * col_factor)) ** 0.5
-        return expanded / (row_factor * col_factor)
-
-    def _expand_cube_frames(self, row_factor, col_factor):
-        """Expands each frame of a cube maintaining relative values.
-
-        For an element (m, n) in the original frame with a value C, the
-        corresponding (m_0...m_rf, n_0...n_cf) values will be C/(rf*cf),
-        where rf is the row_factor and cf is the col_factor.
-        """
-        data = self.to_array()
-        if self._stats_type == "error":
-            data = data**2
-        frame_size = data.shape[1] * data.shape[2]
-        # Flatten to tile columns
-        expanded = np.tile(
-            data.reshape(data.shape[0], frame_size, 1), (1, 1, col_factor)
-        )
-        # Reshape to new columns
-        expanded = expanded.reshape(
-            data.shape[0], data.shape[1], data.shape[2] * col_factor
-        )
-        # Tile rows
-        expanded = np.tile(expanded, (1, 1, row_factor))
-        # Reshape to expanded frame
-        expanded = expanded.reshape(
-            data.shape[0], data.shape[1] * row_factor, data.shape[2] * col_factor
-        )
-        if self._stats_type == "error":
-            return (expanded / (row_factor * col_factor)) ** 0.5
-        return expanded / (row_factor * col_factor)
-
     def super_sample(self, nrows, ncols):
         pass
 
@@ -1032,17 +1134,36 @@ class AggMixin:
         row = self.__getattribute__(self.columns.names[1])
         col = self.__getattribute__(self.columns.names[2])
         assert len(data.shape) in [2, 3], "data must be a DataFrame or a DataCube"
+        # Frames
         if len(data.shape) == 2:
-            expanded_data = self._expand_frame(nrows, ncols)
+            # Process values
+            expanded_data = self._expand_frame(data, nrows, ncols)
             dim1 = int(expanded_data.shape[0] / nrows)
             dim2 = int(expanded_data.shape[1] / ncols)
-            if self._stats_type == "error":
-                expanded_data = expanded_data**2
+
             down_res_data = (
                 expanded_data.reshape(nrows, dim1, ncols, dim2).sum(axis=1).sum(axis=2)
             )
-            if self._stats_type == "error":
-                down_res_data = down_res_data**0.5
+
+            # Process uncertainty
+            if (
+                hasattr(self, "uncertainty")
+                & (self.uncertainty is not None)
+                & (self.uncertainty.array is not None)
+            ):
+                # This uncertainty math is sketchy,
+                # but consistent with downsample. Grain of salt.
+                expanded_unc = _expand_frame(self.uncertainty.array**2, nrows, ncols)
+                down_res_unc = (
+                    expanded_unc.reshape(nrows, dim1, ncols, dim2)
+                    .sum(axis=1)
+                    .sum(axis=2)
+                )
+                down_res_unc = down_res_unc**0.5
+            else:
+                down_res_unc = None
+
+            # Get new column values
             new_row_inds = (
                 np.tile(self.index.values.reshape(data.shape[0], 1), (1, nrows))
                 .reshape(nrows, data.shape[0])
@@ -1055,15 +1176,17 @@ class AggMixin:
             )
 
             down_res_frame = self._build_instance(
-                down_res_data, index=new_row_inds, columns=new_col_inds
+                down_res_data,
+                index=new_row_inds,
+                columns=new_col_inds,
+                uncertainty=down_res_unc,
             )
             return down_res_frame
 
+        # Cubes
         else:
             dim0 = data.shape[0]
-            expanded_data = self._expand_cube_frames(nrows, ncols)
-            if self._stats_type == "error":
-                expanded_data = expanded_data**2
+            expanded_data = _expand_cube_frames(data, nrows, ncols)
             dim1 = int(expanded_data.shape[1] / nrows)
             dim2 = int(expanded_data.shape[2] / ncols)
             down_res_data = (
@@ -1071,8 +1194,24 @@ class AggMixin:
                 .sum(axis=2)
                 .sum(axis=3)
             )
-            if self._stats_type == "error":
-                down_res_data = down_res_data**0.5
+            if (
+                hasattr(self, "uncertainty")
+                & (self.uncertainty is not None)
+                & (self.uncertainty.array is not None)
+            ):
+                # This uncertainty math is sketchy,
+                # but consistent with downsample. Grain of salt.
+                uncertainty = self.uncertainty.array.reshape(data.shape)
+                expanded_unc = _expand_cube_frames(uncertainty**2, nrows, ncols)
+                down_res_unc = (
+                    expanded_unc.reshape(dim0, nrows, dim1, ncols, dim2)
+                    .sum(axis=2)
+                    .sum(axis=3)
+                )
+                down_res_unc = down_res_unc**0.5
+            else:
+                down_res_unc = None
+
             time_indices = {
                 name: self.index.to_frame()[name]
                 for name in self.index.names
@@ -1097,6 +1236,7 @@ class AggMixin:
                 time_indices=time_indices,
                 row_indices={"row": new_row_inds},
                 col_indices={"column": new_col_inds},
+                uncertainty=down_res_unc,
             )
             self.nrow = old_nrow
             self.ncol = old_ncol
@@ -1106,163 +1246,10 @@ class AggMixin:
 class ConvenienceMixins:
     """Convenience mixins which add properties to lightkurve data objects as attributes."""
 
-    @classmethod
-    def parse_index(
-        cls, index: pd.MultiIndex = None, time_indices: dict = None, ntime: int = 0
-    ):
-        """Parse given indices and return a single pandas MultiIndex"""
-        if time_indices:
-            ntime_inds = len(list(time_indices.values())[0])
-            if ("time_index" not in time_indices.keys()) and (
-                "mid_index" not in time_indices.keys()
-            ):
-                time_indices.update({"time_index": np.arange(ntime_inds)})
-        else:
-            time_indices = {}
-
-        if isinstance(index, pd.MultiIndex):
-            time_names = index.names
-            time_indices.update(
-                {name: index.get_level_values(name) for name in time_names}
-            )
-
-            ntime_index = len(index)
-            if ("time_index" not in time_indices.keys()) and (
-                "mid_index" not in time_indices.keys()
-            ):
-                time_indices.update({"time_index": np.arange(ntime_index)})
-
-        if time_indices == {}:
-            time_indices.update({"time_index": np.arange(ntime)})
-
-        if "time_index" in time_indices:
-            t0 = time_indices.pop("time_index")
-            arrays = [t0, *list(time_indices.values())]
-            names = ["time_index", *list(time_indices.keys())]
-        elif "mid_index" in time_indices:
-            t0 = time_indices.pop("mid_index")
-            tfull = time_indices.pop("indices")
-            arrays = [t0, tfull, *list(time_indices.values())]
-            names = ["mid_index", "indices", *list(time_indices.keys())]
-        else:
-            arrays = [*list(time_indices.values())]
-            names = [*list(time_indices.keys())]
-
-        index = pd.MultiIndex.from_arrays(arrays, names=names)
-        return index
-
-    def parse_columns(
-        self,
-        columns: pd.MultiIndex = None,
-        row_indices: dict = None,
-        col_indices: dict = None,
-        nrow: int = 0,
-        ncol: int = 0,
-        continuous=False,
-    ):
-        """Parse row and column information from given information
-
-        Parameters
-        ----------
-        columns : pd.MultiIndex, optional
-            An existing columns instance, easiest to deal with, by default None
-        row_indices : dict, optional
-            A dictionary of row arrays, by default None
-        col_indices : dict, optional
-            A dictionary of column arrays, by default None
-        nrow : int, optional
-            The number of rows, by default 0
-        ncol : int, optional
-            The number of columns, by default 0
-        continuous : bool, optional
-            Whether the rows and columns in row and col indices should be
-            interpreted as continuous.
-            If not continuous, the arrays given in row and col indices should
-            correspond to coordinates by pixel.
-            For DataCubes, the region must be continous. For DataFrames, it is
-            assumed that the region is non-contiguous, by default False.
-
-        Returns
-        -------
-        pd.MultiIndex, int, int
-            Returns a tuple of the parsed columns instance, the number of rows,
-            and the number of columns inferred from the inputs.
-        """
-        if (
-            (columns is None)
-            and (row_indices is None)
-            and (col_indices is None)
-            and (nrow == 0)
-            and (ncol == 0)
-        ):
-            return pd.MultiIndex.from_arrays([[]], names=["series"]), None, None
-
-        def flatten(value):
-            """Flatten row and column arrays"""
-            return (value * np.ones((nrow, ncol), dtype=value.dtype)).ravel()
-
-        row_indices = row_indices or {}
-        col_indices = col_indices or {}
-        if (len(row_indices) > 0) and (len(col_indices) > 0) and continuous:
-            nrow = len(list(row_indices.values())[0])
-            ncol = len(list(col_indices.values())[0])
-            for key, val in row_indices.items():
-                row_indices[key] = flatten(val[:, None])
-            for key, val in col_indices.items():
-                col_indices[key] = flatten(val)
-
-        if columns is not None:
-            parsed_columns = columns.to_frame().reset_index(drop=True)
-            for name in [name for name in columns.names if name is not None]:
-                # Attempt to parse rows and columns from columns.names
-                if "row" in name:
-                    row_indices.update({name: columns.get_level_values(name)})
-                elif "col" in name:
-                    col_indices.update({name: columns.get_level_values(name)})
-        else:
-            parsed_columns = pd.DataFrame()
-
-        # If the column names weren't parseable,
-        # and the given row and col indices were empty
-        if (len(row_indices) == 0) or (len(col_indices) == 0):
-            # Generate indices if both nrow and ncol are given
-            if (nrow > 0) and (ncol > 0) and continuous:
-                row_indices = {"row": flatten(np.arange(nrow)[:, None])}
-                col_indices = {"col": flatten(np.arange(ncol))}
-            # Otherwise just return columns, rows and columns are not parseable
-            else:
-                return columns, nrow, ncol
-        else:
-            for i, val in enumerate(row_indices.values()):
-                if i == 0:
-                    nrow = len(np.unique(val))
-                assert (
-                    len(np.unique(val)) == nrow
-                ), "Mismatch encountered in number of rows specified."
-            for i, val in enumerate(col_indices.values()):
-                if i == 0:
-                    ncol = len(np.unique(val))
-                assert (
-                    len(np.unique(val)) == ncol
-                ), "Mismatch encountered in number of columns specified."
-
-        for key, val in row_indices.items():
-            parsed_columns[key] = val
-        for key, val in col_indices.items():
-            parsed_columns[key] = val
-
-        if "series" not in parsed_columns:
-            parsed_columns["series"] = np.arange(nrow * ncol).ravel()
-
-        series_col = parsed_columns.pop("series")
-        parsed_columns.insert(0, "series", series_col)
-
-        columns = parsed_columns.set_index(
-            ["series", *row_indices.keys(), *col_indices.keys()]
-        ).index
-        self.row_names = list(row_indices.keys())
-        self.col_names = list(col_indices.keys())
-        return columns, nrow, ncol
+    def _build_instance(self, new, **kwargs):
+        all_kwargs = self.user_kwargs.copy()
+        all_kwargs.update(**kwargs)
+        return self.__class__(new, **all_kwargs)
 
     def _include_convenience_index(self):
         INDEX_DICTS = {
@@ -1287,26 +1274,6 @@ class ConvenienceMixins:
             if (key not in self._metadata) and (key != "columns"):
                 self._metadata.append(key)
                 setattr(self, key, index)
-
-    def _fold_index(self, period, t0, level, label):
-        index = deepcopy(self.index)
-        if len(self.index.names) == 1:
-            # Cadence is typically level 0 and datetimes levels 1+
-            level = 0
-
-        if label in index.names:
-            index = index.droplevel(label)
-
-        time = index.get_level_values(level)
-        if t0:
-            time = time - t0
-        else:
-            time = time - time.min()
-
-        phase = time % period / period
-        indices = index.to_frame()
-        indices[label] = phase
-        return indices
 
     def fold(
         self,
@@ -1351,41 +1318,6 @@ class ConvenienceMixins:
         setattr(new_data_obj, label, new_data_obj.index.get_level_values(level=label))
         return new_data_obj
 
-    def sort_index(self, *args, **kwargs):
-        if "inplace" in kwargs:
-            inplace = kwargs["inplace"]
-            kwargs["inplace"] = False
-        else:
-            inplace = False
-        df = super(self._pd_class, self).sort_index(*args, **kwargs)
-        if inplace:
-            super(self._pd_class, self).__init__(df)
-        else:
-            return self[df.index.get_level_values(0).values]
-
-    def droplevel(self, level, axis=0):
-        # pylint: disable:overridden-final-method
-        if level in [0, "time_index", "series"]:
-            raise ValueError("0-index levels cannot be dropped from Cubes.")
-        if axis == 1:
-            raise NotImplementedError(
-                "Dropping column indices is not currently supported."
-            )
-        pdframe = super(self._pd_class, self).droplevel(level, axis)
-
-        if hasattr(self, "ncol"):
-            return self.from_pandas(
-                pdframe,
-                nrow=self.nrow,
-                ncol=self.ncol,
-                **self.user_kwargs,
-            )
-        else:
-            return self.from_pandas(
-                pdframe,
-                **self.user_kwargs,
-            )
-
     def to_array(self):
         """Method to return the data as a numpy array."""
         return self.to_numpy()
@@ -1394,8 +1326,3 @@ class ConvenienceMixins:
     def user_kwargs(self):
         """Keywords passed by the user"""
         return {key: getattr(self, key, None) for key in self._user_kwargs}
-
-    def _build_instance(self, new, **kwargs):
-        all_kwargs = self.user_kwargs.copy()
-        all_kwargs.update(**kwargs)
-        return self.__class__(new, **all_kwargs)

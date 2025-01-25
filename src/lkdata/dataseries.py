@@ -9,7 +9,6 @@ import pandas as pd
 from .mixins import (
     AggMixin,
     ConvenienceMixins,
-    ErrorStatsMixin,
     MathMixin,
     StatsMixin,
     BoolStatsMixin,
@@ -82,7 +81,7 @@ class Series(
             return self.__class__(result_data, index=result_index, **init_kwds)
 
 
-class DataSeries(Series, MathMixin, StatsMixin):
+class DataSeries(MathMixin, StatsMixin, Series):
     """
     pandas.Series-like object with uncertainty and lightkurve functionality.
 
@@ -196,15 +195,6 @@ class DataSeries(Series, MathMixin, StatsMixin):
 
     def __repr__(self):
         return f"📉 DataSeries {self.shape}\n" + super().__repr__()
-
-
-class ErrorSeries(Series, ErrorStatsMixin):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._set_errstats_methods()
-
-    def __repr__(self):
-        return f"📈 ErrorSeries {self.shape}\n" + super().__repr__()
 
 
 class BoolSeries(
