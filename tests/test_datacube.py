@@ -180,7 +180,7 @@ def test_real_data():
     assert isinstance(flux.uncertainty, Uncertainty)
 
     assert flux.to_array().shape == (50, 6, 6)
-    assert flux.uncertainty.array.shape == (50, 36)
+    assert flux.uncertainty.array.shape == (50, 6, 6)
 
     assert flux.downsample(5).to_array().shape == (8, 6, 6)
     assert flux.downsample(5).uncertainty.array.shape == (8, 6, 6)
@@ -210,23 +210,23 @@ def test_real_data():
         == ((flux[0, -2:, -2:].uncertainty.array ** 2).sum(axis=None)) ** 0.5
     )
 
-    assert flux.spatial_downsample(2).sum().sum() == flux.sum().sum()
-    assert (flux.spatial_downsample(2).uncertainty.array ** 2).sum().sum().round() == (
-        flux.uncertainty.array**2
-    ).sum().sum().round()
+    assert flux.spatial_downsample(2).sum(axis=None) == flux.sum(axis=None)
+    assert (flux.spatial_downsample(2).uncertainty.array ** 2).sum(
+        axis=None
+    ).round() == (flux.uncertainty.array**2).sum(axis=None).round()
 
-    assert flux[:, :-1].spatial_downsample(2).sum().sum() == flux[:, :-2].sum().sum()
-    assert (
-        flux[:, :-1].spatial_downsample(2).uncertainty.array ** 2
-    ).sum().sum().round() == (flux[:, :-2].uncertainty.array ** 2).sum().sum().round()
-    assert (
-        flux[:, :, :-1].spatial_downsample(2).sum().sum() == flux[:, :, :-2].sum().sum()
+    assert flux[:, :-1].spatial_downsample(2).sum(axis=None) == flux[:, :-2].sum(
+        axis=None
     )
-    assert (
-        flux[:, :, :-1].spatial_downsample(2).uncertainty.array ** 2
-    ).sum().sum().round() == (
-        flux[:, :, :-2].uncertainty.array ** 2
-    ).sum().sum().round()
+    assert (flux[:, :-1].spatial_downsample(2).uncertainty.array ** 2).sum(
+        axis=None
+    ).round() == (flux[:, :-2].uncertainty.array ** 2).sum(axis=None).round()
+    assert flux[:, :, :-1].spatial_downsample(2).sum(axis=None) == flux[:, :, :-2].sum(
+        axis=None
+    )
+    assert (flux[:, :, :-1].spatial_downsample(2).uncertainty.array ** 2).sum(
+        axis=None
+    ).round() == (flux[:, :, :-2].uncertainty.array ** 2).sum(axis=None).round()
 
 
 def test_bool_cube():

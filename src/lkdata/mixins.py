@@ -1037,6 +1037,9 @@ class AggMixin:
         Examples
         --------
 
+        TODO: This shouldn't be a mixin for lk products, it's Cube specific
+        with an application to a non-timeseries DataFrame and isn't meaningful
+        for series at all.
         """
         assert isinstance(factor, int) or isinstance(
             factor, tuple
@@ -1112,6 +1115,8 @@ class AggMixin:
             )
             error = error.agg("sum")[bin_mask].to_numpy()
             error = error**0.5
+        else:
+            error = None
 
         new_obj = self._build_instance(
             new_data[bin_mask].T.to_numpy(),
@@ -1121,8 +1126,8 @@ class AggMixin:
             columns=new_index[bin_mask],
         )
 
-        if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
-            new_obj.uncertainty = error.reshape(new_obj.to_array().shape)
+        if error is not None:
+            new_obj.uncertainty = error.T.reshape(new_obj.to_array().shape)
 
         return new_obj
 
@@ -1130,6 +1135,9 @@ class AggMixin:
         pass
 
     def spatial_aggregate(self, nrows, ncols):
+        # TODO: This shouldn't be a mixin for lk products, it's Cube specific
+        # with an application to a non-timeseries DataFrame and isn't
+        # meaningful for series at all.
         data = self.to_array()
         row = self.__getattribute__(self.columns.names[1])
         col = self.__getattribute__(self.columns.names[2])
