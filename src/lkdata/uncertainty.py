@@ -658,7 +658,7 @@ class _VariancePropagationMixin:
         if other_uncert.array is not None:
             d_b = to_variance(other_uncert.array)
             # Formula: sigma**2 = |A|**2 * d_b
-            right = np.abs(self.parent_nddata.data**2 * d_b)
+            right = np.abs(self.parent_nddata**2 * d_b)
         else:
             right = 0
 
@@ -666,7 +666,7 @@ class _VariancePropagationMixin:
             # Just the reversed case
             d_a = to_variance(self.array)
             # Formula: sigma**2 = |B|**2 * d_a
-            left = np.abs(other_uncert.parent_nddata.data**2 * d_a)
+            left = np.abs(other_uncert.parent_nddata**2 * d_a)
         else:
             left = 0
 
@@ -703,16 +703,15 @@ class _VariancePropagationMixin:
                 2
                 * correlation
                 * np.sqrt(d_a * d_b)
-                * self.parent_nddata.data
-                * other_uncert.parent_nddata.data
+                * self.parent_nddata
+                * other_uncert.parent_nddata
             )
         else:
             corr = 0
 
         if divide:
             return from_variance(
-                (left + right + correlation_sign * corr)
-                / other_uncert.parent_nddata.data**4
+                (left + right + correlation_sign * corr) / other_uncert.parent_nddata**4
             )
         else:
             return from_variance(left + right + correlation_sign * corr)

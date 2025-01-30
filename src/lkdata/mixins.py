@@ -300,15 +300,6 @@ class MathMixin(IndexProcessor):
     """
 
     _uncertainty = None
-    _array = None
-
-    @property
-    def array(self):
-        return self._array
-
-    @array.setter
-    def array(self, arr):
-        self._array = np.array(arr)
 
     @property
     def uncertainty(self):
@@ -318,6 +309,7 @@ class MathMixin(IndexProcessor):
     def uncertainty(self, value):
         if not hasattr(value, "uncertainty_type"):
             value = Uncertainty(value)
+        value.parent_nddata = self.array
         self._uncertainty = value
 
     def _process_math_val(self, val):
@@ -447,9 +439,9 @@ class MathMixin(IndexProcessor):
         ndarray
         """
         if operand is not None:
-            return operation(self.to_numpy(), self._process_math_val(operand), **kwargs)
+            return operation(self.to_array(), self._process_math_val(operand), **kwargs)
         else:
-            return operation(self.to_numpy(), **kwargs)
+            return operation(self.to_array(), **kwargs)
 
     def _arithmetic_uncertainty(self, operation, operand, result, correlation, **kwds):
         """
@@ -547,10 +539,16 @@ class MathMixin(IndexProcessor):
 
     def __mul__(self, other):
         result = self._prepare_then_do_arithmetic(np.multiply, other)
+        # Allow scalar multiplication
+        if isinstance(other, (float, int, np.ndarray)):
+            result.uncertainty.array = np.multiply(result.uncertainty.array, other)
         return result
 
     def __truediv__(self, other):
         result = self._prepare_then_do_arithmetic(np.true_divide, other)
+        # Allow scalar division
+        if isinstance(other, (float, int, np.ndarray)):
+            result.uncertainty.array = np.true_divide(result.uncertainty.array, other)
         return result
 
     def __pow__(self, val):

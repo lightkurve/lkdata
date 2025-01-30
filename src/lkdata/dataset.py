@@ -9,7 +9,7 @@ from warnings import warn
 import numpy as np
 import pandas as pd
 
-from .datacube import DataCube, BoolCube, BitwiseCube
+from .datacube import Cube, DataCube, BoolCube, BitwiseCube
 from .dataframe import DataFrame, BoolFrame, BitwiseFrame
 from .dataseries import DataSeries, BoolSeries, BitwiseSeries
 
@@ -25,7 +25,7 @@ class DataProcessorMixin:
 
     This class provides methods to process and validate input data, ensuring consistency
     with expected attributes and shapes. It supports various data types including
-    DataCube, ErrorCube, DataFrame, ErrorFrame, DataSeries, and ErrorSeries.
+    DataCube, DataFrame, DataSeries.
 
     Attributes:
     -----------
@@ -33,8 +33,6 @@ class DataProcessorMixin:
         A dictionary mapping data classes to sets of attributes to be checked.
     _data : dict
         Storage for processed data products.
-    _error : dict
-        Storage for processed error products.
     _type : str or None
         The type of data being processed ('data' or 'error').
     kwargs : dict or None
@@ -57,17 +55,18 @@ class DataProcessorMixin:
     """
 
     CLASS_CHECKS = {
-        DataCube: {"ntime", "nrow", "ncol", "index", "columns"},
-        DataFrame: {"ntime", "index"},
-        DataSeries: {"ntime", "index"},
+        "cubes": {"ntime", "nrow", "ncol", "index", "columns"},
+        "frames_series": {"ntime", "index"},
     }
     _data = {}
-    _error = {}
-    _type = None
     kwargs = None
 
     def _check_attrs(self, data_product):
-        attrs = self.CLASS_CHECKS[data_product.__class__]
+        if issubclass(data_product, Cube):
+            attrs = self.CLASS_CHECKS["cubes"]
+        else:
+            attrs = self.CLASS_CHECKS["frames_series"]
+
         for attr in attrs.intersection({"ntime", "nrow", "ncol"}):
             if hasattr(self, attr):
                 if getattr(self, attr) != getattr(data_product, attr):
@@ -94,9 +93,8 @@ class DataProcessorMixin:
     def _build_data_product(self, data_arr: Iterable):
         data_arr = np.asarray(data_arr)
         data_classes = {3: DataCube, 2: DataFrame, 1: DataSeries}
-        classes = {"data": data_classes}
 
-        obj_class = classes[self._type].get(data_arr.ndim, None)
+        obj_class = data_classes.get(data_arr.ndim, None)
         if obj_class in [DataCube]:
             data_product = obj_class(data_arr, **self.kwargs)
             self._check_attrs(data_product)
@@ -145,13 +143,18 @@ class DataProcessorMixin:
     @process_input.register(DataCube)
     @process_input.register(DataFrame)
     @process_input.register(DataSeries)
+    @process_input.register(BoolCube)
+    @process_input.register(BoolFrame)
+    @process_input.register(BoolSeries)
+    @process_input.register(BitwiseCube)
+    @process_input.register(BitwiseFrame)
+    @process_input.register(BitwiseSeries)
     def _(self, data_input):
         self._check_attrs(data_input)
         return data_input
 
     @process_input.register
     def _(self, data_input: Iterable):
-        assert self._type in ["data", "error"], "Unrecognized type"
         try:
             data_product = self._build_data_product(data_input)
             return data_product
@@ -199,40 +202,8 @@ class ProductBundle(dict, DataProcessorMixin):
             data = self._unpack_data(data)
             self.update(data)
 
-    @singledispatchmethod
-    def _unpack_data(self, data):
-        raise ValueError(f"Unsupported data type {type(data)}")
-
-    @_unpack_data.register
-    def _(self, data: dict):
-        return data
-
-    @_unpack_data.register(DataCube)
-    @_unpack_data.register(DataFrame)
-    @_unpack_data.register(DataSeries)
-    def _(self, data):
-        return {"flux_" + self._type: data}
-
-    @_unpack_data.register
-    def _(self, data: Iterable):
-        return {"flux_" + self._type: np.asarray(data)}
-
-    def __setitem__(self, key, val):
-        val = self.process_input(val)
-        self._data_types[key] = type(val)
-        dict.__setitem__(self, key, val)
-        if not hasattr(self, "index"):
-            setattr(self, "index", val.index)
-        if not hasattr(self, "ntime"):
-            setattr(self, "ntime", val.ntime)
-
-    def update(self, *args, **kwargs):
-        for k, v in dict(*args, **kwargs).items():
-            self[k] = v
-
-    def apply(self, func):
-        mod = {key: func(val) for key, val in self.items()}
-        return self.__class__(mod)
+    def __deepcopy__(self, *args, **kwargs):
+        return self.__class__({key: deepcopy(val) for key, val in self.items()})
 
     @singledispatchmethod
     def __getitem__(self, key):
@@ -256,8 +227,62 @@ class ProductBundle(dict, DataProcessorMixin):
                 new_values[k] = v
         return new_values
 
-    def __deepcopy__(self, *args, **kwargs):
-        return self.__class__({key: deepcopy(val) for key, val in self.items()})
+    def __setitem__(self, key, val):
+        val = self.process_input(val)
+        self._data_types[key] = type(val)
+        dict.__setitem__(self, key, val)
+        if not hasattr(self, "index"):
+            setattr(self, "index", val.index)
+        if not hasattr(self, "ntime"):
+            setattr(self, "ntime", val.ntime)
+
+    @classmethod
+    def _make_product(cls, data, **kwargs):
+        index = kwargs.pop("index", None)
+        time_indices = kwargs.pop("time_indices", None)
+        parsed_index = DataCube.parse_index(index, time_indices)
+        if not parsed_index.empty:
+            index = parsed_index
+        if data is not None:
+            if isinstance(data, cls):
+                data_product = data
+            else:
+                data_product = cls(data, index, **kwargs)
+        else:
+            data_product = cls(index=index, **kwargs)
+
+        if not hasattr(data_product, "index"):
+            data_product.ntime = 0
+            data_product.index = parsed_index
+
+        for val in data_product.values():
+            val.index = index
+
+    @singledispatchmethod
+    def _unpack_data(self, data):
+        raise ValueError(f"Unsupported data type {type(data)}")
+
+    @_unpack_data.register
+    def _(self, data: dict):
+        return data
+
+    @_unpack_data.register(DataCube)
+    @_unpack_data.register(DataFrame)
+    @_unpack_data.register(DataSeries)
+    def _(self, data):
+        return {"flux_" + self._type: data}
+
+    @_unpack_data.register
+    def _(self, data: Iterable):
+        return {"flux_" + self._type: np.asarray(data)}
+
+    def apply(self, func):
+        mod = {key: func(val) for key, val in self.items()}
+        return self.__class__(mod)
+
+    def update(self, *args, **kwargs):
+        for k, v in dict(*args, **kwargs).items():
+            self[k] = v
 
 
 class DataProducts(ProductBundle):
@@ -375,26 +400,17 @@ class DataSet:
             if k not in ("ntime", "nrow", "ncol", "columns"):
                 self._user_kwargs.append(k)
 
-        parsed_index = DataCube.parse_index(index, time_indices)
-        if not parsed_index.empty:
-            index = parsed_index
+        self.data = DataProducts._make_product(
+            data, index=index, time_indices=time_indices, **kwargs
+        )
 
-        self._data_types = {}
-        if data is not None:
-            if isinstance(data, DataProducts):
-                self.data = data
-            else:
-                self.data = DataProducts(data, index, **kwargs)
-            self._data_types.update(self.data._data_types)
-        else:
-            self.data = DataProducts(index=index, **kwargs)
+        self.bool = BoolProducts._make_product(
+            bools, index=index, time_indices=time_indices, **kwargs
+        )
 
-        if not hasattr(self.data, "index"):
-            self.data.ntime = 0
-            self.data.index = parsed_index
-
-        for val in self.data.values():
-            val.index = self.index
+        self.bitwise = BitwiseProducts._make_product(
+            bitwise, index=index, time_indices=time_indices, **kwargs
+        )
 
     def __len__(self):
         return len(self.data)
@@ -411,9 +427,7 @@ class DataSet:
             error dictionaries.
         """
         cubes = {
-            key: self.data[key]
-            for key, value in self._data_types.items()
-            if "DataCube" in str(value)
+            key: value for key, value in self.data.items() if issubclass(value, Cube)
         }
 
         return cubes
@@ -430,9 +444,9 @@ class DataSet:
             error dictionaries.
         """
         frames = {
-            key: self.data[key]
-            for key, value in self._data_types.items()
-            if "DataFrame" in str(value)
+            key: value
+            for key, value in self.data.items()
+            if isinstance(value, DataFrame)
         }
         return frames
 
@@ -448,9 +462,9 @@ class DataSet:
             error dictionaries.
         """
         series = {
-            key: self.data[key]
-            for key, value in self._data_types.items()
-            if "DataSeries" in str(value)
+            key: value
+            for key, value in self.data.items()
+            if isinstance(value, DataSeries)
         }
         return series
 

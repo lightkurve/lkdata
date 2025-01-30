@@ -28,6 +28,7 @@ class Series(
 
     _pd_class = pd.Series
     _user_kwargs = None
+    _array = None
 
     def __init__(self, data, index=None, dtype=None, name=None, copy=None, **kwargs):
         self._user_kwargs = []
@@ -49,6 +50,7 @@ class Series(
         def stats_post_process(result, **kwargs):
             return result
 
+        self._array = self.to_array()
         self.stats_post_process = stats_post_process
         self._include_convenience_index()
 
@@ -56,6 +58,10 @@ class Series(
         return self._build_instance(
             self.to_array(), index=self.index, **self.user_kwargs
         )
+
+    @property
+    def array(self):
+        return self._array
 
     @property
     def ntime(self):
@@ -182,7 +188,6 @@ class DataSeries(MathMixin, StatsMixin, Series):
     """
 
     def __init__(self, data, uncertainty=None, index=None, dtype=None, **kwargs):
-        self.uncertainty = uncertainty
         super().__init__(
             data,
             index=index,
@@ -191,6 +196,7 @@ class DataSeries(MathMixin, StatsMixin, Series):
             copy=kwargs.pop("copy", None),
             **kwargs,
         )
+        self.uncertainty = uncertainty
         self._set_stats_methods()
 
     def __repr__(self):

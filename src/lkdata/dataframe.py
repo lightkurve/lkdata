@@ -35,6 +35,7 @@ class Frame(
     row_names = None
     col_names = None
     _user_kwargs = None
+    _array = None
 
     def __init__(self, *args, **kwargs):
         index = kwargs.pop("index", None)
@@ -83,6 +84,7 @@ class Frame(
         return repr(self) + super()._repr_html_()
 
     def __post_init__(self):
+        self._array = self.to_array()
         self._include_convenience_index()
         self._include_convenience_columns()
 
@@ -97,6 +99,10 @@ class Frame(
             return self._series_class(result, uncertainty=uncertainty, **kwargs)
         else:
             return result
+
+    @property
+    def array(self):
+        return self._array
 
     @property
     def ntime(self):
@@ -160,10 +166,11 @@ class DataFrame(StatsMixin, Frame):
     _series_class = DataSeries
 
     def __init__(self, *args, **kwargs):
-        self.uncertainty = kwargs.get("uncertainty", None)
+        uncertainty = kwargs.pop("uncertainty", None)
         self._metadata = []
         self._user_kwargs = []
         super().__init__(*args, **kwargs)
+        self.uncertainty = uncertainty
         self._set_stats_methods()
 
     def __repr__(self):

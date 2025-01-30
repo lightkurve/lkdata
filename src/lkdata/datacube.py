@@ -36,6 +36,7 @@ class Cube(
     row_names: Optional[List[str]] = None
     col_names: Optional[List[str]] = None
     _user_kwargs: Optional[List[str]] = None
+    _array = None
 
     def __init__(
         self,
@@ -63,6 +64,7 @@ class Cube(
         )
 
         super().__init__(data, index=index, columns=columns)
+        self._array = self.to_array()
         self._include_convenience_index()
         self._include_convenience_columns()
 
@@ -372,6 +374,10 @@ class Cube(
                 )
 
     @property
+    def array(self):
+        return self._array
+
+    @property
     def nseries(self):
         """Total number of time series contained in the cube"""
         return self.ncol * self.nrow
@@ -453,10 +459,7 @@ class Cube(
     def to_array(self) -> np.ndarray:
         """Convert Cube data to a numpy array
 
-        Returns
-        -------
-        data_array
-            np.ndarray
+        Overwrites ConvenienceMixins.to_array reshape correctly.
         """
         data_array = self.to_numpy().reshape(self.ntime, self.nrow, self.ncol)
         return data_array
@@ -503,7 +506,6 @@ class DataCube(
             col_indices=col_indices,
             **kwargs,
         )
-        self.array = self.to_array()
         if uncertainty is not None:
             uncertainty = uncertainty.reshape(self.array.shape)
         self.uncertainty = uncertainty
