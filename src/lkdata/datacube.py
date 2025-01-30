@@ -64,162 +64,13 @@ class Cube(
         )
 
         super().__init__(data, index=index, columns=columns)
-        self._array = self.to_array()
+        self._array = self.to_numpy().reshape(self.ntime, self.nrow, self.ncol)
         self._include_convenience_index()
         self._include_convenience_columns()
 
-    def _preprocess_data(self, data):
-        data = np.array(data)
-        self._set_dim("ntime", data.shape[0])
-        log.info("data.ndim = %s, data.shape= %s", data.ndim, data.shape)
-        if data.ndim == 2:
-            if (self.nrow is None) | (self.ncol is None):
-                raise ValueError(
-                    """
-                Must set `nrow` and `ncol` when giving data as a 2D array.
-                """
-                )
-        elif data.ndim == 3:
-            self._set_dim("nrow", data.shape[1])
-            self._set_dim("ncol", data.shape[2])
-            data = np.hstack(data.transpose([1, 0, 2]))
-        else:
-            raise ValueError("""Dimension of given data not interpretable as a Cube""")
-        return data
-
-    def _set_dim(self, attr, val):
-        if getattr(self, attr, None) is None:
-            setattr(self, attr, val)
-        elif getattr(self, attr) != val:
-            raise ValueError(f"Given {attr} does not match given data shape {val}")
-
-    def _convert_to_series_index(self, row, col):
-        # Convert row, col index to DataFrame column index
-        if isinstance(row, slice):
-            row_indices = np.arange(self.nrow)[row]
-        else:
-            row_indices = np.atleast_1d(row)
-        if isinstance(col, slice):
-            col_indices = np.arange(self.ncol)[col]
-        else:
-            col_indices = np.atleast_1d(col)
-        nrow = len(row_indices)
-        ncol = len(col_indices)
-        if isinstance(row, slice) or isinstance(col, slice):
-            series_index = (
-                row_indices.repeat(ncol).reshape(nrow, ncol).T * self.ncol
-                + col_indices.reshape(ncol, 1)
-            ).ravel()
-        else:
-            series_index = row_indices * self.ncol + col_indices
-        series_index.sort()
-        return nrow, ncol, series_index
-
-    def make_cadence_label(self, cadence: int):
-        if isinstance(self.index, pd.MultiIndex):
-            indices = []
-            for i in zip(self.index.names, self.index[cadence]):
-                if i[0] == "indices":
-                    strlabel = f"{i[0]}: {i[1]}"
-                elif ("cadence" in i[0]) or ("index" in i[0]):
-                    strlabel = f"{i[0]}: {int(np.floor(i[1]))}"
-                else:
-                    strlabel = f"{i[0]}: {i[1]:0.3f}"
-                indices += [strlabel]
-        else:
-            indices = [
-                f"{i[0]} {i[1]}" for i in zip(self.index.names, [self.index[cadence]])
-            ]
-        label = "<br>" + "<br>".join(indices)
-        return label
-
-    def single_frame(self, cadence: int) -> pd.DataFrame:
-        """Create a stylized single cadence frame of a datacube
-
-        This is distinct from to_dataframe() and from retreiving a single
-        cadence of a DataCube. The former returns a pandas DataFrame with all
-        pixels along the column axis and all cadences along the index axis.
-        The latter returns a DataCube with a single cadence, time information
-        is retained and remains the first index.
-
-        This returns a pandas DataFrame with rows on the index axis, and
-        columns along the column axis. Time information is lost.
-        """
-        cadence = int(np.floor(cadence))
-
-        row = getattr(self, self.columns.names[1])
-        col = getattr(self, self.columns.names[2])
-        df = pd.DataFrame(
-            self.to_array()[cadence],
-            index=pd.Series(row[:: self.ncol], name=self.columns.names[1]),
-            columns=pd.MultiIndex.from_product(
-                [[self.columns.names[2]], pd.Series(col[: self.ncol])]
-            ),
-        )
-        return df
-
-    def stylize_frame(self, df, **kwargs):
-        out = Styler(df)
-        if "label" in kwargs:
-            out = out.set_caption(kwargs.pop("label"))
-        if self._stats_type == "error":
-            out = out.format(precision=3)
-        else:
-            out = out.format(precision=0, thousands=",")
-
-        vmin = kwargs.pop("vmin", df.min(axis=None))
-        vmax = kwargs.pop("vmax", df.max(axis=None))
-
-        out = out.background_gradient(axis=None, vmin=vmin, vmax=vmax, **kwargs)
-
-        out = out.set_table_styles(
-            [
-                {
-                    "selector": "caption",
-                    "props": "caption-side: bottom; font-size:1em; font-weight: bold;",
-                },
-                {"selector": "th", "props": "text-align: center;"},
-                {
-                    "selector": "td",
-                    "props": "width: 30px; height: 30px; font-size: 6pt; text-align: center;",
-                },
-                {"selector": ":hover", "props": ""},
-            ]
-        )
-        return out
-
-    def _repr_html_(self):
-        if hasattr(self, "_styler"):
-            out0 = self.styler
-        else:
-            df = self.single_frame(0)
-            label = self.make_cadence_label(0)
-            out0 = self.stylize_frame(df, label=label, cmap="gray")
-            self.styler = out0
-
-        if self.shape[0] > 1:
-            hidden_frames = f"[+{self.shape[0]-1} cadences]"
-            return f"""
-            {repr(self)}
-            {out0.to_html(max_rows=11, max_columns=11)}
-            ...<br>
-            {hidden_frames}<br>
-            """
-        else:
-            return f"""
-            {repr(self)}
-            {out0.to_html(max_rows=11, max_columns=11)}
-            """
-
-    def __repr__(self):
-        return f"Cube {self.ntime, self.nrow, self.ncol}"
-
-    def __str__(self):
-        return self.__repr__()
-
     def __deepcopy__(self, *args, **kwargs):
         return self._build_instance(
-            self.to_array(), index=self.index, columns=self.columns, **self.user_kwargs
+            self.array, index=self.index, columns=self.columns, **self.user_kwargs
         )
 
     @singledispatchmethod
@@ -332,6 +183,86 @@ class Cube(
             **init_kwds,
         )
 
+    def __repr__(self):
+        return f"Cube {self.ntime, self.nrow, self.ncol}"
+
+    def __str__(self):
+        return self.__repr__()
+
+    def _convert_to_series_index(self, row, col):
+        # Convert row, col index to DataFrame column index
+        if isinstance(row, slice):
+            row_indices = np.arange(self.nrow)[row]
+        else:
+            row_indices = np.atleast_1d(row)
+        if isinstance(col, slice):
+            col_indices = np.arange(self.ncol)[col]
+        else:
+            col_indices = np.atleast_1d(col)
+        nrow = len(row_indices)
+        ncol = len(col_indices)
+        if isinstance(row, slice) or isinstance(col, slice):
+            series_index = (
+                row_indices.repeat(ncol).reshape(nrow, ncol).T * self.ncol
+                + col_indices.reshape(ncol, 1)
+            ).ravel()
+        else:
+            series_index = row_indices * self.ncol + col_indices
+        series_index.sort()
+        return nrow, ncol, series_index
+
+    def _preprocess_data(self, data):
+        data = np.array(data)
+        self._set_dim("ntime", data.shape[0])
+        log.info("data.ndim = %s, data.shape= %s", data.ndim, data.shape)
+        if data.ndim == 2:
+            if (self.nrow is None) | (self.ncol is None):
+                raise ValueError(
+                    """
+                Must set `nrow` and `ncol` when giving data as a 2D array.
+                """
+                )
+        elif data.ndim == 3:
+            self._set_dim("nrow", data.shape[1])
+            self._set_dim("ncol", data.shape[2])
+            data = np.hstack(data.transpose([1, 0, 2]))
+        else:
+            raise ValueError("""Dimension of given data not interpretable as a Cube""")
+        return data
+
+    def _repr_html_(self):
+        if hasattr(self, "_styler"):
+            out0 = self.styler
+        else:
+            df = self.single_frame(0)
+            label = self.make_cadence_label(0)
+            out0 = self.stylize_frame(df, label=label, cmap="gray")
+            self.styler = out0
+
+        if self.shape[0] > 1:
+            hidden_frames = f"[+{self.shape[0]-1} cadences]"
+            return f"""
+            {repr(self)}
+            {out0.to_html(max_rows=11, max_columns=11)}
+            ...<br>
+            {hidden_frames}<br>
+            """
+        else:
+            return f"""
+            {repr(self)}
+            {out0.to_html(max_rows=11, max_columns=11)}
+            """
+
+    def _set_dim(self, attr, val):
+        if getattr(self, attr, None) is None:
+            setattr(self, attr, val)
+        elif getattr(self, attr) != val:
+            raise ValueError(f"Given {attr} does not match given data shape {val}")
+
+    @property
+    def array(self):
+        return self._array
+
     def describe_cube(self, **printoptions):
         """Print a description of the Cube instance.
 
@@ -373,39 +304,62 @@ class Cube(
                     f'\t{key.ljust(max_name_len+1)}:\t{getattr(self, key, "Not defined")}'
                 )
 
-    @property
-    def array(self):
-        return self._array
+    @classmethod
+    def from_pandas(cls, data: pd.DataFrame, **kwargs):
+        """Convert a pd.DataFrame to a DataCube
+
+        Notes:
+        This assumes no multi-indexing in the pandas dataframe.
+        """
+        return cls(data.to_numpy(), index=data.index, columns=data.columns, **kwargs)
+
+    def make_cadence_label(self, cadence: int):
+        if isinstance(self.index, pd.MultiIndex):
+            indices = []
+            for i in zip(self.index.names, self.index[cadence]):
+                if i[0] == "indices":
+                    strlabel = f"{i[0]}: {i[1]}"
+                elif ("cadence" in i[0]) or ("index" in i[0]):
+                    strlabel = f"{i[0]}: {int(np.floor(i[1]))}"
+                else:
+                    strlabel = f"{i[0]}: {i[1]:0.3f}"
+                indices += [strlabel]
+        else:
+            indices = [
+                f"{i[0]} {i[1]}" for i in zip(self.index.names, [self.index[cadence]])
+            ]
+        label = "<br>" + "<br>".join(indices)
+        return label
 
     @property
     def nseries(self):
         """Total number of time series contained in the cube"""
         return self.ncol * self.nrow
 
-    @property
-    def units(self):
-        """Data units, if any"""
-        return self._flux_units
+    def single_frame(self, cadence: int) -> pd.DataFrame:
+        """Create a stylized single cadence frame of a datacube
 
-    @units.setter
-    def units(self, unit):
-        # remove formatting, if present
-        self._flux_units = str(unit)
+        This is distinct from to_dataframe() and from retreiving a single
+        cadence of a DataCube. The former returns a pandas DataFrame with all
+        pixels along the column axis and all cadences along the index axis.
+        The latter returns a DataCube with a single cadence, time information
+        is retained and remains the first index.
 
-    @property
-    def values(self):
-        return super().values
+        This returns a pandas DataFrame with rows on the index axis, and
+        columns along the column axis. Time information is lost.
+        """
+        cadence = int(np.floor(cadence))
 
-    @property
-    def styler(self):
-        """The pandas.DataFrame styler for single cadence frames."""
-        if hasattr(self, "_styler"):
-            return self._styler
-        return None
-
-    @styler.setter
-    def styler(self, val: Styler):
-        self._styler = val
+        row = getattr(self, self.columns.names[1])
+        col = getattr(self, self.columns.names[2])
+        df = pd.DataFrame(
+            self.array[cadence],
+            index=pd.Series(row[:: self.ncol], name=self.columns.names[1]),
+            columns=pd.MultiIndex.from_product(
+                [[self.columns.names[2]], pd.Series(col[: self.ncol])]
+            ),
+        )
+        return df
 
     def stats_post_process(self, result, **kwargs):
         """Statistics post processer to format return data."""
@@ -425,13 +379,54 @@ class Cube(
         else:
             return result
 
+    @property
+    def styler(self):
+        """The pandas.DataFrame styler for single cadence frames."""
+        if hasattr(self, "_styler"):
+            return self._styler
+        return None
+
+    @styler.setter
+    def styler(self, val: Styler):
+        self._styler = val
+
+    def stylize_frame(self, df, **kwargs):
+        out = Styler(df)
+        if "label" in kwargs:
+            out = out.set_caption(kwargs.pop("label"))
+        if self._stats_type == "error":
+            out = out.format(precision=3)
+        else:
+            out = out.format(precision=0, thousands=",")
+
+        vmin = kwargs.pop("vmin", df.min(axis=None))
+        vmax = kwargs.pop("vmax", df.max(axis=None))
+
+        out = out.background_gradient(axis=None, vmin=vmin, vmax=vmax, **kwargs)
+
+        out = out.set_table_styles(
+            [
+                {
+                    "selector": "caption",
+                    "props": "caption-side: bottom; font-size:1em; font-weight: bold;",
+                },
+                {"selector": "th", "props": "text-align: center;"},
+                {
+                    "selector": "td",
+                    "props": "width: 30px; height: 30px; font-size: 6pt; text-align: center;",
+                },
+                {"selector": ":hover", "props": ""},
+            ]
+        )
+        return out
+
     def to_dataframe(
         self,
         row: Union[int, float, list, slice],
         col: Union[int, float, list, slice],
         **kwargs,
     ) -> DataFrame:
-        """Convert lk Cube to lk Frame with the given row and column indices.
+        """Convert lkdata.Cube to lkdata.Frame with the given row and column.
 
         Parameters
         ----------
@@ -456,22 +451,19 @@ class Cube(
             **kwargs,
         )
 
-    def to_array(self) -> np.ndarray:
-        """Convert Cube data to a numpy array
+    @property
+    def units(self):
+        """Data units, if any"""
+        return self._flux_units
 
-        Overwrites ConvenienceMixins.to_array reshape correctly.
-        """
-        data_array = self.to_numpy().reshape(self.ntime, self.nrow, self.ncol)
-        return data_array
+    @units.setter
+    def units(self, unit):
+        # remove formatting, if present
+        self._flux_units = str(unit)
 
-    @classmethod
-    def from_pandas(cls, data: pd.DataFrame, **kwargs):
-        """Convert a pd.DataFrame to a DataCube
-
-        Notes:
-        This assumes no multi-indexing in the pandas dataframe.
-        """
-        return cls(data.to_numpy(), index=data.index, columns=data.columns, **kwargs)
+    @property
+    def values(self):
+        return super().values
 
 
 class DataCube(
@@ -506,10 +498,10 @@ class DataCube(
             col_indices=col_indices,
             **kwargs,
         )
-        if uncertainty is not None and uncertainty.array is not None:
-            uncertainty = uncertainty.reshape(self.array.shape)
+
         self.uncertainty = uncertainty
-        self.uncertainty.parent_nddata = self.array
+        if self.uncertainty.array is not None:
+            self.uncertainty = uncertainty.reshape(self.array.shape)
         self._set_stats_methods()
 
     def __repr__(self):

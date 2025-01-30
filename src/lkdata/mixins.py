@@ -301,26 +301,35 @@ class MathMixin(IndexProcessor):
 
     _uncertainty = None
 
-    @property
-    def uncertainty(self):
-        return self._uncertainty
+    def __add__(self, other):
+        result = self._prepare_then_do_arithmetic(np.add, other)
+        return result
 
-    @uncertainty.setter
-    def uncertainty(self, value):
-        if not hasattr(value, "uncertainty_type"):
-            value = Uncertainty(value)
-        value.parent_nddata = self.array
-        self._uncertainty = value
+    def __mod__(self, val):
+        result = self._prepare_then_do_arithmetic(np.mod, val)
+        return result
 
-    def _process_math_val(self, val):
-        if isinstance(val, (np.ndarray, float)):
-            return val
-        elif isinstance(val, (int, np.int64)):
-            return float(val)
-        elif isinstance(val, (pd.DataFrame, pd.Series)):
-            return val.to_array()
-        else:
-            raise TypeError(f"Can not perform math operations with type {type(val)}.")
+    def __mul__(self, other):
+        result = self._prepare_then_do_arithmetic(np.multiply, other)
+        # Allow scalar multiplication
+        if isinstance(other, (float, int, np.ndarray)):
+            result.uncertainty.array = np.multiply(result.uncertainty.array, other)
+        return result
+
+    def __pow__(self, val):
+        result = self._prepare_then_do_arithmetic(np.power, val)
+        return result
+
+    def __sub__(self, other):
+        result = self._prepare_then_do_arithmetic(np.subtract, other)
+        return result
+
+    def __truediv__(self, other):
+        result = self._prepare_then_do_arithmetic(np.true_divide, other)
+        # Allow scalar division
+        if isinstance(other, (float, int, np.ndarray)):
+            result.uncertainty.array = np.true_divide(result.uncertainty.array, other)
+        return result
 
     def _arithmetic(
         self,
@@ -328,7 +337,6 @@ class MathMixin(IndexProcessor):
         operand,
         propagate_uncertainties=True,
         uncertainty_correlation=0,
-        axis=None,
         **kwargs,
     ):
         """
@@ -439,9 +447,9 @@ class MathMixin(IndexProcessor):
         ndarray
         """
         if operand is not None:
-            return operation(self.to_array(), self._process_math_val(operand), **kwargs)
+            return operation(self.array, self._process_math_val(operand), **kwargs)
         else:
-            return operation(self.to_array(), **kwargs)
+            return operation(self.array, **kwargs)
 
     def _arithmetic_uncertainty(self, operation, operand, result, correlation, **kwds):
         """
@@ -529,36 +537,6 @@ class MathMixin(IndexProcessor):
                 operation, operand, result, correlation, **axis_kwarg
             )
 
-    def __add__(self, other):
-        result = self._prepare_then_do_arithmetic(np.add, other)
-        return result
-
-    def __sub__(self, other):
-        result = self._prepare_then_do_arithmetic(np.subtract, other)
-        return result
-
-    def __mul__(self, other):
-        result = self._prepare_then_do_arithmetic(np.multiply, other)
-        # Allow scalar multiplication
-        if isinstance(other, (float, int, np.ndarray)):
-            result.uncertainty.array = np.multiply(result.uncertainty.array, other)
-        return result
-
-    def __truediv__(self, other):
-        result = self._prepare_then_do_arithmetic(np.true_divide, other)
-        # Allow scalar division
-        if isinstance(other, (float, int, np.ndarray)):
-            result.uncertainty.array = np.true_divide(result.uncertainty.array, other)
-        return result
-
-    def __pow__(self, val):
-        result = self._prepare_then_do_arithmetic(np.power, val)
-        return result
-
-    def __mod__(self, val):
-        result = self._prepare_then_do_arithmetic(np.mod, val)
-        return result
-
     def _prepare_then_do_arithmetic(self, operation, operand):
         """Intermediate method called by public arithmetic (i.e. ``add``)
         before the processing method (``_arithmetic``) is invoked.
@@ -584,6 +562,40 @@ class MathMixin(IndexProcessor):
         init_kwds.update(self._get_math_kwargs())
         # Return a new class based on the result
         return self._build_instance(result, **init_kwds)
+
+    def _process_math_val(self, val):
+        if isinstance(val, (np.ndarray, float)):
+            return val
+        elif isinstance(val, (int, np.int64)):
+            return float(val)
+        elif isinstance(val, (pd.DataFrame, pd.Series)):
+            if hasattr(val, "array"):
+                return val.array
+            else:
+                return val.to_numpy()
+        else:
+            raise TypeError(f"Can not perform math operations with type {type(val)}.")
+
+    @property
+    def uncertainty(self):
+        """An NDData.Uncertainty object"""
+        return self._uncertainty
+
+    @uncertainty.setter
+    def uncertainty(self, value):
+        if hasattr(value, "uncertainty_type"):
+            uncertainty = value
+        else:
+            if value is not None:
+                value = self._process_math_val(value)
+            if isinstance(value, (int, float)):
+                value = np.ones_like(self.array) * value
+            elif hasattr(value, "reshape"):
+                value = value.reshape(self.array.shape)
+            uncertainty = Uncertainty(value)
+
+        uncertainty.parent_nddata = self.array
+        self._uncertainty = uncertainty
 
 
 class StatsMixin:
@@ -1001,7 +1013,7 @@ class AggMixin:
             )
 
         if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
-            new_obj.uncertainty = error.reshape(new_obj.to_array().shape)
+            new_obj.uncertainty = error.reshape(new_obj.array.shape)
 
         return new_obj
 
@@ -1125,7 +1137,7 @@ class AggMixin:
         )
 
         if error is not None:
-            new_obj.uncertainty = error.T.reshape(new_obj.to_array().shape)
+            new_obj.uncertainty = error.T.reshape(new_obj.array.shape)
 
         return new_obj
 
@@ -1136,7 +1148,7 @@ class AggMixin:
         # TODO: This shouldn't be a mixin for lk products, it's Cube specific
         # with an application to a non-timeseries DataFrame and isn't
         # meaningful for series at all.
-        data = self.to_array()
+        data = self.array
         row = self.__getattribute__(self.columns.names[1])
         col = self.__getattribute__(self.columns.names[2])
         assert len(data.shape) in [2, 3], "data must be a DataFrame or a DataCube"
@@ -1323,10 +1335,6 @@ class ConvenienceMixins:
         new_data_obj._metadata.append(label)
         setattr(new_data_obj, label, new_data_obj.index.get_level_values(level=label))
         return new_data_obj
-
-    def to_array(self):
-        """Method to return the data as a numpy array."""
-        return self.to_numpy()
 
     @property
     def user_kwargs(self):

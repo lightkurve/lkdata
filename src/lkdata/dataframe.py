@@ -75,39 +75,15 @@ class Frame(
         pd.DataFrame.__init__(self, *args, index=index, columns=columns, **kwargs)
         self.__post_init__()
 
-    @property
-    def nseries(self):
-        """Number of series in the DataFrame"""
-        return self.shape[1]
-
-    def _repr_html_(self):
-        return repr(self) + super()._repr_html_()
-
     def __post_init__(self):
-        self._array = self.to_array()
+        self._array = self.to_numpy()
         self._include_convenience_index()
         self._include_convenience_columns()
 
-    def stats_post_process(self, result, **kwargs):
-        axis = kwargs.pop("axis")
-        uncertainty = kwargs.pop("uncertainty", None)
-        if axis in [0, "time"]:
-            if uncertainty is not None and uncertainty.array is not None:
-                return result, kwargs["uncertainty"]
-            return result
-        if axis in [1, "pixel"]:
-            return self._series_class(result, uncertainty=uncertainty, **kwargs)
-        else:
-            return result
-
-    @property
-    def array(self):
-        return self._array
-
-    @property
-    def ntime(self):
-        """Number of time frames"""
-        return self.shape[0]
+    def __deepcopy__(self, *args, **kwargs):
+        return self._build_instance(
+            self.array, index=self.index, columns=self.columns, **self.user_kwargs
+        )
 
     @singledispatchmethod
     def __getitem__(self, key):
@@ -156,10 +132,34 @@ class Frame(
             **init_kwds,
         )
 
-    def __deepcopy__(self, *args, **kwargs):
-        return self._build_instance(
-            self.to_array(), index=self.index, columns=self.columns, **self.user_kwargs
-        )
+    def _repr_html_(self):
+        return repr(self) + super()._repr_html_()
+
+    @property
+    def array(self):
+        return self._array
+
+    @property
+    def nseries(self):
+        """Number of series in the DataFrame"""
+        return self.shape[1]
+
+    @property
+    def ntime(self):
+        """Number of time frames"""
+        return self.shape[0]
+
+    def stats_post_process(self, result, **kwargs):
+        axis = kwargs.pop("axis")
+        uncertainty = kwargs.pop("uncertainty", None)
+        if axis in [0, "time"]:
+            if uncertainty is not None and uncertainty.array is not None:
+                return result, kwargs["uncertainty"]
+            return result
+        if axis in [1, "pixel"]:
+            return self._series_class(result, uncertainty=uncertainty, **kwargs)
+        else:
+            return result
 
 
 class DataFrame(StatsMixin, Frame):
@@ -218,16 +218,6 @@ class BitwiseFrame(BitwiseMixin, Frame):
         self.values_display = values_display
         self._user_kwargs.append("values_display")
 
-    @property
-    def styler(self):
-        if hasattr(self, "_styler"):
-            return self._styler
-        return None
-
-    @styler.setter
-    def styler(self, val: Styler):
-        self._styler = val
-
     def __repr__(self):
         return f"📗 BitwiseFrame {self.shape}"
 
@@ -241,6 +231,16 @@ class BitwiseFrame(BitwiseMixin, Frame):
         {repr(self)}
         {out0.to_html()}
         """
+
+    @property
+    def styler(self):
+        if hasattr(self, "_styler"):
+            return self._styler
+        return None
+
+    @styler.setter
+    def styler(self, val: Styler):
+        self._styler = val
 
 
 class LkFrame:
