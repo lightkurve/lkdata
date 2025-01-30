@@ -318,7 +318,7 @@ class MathMixin(IndexProcessor):
         elif isinstance(val, (int, np.int64)):
             return float(val)
         elif isinstance(val, (pd.DataFrame, pd.Series)):
-            return val.to_numpy()
+            return val.to_array()
         else:
             raise TypeError(f"Can not perform math operations with type {type(val)}.")
 

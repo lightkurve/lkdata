@@ -506,7 +506,7 @@ class DataCube(
             col_indices=col_indices,
             **kwargs,
         )
-        if uncertainty is not None:
+        if uncertainty is not None and uncertainty.array is not None:
             uncertainty = uncertainty.reshape(self.array.shape)
         self.uncertainty = uncertainty
         self.uncertainty.parent_nddata = self.array
