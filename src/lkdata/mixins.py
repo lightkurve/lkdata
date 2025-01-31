@@ -50,6 +50,26 @@ CUM_METHOD_NAMES = ["cumsum", "cummin", "cummax", "cumprod"]
 class IndexProcessor:
     """Mixins to handle index processing"""
 
+    def _fold_index(self, period, t0, level, label):
+        index = deepcopy(self.index)
+        if len(self.index.names) == 1:
+            # Cadence is typically level 0 and datetimes levels 1+
+            level = 0
+
+        if label in index.names:
+            index = index.droplevel(label)
+
+        time = index.get_level_values(level)
+        if t0:
+            time = time - t0
+        else:
+            time = time - time.min()
+
+        phase = time % period / period
+        indices = index.to_frame()
+        indices[label] = phase
+        return indices
+
     def _get_math_kwargs(self):
         if not (isinstance(self, pd.DataFrame) or isinstance(self, pd.Series)):
             raise TypeError(f"Unsupported type {type(self)}")
@@ -60,6 +80,29 @@ class IndexProcessor:
             kwargs["nrow"] = self.nrow
             kwargs["ncol"] = self.ncol
         return kwargs
+
+    def droplevel(self, level, axis=0):
+        # pylint: disable:overridden-final-method
+        if level in [0, "time_index", "series"]:
+            raise ValueError("0-index levels cannot be dropped from Cubes.")
+        if axis == 1:
+            raise NotImplementedError(
+                "Dropping column indices is not currently supported."
+            )
+        pdframe = super(self._pd_class, self).droplevel(level, axis)
+
+        if hasattr(self, "ncol"):
+            return self.from_pandas(
+                pdframe,
+                nrow=self.nrow,
+                ncol=self.ncol,
+                **self.user_kwargs,
+            )
+        else:
+            return self.from_pandas(
+                pdframe,
+                **self.user_kwargs,
+            )
 
     @classmethod
     def parse_index(
@@ -219,26 +262,6 @@ class IndexProcessor:
         self.col_names = list(col_indices.keys())
         return columns, nrow, ncol
 
-    def _fold_index(self, period, t0, level, label):
-        index = deepcopy(self.index)
-        if len(self.index.names) == 1:
-            # Cadence is typically level 0 and datetimes levels 1+
-            level = 0
-
-        if label in index.names:
-            index = index.droplevel(label)
-
-        time = index.get_level_values(level)
-        if t0:
-            time = time - t0
-        else:
-            time = time - time.min()
-
-        phase = time % period / period
-        indices = index.to_frame()
-        indices[label] = phase
-        return indices
-
     def sort_index(self, *args, **kwargs):
         if "inplace" in kwargs:
             inplace = kwargs["inplace"]
@@ -250,29 +273,6 @@ class IndexProcessor:
             super(self._pd_class, self).__init__(df)
         else:
             return self[df.index.get_level_values(0).values]
-
-    def droplevel(self, level, axis=0):
-        # pylint: disable:overridden-final-method
-        if level in [0, "time_index", "series"]:
-            raise ValueError("0-index levels cannot be dropped from Cubes.")
-        if axis == 1:
-            raise NotImplementedError(
-                "Dropping column indices is not currently supported."
-            )
-        pdframe = super(self._pd_class, self).droplevel(level, axis)
-
-        if hasattr(self, "ncol"):
-            return self.from_pandas(
-                pdframe,
-                nrow=self.nrow,
-                ncol=self.ncol,
-                **self.user_kwargs,
-            )
-        else:
-            return self.from_pandas(
-                pdframe,
-                **self.user_kwargs,
-            )
 
 
 class MathMixin(IndexProcessor):
@@ -312,7 +312,7 @@ class MathMixin(IndexProcessor):
     def __mul__(self, other):
         result = self._prepare_then_do_arithmetic(np.multiply, other)
         # Allow scalar multiplication
-        if isinstance(other, (float, int, np.ndarray)):
+        if isinstance(other, (float, int, np.ndarray)) and self.uncertainty:
             result.uncertainty.array = np.multiply(result.uncertainty.array, other)
         return result
 
@@ -327,7 +327,7 @@ class MathMixin(IndexProcessor):
     def __truediv__(self, other):
         result = self._prepare_then_do_arithmetic(np.true_divide, other)
         # Allow scalar division
-        if isinstance(other, (float, int, np.ndarray)):
+        if isinstance(other, (float, int, np.ndarray)) and self.uncertainty:
             result.uncertainty.array = np.true_divide(result.uncertainty.array, other)
         return result
 
@@ -503,12 +503,12 @@ class MathMixin(IndexProcessor):
         # TODO: There is no enforced requirement that actually forbids the
         # uncertainty to have negative entries but with correlation the
         # sign of the uncertainty DOES matter.
-        if self.uncertainty is None and (
-            not hasattr(operand, "uncertainty") or operand.uncertainty is None
+        if not self.uncertainty and (
+            not hasattr(operand, "uncertainty") or not operand.uncertainty
         ):
             # Neither has uncertainties so the result should have none.
             return None
-        elif self.uncertainty is None:
+        elif not self.uncertainty:
             # Create a temporary uncertainty to allow uncertainty propagation
             # to yield the correct results. (issue #4152)
             self.uncertainty = operand.uncertainty.__class__(None)
@@ -519,7 +519,7 @@ class MathMixin(IndexProcessor):
             self.uncertainty = None
             return result_uncert
 
-        elif operand is not None and operand.uncertainty is None:
+        elif operand is not None and not operand.uncertainty:
             # As with self.uncertainty is None but the other way around.
             operand.uncertainty = self.uncertainty.__class__(None)
             result_uncert = self.uncertainty.propagate(
