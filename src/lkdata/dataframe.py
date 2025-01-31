@@ -153,8 +153,8 @@ class Frame(
         axis = kwargs.pop("axis")
         uncertainty = kwargs.pop("uncertainty", None)
         if axis in [0, "time"]:
-            if uncertainty is not None and uncertainty.array is not None:
-                return result, kwargs["uncertainty"]
+            if uncertainty:
+                return result, uncertainty
             return result
         if axis in [1, "pixel"]:
             return self._series_class(result, uncertainty=uncertainty, **kwargs)

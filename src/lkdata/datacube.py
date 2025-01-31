@@ -366,7 +366,7 @@ class Cube(
         axis = kwargs.pop("axis")
         uncertainty = kwargs.pop("uncertainty", None)
         if axis in [0, "time"]:
-            if uncertainty is not None and uncertainty.array is not None:
+            if uncertainty:
                 return (
                     result.reshape(self.nrow, self.ncol),
                     uncertainty.array.reshape(self.nrow, self.ncol),

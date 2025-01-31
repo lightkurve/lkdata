@@ -404,8 +404,8 @@ class MathMixin(IndexProcessor):
 
         result = self._arithmetic_data(operation, operand, **kwds2["data"])
 
-        if not hasattr(operand, "uncertainty"):
-            propagate_uncertainties = False
+        # if not hasattr(operand, "uncertainty"):
+        #     propagate_uncertainties = False
 
         # Determine the other properties
         if propagate_uncertainties is None:
@@ -489,15 +489,6 @@ class MathMixin(IndexProcessor):
                 "Uncertainty propagation is only defined for "
                 "subclasses of NDUncertainty."
             )
-        if (
-            operand is not None
-            and operand.uncertainty is not None
-            and not isinstance(operand.uncertainty, NDUncertainty)
-        ):
-            raise TypeError(
-                "Uncertainty propagation is only defined for "
-                "subclasses of NDUncertainty."
-            )
 
         # Now do the uncertainty propagation
         # TODO: There is no enforced requirement that actually forbids the
@@ -519,7 +510,11 @@ class MathMixin(IndexProcessor):
             self.uncertainty = None
             return result_uncert
 
-        elif operand is not None and not operand.uncertainty:
+        elif (
+            operand is not None
+            and hasattr(operand, "uncertainty")
+            and not operand.uncertainty
+        ):
             # As with self.uncertainty is None but the other way around.
             operand.uncertainty = self.uncertainty.__class__(None)
             result_uncert = self.uncertainty.propagate(
@@ -527,9 +522,11 @@ class MathMixin(IndexProcessor):
             )
             operand.uncertainty = None
             return result_uncert
-
+        elif operand is not None:
+            # operand exists but has no uncertainty, can't propagate
+            return self.uncertainty
         else:
-            # Both have uncertainties so just propagate.
+            # Both have uncertainties (or there is no operand) so just propagate.
 
             # only supply the axis kwarg if one has been specified for a collapsing operation
             axis_kwarg = dict(axis=kwds["axis"]) if "axis" in kwds else dict()
