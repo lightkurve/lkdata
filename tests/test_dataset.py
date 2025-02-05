@@ -4,12 +4,11 @@ import numpy as np
 from lkdata.dataset import (
     DataProcessorMixin,
     DataProducts,
-    ErrorProducts,
     DataSet,
 )
-from lkdata.datacube import DataCube, ErrorCube
-from lkdata.dataframe import DataFrame, ErrorFrame
-from lkdata.dataseries import DataSeries, ErrorSeries
+from lkdata.datacube import DataCube
+from lkdata.dataframe import DataFrame
+from lkdata.dataseries import DataSeries
 import pandas as pd
 
 
@@ -100,54 +99,6 @@ class TestDataProducts:
             product_bundle._unpack_data(data)
 
 
-class TestErrorProducts:
-    @pytest.fixture
-    def product_bundle(self):
-        return ErrorProducts()
-
-    def test_unpack_data_dict(self, product_bundle):
-        data = {"key1": [1, 2, 3], "key2": [4, 5, 6]}
-        result = product_bundle._unpack_data(data)
-        assert result == data
-
-    def test_unpack_data_errorcube(self, product_bundle):
-        data = ErrorCube(np.random.rand(10, 5, 5))
-        result = product_bundle._unpack_data(data)
-        assert "flux_error" in result
-        assert isinstance(result["flux_error"], ErrorCube)
-
-    def test_unpack_data_errorframe(self, product_bundle):
-        data = ErrorFrame(np.random.rand(10, 25))
-        result = product_bundle._unpack_data(data)
-        assert "flux_error" in result
-        assert isinstance(result["flux_error"], ErrorFrame)
-
-    def test_unpack_data_errorseries(self, product_bundle):
-        data = ErrorSeries(np.random.rand(10))
-        result = product_bundle._unpack_data(data)
-        assert "flux_error" in result
-        assert isinstance(result["flux_error"], ErrorSeries)
-
-    def test_unpack_data_list(self, product_bundle):
-        data = [1, 2, 3, 4, 5]
-        result = product_bundle._unpack_data(data)
-        assert "flux_error" in result
-        assert isinstance(result["flux_error"], np.ndarray)
-        np.testing.assert_array_equal(result["flux_error"], np.array(data))
-
-    def test_unpack_data_numpy_array(self, product_bundle):
-        data = np.array([1, 2, 3, 4, 5])
-        result = product_bundle._unpack_data(data)
-        assert "flux_error" in result
-        assert isinstance(result["flux_error"], np.ndarray)
-        np.testing.assert_array_equal(result["flux_error"], data)
-
-    def test_unpack_data_unsupported_type(self, product_bundle):
-        data = 42  # integer is not a supported type
-        with pytest.raises(ValueError, match="Unsupported data type <class 'int'>"):
-            product_bundle._unpack_data(data)
-
-
 class TestEmptyDataset:
     @pytest.fixture
     def sample_dataset(self):
@@ -179,12 +130,6 @@ class TestEmptyDataset:
         assert sample_dataset.data.nrow == sample_datacube.nrow
         assert sample_dataset.data.ncol == sample_datacube.ncol
 
-        error_cube = ErrorCube(np.random.rand(10, 5, 5))
-        sample_dataset.error._check_attrs(error_cube)
-        assert sample_dataset.ntime == error_cube.ntime
-        assert sample_dataset.error.nrow == error_cube.nrow
-        assert sample_dataset.error.ncol == error_cube.ncol
-
     def test_check_attrs_mismatch(self, sample_dataset, sample_datacube):
         sample_dataset.data.ntime = 11  # Mismatch
         with pytest.raises(
@@ -215,10 +160,6 @@ class TestEmptyDataset:
         sample_dataset.ntime = 10
         sample_dataset.data._check_attrs(sample_dataframe)
         assert sample_dataset.ntime == sample_dataframe.ntime
-
-        error_frame = ErrorFrame(np.random.rand(10, 25))
-        sample_dataset.error._check_attrs(error_frame)
-        assert sample_dataset.ntime == error_frame.ntime
 
     def test_check_attrs_with_non_standard_attribute(
         self, sample_dataset, sample_datacube
@@ -343,48 +284,38 @@ class TestDataSet1(unittest.TestCase):
     def test_init(self):
         ds = DataSet(self.data, self.error)
         self.assertIsInstance(ds.data, DataProducts)
-        self.assertIsInstance(ds.error, ErrorProducts)
 
     def test_cubes_property(self):
         cube_data = np.array([[[1, 2], [3, 4]]])
         cube_error = np.array([[[0.1, 0.2], [0.3, 0.4]]])
-        ds = DataSet(
-            {"data_cube": DataCube(cube_data)}, {"error_cube": ErrorCube(cube_error)}
-        )
+        ds = DataSet({"data_cube": DataCube(cube_data, uncertainty=cube_error)})
         cubes = ds.cubes
         self.assertIn("data_cube", cubes)
-        self.assertIn("error_cube", cubes)
         self.assertIsInstance(cubes["data_cube"], DataCube)
-        self.assertIsInstance(cubes["error_cube"], ErrorCube)
 
     def test_frames_property(self):
         ds = DataSet(
             {"data_frame": DataFrame(self.data)},
-            {"error_frame": ErrorFrame(self.error)},
         )
         frames = ds.frames
         self.assertIn("data_frame", frames)
         self.assertIn("error_frame", frames)
         self.assertIsInstance(frames["data_frame"], DataFrame)
-        self.assertIsInstance(frames["error_frame"], ErrorFrame)
 
     def test_series_property(self):
         series_data = np.array([1, 2, 3, 4])
         series_error = np.array([0.1, 0.2, 0.3, 0.4])
         ds = DataSet(
-            {"data_series": DataSeries(series_data)},
-            {"error_series": ErrorSeries(series_error)},
+            {"data_series": DataSeries(series_data, uncertainty=series_error)},
         )
         series = ds.series
         self.assertIn("data_series", series)
         self.assertIn("error_series", series)
         self.assertIsInstance(series["data_series"], DataSeries)
-        self.assertIsInstance(series["error_series"], ErrorSeries)
 
     def test_getitem_string(self):
         ds = DataSet({"data": self.data}, {"error": self.error})
         self.assertIsInstance(ds["data"], DataFrame)
-        self.assertIsInstance(ds["error"], ErrorFrame)
 
     def test_getitem_slice(self):
         ds = DataSet({"data": self.data}, {"error": self.error})
@@ -414,12 +345,12 @@ class TestDataSet2:
             "frame": DataFrame(np.random.rand(10, 5)),
             "series": DataSeries(np.random.rand(10)),
         }
-        error = {
-            "errcube": ErrorCube(np.random.rand(10, 5, 3)),
-            "errframe": ErrorFrame(np.random.rand(10, 5)),
-            "errseries": ErrorSeries(np.random.rand(10)),
-        }
-        return DataSet(data, error, time_indices={"time": time})
+        # error = {
+        #     "errcube": ErrorCube(np.random.rand(10, 5, 3)),
+        #     "errframe": ErrorFrame(np.random.rand(10, 5)),
+        #     "errseries": ErrorSeries(np.random.rand(10)),
+        # }
+        return DataSet(data, time_indices={"time": time})
 
     def test_dataset_ntime(self, sample_data):
         assert sample_data.ntime == 10
@@ -467,10 +398,6 @@ class TestDataSet2:
             isinstance(val, (DataCube, DataFrame, DataSeries))
             for val in subset.data.values()
         )
-        assert all(
-            isinstance(val, (ErrorCube, ErrorFrame, ErrorSeries))
-            for val in subset.error.values()
-        )
 
     def test_dataset_getitem_tuple_invalid(self):
         ds = DataSet()
@@ -478,9 +405,9 @@ class TestDataSet2:
             _ = ds[1, 2, 3, 4]
 
     def test_dataset_build_instance(self, sample_data):
-        data, error = sample_data.data, sample_data.error
-        ds = DataSet(data, error, custom_param="test")
-        new_ds = ds._build_instance(data, error, new_param="new_test")
+        data = sample_data.data
+        ds = DataSet(data, custom_param="test")
+        new_ds = ds._build_instance(data, new_param="new_test")
         assert isinstance(new_ds, DataSet)
         assert new_ds.custom_param == "test"
         assert new_ds.new_param == "new_test"
@@ -510,11 +437,6 @@ class TestDataSet2:
             val.shape == (10, 2)
             for val in slice_3d.data.values()
             if isinstance(val, DataCube)
-        )
-        assert all(
-            val.shape == (10, 2)
-            for val in slice_3d.error.values()
-            if isinstance(val, ErrorCube)
         )
 
     def test_dataset_user_kwargs_preservation(self):
@@ -560,25 +482,15 @@ class TestDataSet2:
             "frame": DataFrame(np.random.rand(10, 3)),
             "series": DataSeries(np.random.rand(10)),
         }
-        error = {
-            "cube": ErrorCube(np.random.rand(10, 3, 2)),
-            "frame": ErrorFrame(np.random.rand(10, 3)),
-            "series": ErrorSeries(np.random.rand(10)),
-        }
-        ds = DataSet(data=data, error=error)
+        # error = {
+        #     "cube": ErrorCube(np.random.rand(10, 3, 2)),
+        #     "frame": ErrorFrame(np.random.rand(10, 3)),
+        #     "series": ErrorSeries(np.random.rand(10)),
+        # }
+        ds = DataSet(data=data)
         assert isinstance(ds.data["cube"], DataCube)
         assert isinstance(ds.data["frame"], DataFrame)
         assert isinstance(ds.data["series"], DataSeries)
-
-        assert isinstance(ds.error["cube"], ErrorCube)
-        assert isinstance(ds.error["frame"], ErrorFrame)
-        assert isinstance(ds.error["series"], ErrorSeries)
-
-    def test_dataset_with_mismatched_data_error_shapes(self):
-        data = {"series": DataSeries(np.random.rand(10))}
-        error = {"series": ErrorSeries(np.random.rand(15))}
-        with pytest.raises(ValueError):
-            DataSet(data, error)
 
     def test_dataset_getitem_with_boolean_indexing(self):
         data = {"series": DataSeries(np.random.rand(10))}

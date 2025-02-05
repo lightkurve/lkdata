@@ -10,13 +10,26 @@ import numpy as np
 import pandas as pd
 
 from .datacube import Cube, DataCube, BoolCube, BitwiseCube
-from .dataframe import DataFrame, BoolFrame, BitwiseFrame
-from .dataseries import DataSeries, BoolSeries, BitwiseSeries
+from .dataframe import Frame, DataFrame, BoolFrame, BitwiseFrame
+from .dataseries import Series, DataSeries, BoolSeries, BitwiseSeries
+from .mixins import IndexProcessor
 
 LkDataTypes = Union[DataCube, DataFrame, DataSeries]
 LkBoolTypes = Union[BoolCube, BoolFrame, BoolSeries]
 LkBitwiseTypes = Union[BitwiseCube, BitwiseFrame, BitwiseSeries]
 LkTypes = Union[LkDataTypes, LkBoolTypes, LkBitwiseTypes]
+
+CLS_STRINGS = {
+    DataCube: "DataCube",
+    BoolCube: "BoolCube",
+    BitwiseCube: "BitwiseCube",
+    DataFrame: "DataFrame",
+    BoolFrame: "BoolFrame",
+    BitwiseFrame: "BitwiseFrame",
+    DataSeries: "DataSeries",
+    BoolSeries: "BoolSeries",
+    BitwiseSeries: "BitwiseSeries",
+}
 
 
 class DataProcessorMixin:
@@ -33,8 +46,6 @@ class DataProcessorMixin:
         A dictionary mapping data classes to sets of attributes to be checked.
     _data : dict
         Storage for processed data products.
-    _type : str or None
-        The type of data being processed ('data' or 'error').
     kwargs : dict or None
         Additional keyword arguments for data product construction.
 
@@ -58,17 +69,16 @@ class DataProcessorMixin:
         "cubes": {"ntime", "nrow", "ncol", "index", "columns"},
         "frames_series": {"ntime", "index"},
     }
-    _data = {}
-    kwargs = None
+    kwargs: dict = None
 
     def _check_attrs(self, data_product):
-        if issubclass(data_product, Cube):
+        if issubclass(type(data_product), Cube):
             attrs = self.CLASS_CHECKS["cubes"]
         else:
             attrs = self.CLASS_CHECKS["frames_series"]
 
         for attr in attrs.intersection({"ntime", "nrow", "ncol"}):
-            if hasattr(self, attr):
+            if hasattr(self, attr) and (getattr(self, attr) is not None):
                 if getattr(self, attr) != getattr(data_product, attr):
                     raise ValueError(
                         f"""
@@ -78,8 +88,10 @@ class DataProcessorMixin:
                     )
             else:
                 setattr(self, attr, getattr(data_product, attr, None))
+        # Checking indices/columns are the same shapes, not strict on values.
+        # TODO: reconsider
         for attr in attrs.intersection({"index", "columns"}):
-            if hasattr(self, attr):
+            if hasattr(self, attr) and (getattr(self, attr) is not None):
                 if getattr(self, attr).shape != getattr(data_product, attr).shape:
                     raise ValueError(
                         f"""
@@ -92,14 +104,21 @@ class DataProcessorMixin:
 
     def _build_data_product(self, data_arr: Iterable):
         data_arr = np.asarray(data_arr)
-        data_classes = {3: DataCube, 2: DataFrame, 1: DataSeries}
+        data_classes = {3: self._cube, 2: self._frame, 1: self._series}
+        try:
+            obj_class = data_classes.get(data_arr.ndim)
+        except KeyError as err:
+            raise ValueError(
+                f"""
+            The dimensions of given data ({data_arr.ndim=}) are not
+            interpretable as a Cube, Frame, or Series.
+            If giving multiple data products, provide input as a
+            dictionary and use the `update` method.
+                             """
+            ) from err
 
-        obj_class = data_classes.get(data_arr.ndim, None)
-        if obj_class in [DataCube]:
-            data_product = obj_class(data_arr, **self.kwargs)
-            self._check_attrs(data_product)
-        elif obj_class:
-            kwargs = deepcopy(self.kwargs)
+        kwargs = deepcopy(self.kwargs)
+        if data_arr.ndim in [1, 2]:
             # The following kwargs are assumed to be for building cubes when
             # initializing a DataSet and are ignored if a DataSet is built
             # with generic iterables
@@ -108,14 +127,13 @@ class DataProcessorMixin:
             kwargs.pop("ncol", None)
             kwargs.pop("row_indices", None)
             kwargs.pop("col_indices", None)
-            data_product = obj_class(data_arr, **kwargs)
-            self._check_attrs(data_product)
-        else:
-            raise TypeError("Unrecognized format given for input.")
+
+        data_product = obj_class(data_arr, **kwargs)
+        self._check_attrs(data_product)
         return data_product
 
     @singledispatchmethod
-    def process_input(self, data_input) -> LkTypes:
+    def process_input(self, input_data) -> LkTypes:
         """
         Process the input data and convert it to the appropriate data product.
 
@@ -123,12 +141,11 @@ class DataProcessorMixin:
 
         Parameters
         ----------
-        data_input : Union[list, np.ndarray, DataCube, DataFrame, DataSeries,
-                           ErrorCube, ErrorFrame, ErrorSeries]
+        data_input : Union[list, np.ndarray, DataCube, DataFrame, DataSeries]
             The input data to be processed.
         Returns
         -------
-        Union[DataCube, DataFrame, DataSeries, ErrorCube, ErrorFrame, ErrorSeries]
+        Union[DataCube, DataFrame, DataSeries]
             The processed data product.
 
         Raises
@@ -149,20 +166,21 @@ class DataProcessorMixin:
     @process_input.register(BitwiseCube)
     @process_input.register(BitwiseFrame)
     @process_input.register(BitwiseSeries)
-    def _(self, data_input):
-        self._check_attrs(data_input)
-        return data_input
+    def _(self, input_data):
+        self._check_attrs(input_data)
+        return input_data
 
     @process_input.register
-    def _(self, data_input: Iterable):
+    def _(self, input_data: Iterable):
         try:
-            data_product = self._build_data_product(data_input)
+            data_product = self._build_data_product(input_data)
             return data_product
         except TypeError as err:
             raise TypeError(
                 """
                 If giving multiple data products, provide input as a
-                dictionary and use the `update` method."""
+                dictionary and use the `update` method.
+                """
             ) from err
 
 
@@ -186,21 +204,32 @@ class ProductBundle(dict, DataProcessorMixin):
         data products, i.e. flux summation.
     """
 
-    _type = None
+    _type: str = None
+    _cube: Cube = Cube
+    _frame: Frame = Frame
+    _series: Series = Series
+
+    _index: pd.MultiIndex = None
+    _ntime: int = None
 
     def __init__(
         self,
-        data: Union[
-            Dict[str, Union[Iterable, LkDataTypes]], Iterable, LkDataTypes
+        input_data: Union[
+            Dict[str, Union[Iterable, LkDataTypes]],
+            Iterable,
+            LkTypes,
         ] = None,
         index: pd.MultiIndex = None,
+        **kwargs,
     ):
-        if isinstance(index, pd.MultiIndex):
-            self.index = index
+        index = kwargs.pop("index", None)
+        time_indices = kwargs.pop("time_indices", None)
+        index = IndexProcessor.parse_index(index, time_indices)
+
         self._data_types = dict()
-        if data is not None:
-            data = self._unpack_data(data)
-            self.update(data)
+        if input_data is not None:
+            input_data = self._unpack_input(input_data)
+            self.update(input_data)
 
     def __deepcopy__(self, *args, **kwargs):
         return self.__class__({key: deepcopy(val) for key, val in self.items()})
@@ -228,57 +257,85 @@ class ProductBundle(dict, DataProcessorMixin):
         return new_values
 
     def __setitem__(self, key, val):
+        # Check input attributes and convert to an LkType
         val = self.process_input(val)
         self._data_types[key] = type(val)
-        dict.__setitem__(self, key, val)
-        if not hasattr(self, "index"):
+        super().__setitem__(key, val)
+        if self.index is not None:
+            setattr(val, "index", self.index)
+        else:
             setattr(self, "index", val.index)
-        if not hasattr(self, "ntime"):
+        if not self.ntime:
             setattr(self, "ntime", val.ntime)
 
-    @classmethod
-    def _make_product(cls, data, **kwargs):
-        index = kwargs.pop("index", None)
-        time_indices = kwargs.pop("time_indices", None)
-        parsed_index = DataCube.parse_index(index, time_indices)
-        if not parsed_index.empty:
-            index = parsed_index
-        if data is not None:
-            if isinstance(data, cls):
-                data_product = data
-            else:
-                data_product = cls(data, index, **kwargs)
-        else:
-            data_product = cls(index=index, **kwargs)
-
-        if not hasattr(data_product, "index"):
-            data_product.ntime = 0
-            data_product.index = parsed_index
-
-        for val in data_product.values():
-            val.index = index
-
     @singledispatchmethod
-    def _unpack_data(self, data):
-        raise ValueError(f"Unsupported data type {type(data)}")
+    def _unpack_input(self, input_data) -> dict:
+        """Take given data and create a dictionary of products.
 
-    @_unpack_data.register
-    def _(self, data: dict):
-        return data
+        Parameters
+        ----------
+        input : Union[Dict[str, Union[LkTypes, Iterable]], LkTypes, Iterable]
+            Object or collection of objects to bundle with common indices. A
+            dictionary of LkTypes|Iterable is the only option which supports
+            creating a bundle of multiple objects. Lone LkTypes and Iterable
+            objects are supported and will create a bundle with a single entry.
 
-    @_unpack_data.register(DataCube)
-    @_unpack_data.register(DataFrame)
-    @_unpack_data.register(DataSeries)
-    def _(self, data):
-        return {"flux_" + self._type: data}
+        Raises
+        ------
+        ValueError
+            Raised if data is given in an unsupported form.
+        """
+        raise ValueError(f"Unsupported data type {type(input_data)}")
 
-    @_unpack_data.register
-    def _(self, data: Iterable):
-        return {"flux_" + self._type: np.asarray(data)}
+    @_unpack_input.register
+    def _(self, input_data: dict):
+        return input_data
+
+    @_unpack_input.register(DataCube)
+    @_unpack_input.register(DataFrame)
+    @_unpack_input.register(DataSeries)
+    @_unpack_input.register(BoolCube)
+    @_unpack_input.register(BoolFrame)
+    @_unpack_input.register(BoolSeries)
+    @_unpack_input.register(BitwiseCube)
+    @_unpack_input.register(BitwiseFrame)
+    @_unpack_input.register(BitwiseSeries)
+    def _(self, input_data):
+        default_key = CLS_STRINGS.get(type(input_data))
+        return {default_key: input_data}
+
+    @_unpack_input.register
+    def _(self, input_data: Iterable):
+        data_as_array = np.asarray(input_data)
+        product_type = {3: "Cube", 2: "Frame"}.get(data_as_array.ndim, "Series")
+        return {self.type.capitalize() + product_type: data_as_array}
 
     def apply(self, func):
         mod = {key: func(val) for key, val in self.items()}
         return self.__class__(mod)
+
+    @property
+    def index(self):
+        return self._index
+
+    @index.setter
+    def index(self, value):
+        assert isinstance(value, pd.MultiIndex)
+        self._index = value
+
+    @property
+    def ntime(self):
+        return self._ntime
+
+    @ntime.setter
+    def ntime(self, value):
+        assert isinstance(value, int)
+        self._ntime = value
+
+    @property
+    def type(self):
+        """The type of product in the bundle, data|bool|bitwise"""
+        return self._type
 
     def update(self, *args, **kwargs):
         for k, v in dict(*args, **kwargs).items():
@@ -304,6 +361,9 @@ class DataProducts(ProductBundle):
     """
 
     _type = "data"
+    _cube = DataCube
+    _frame = DataFrame
+    _series = DataSeries
 
     def __init__(
         self,
@@ -319,6 +379,9 @@ class DataProducts(ProductBundle):
 
 class BoolProducts(ProductBundle):
     _type = "bool"
+    _cube = BoolCube
+    _frame = BoolFrame
+    _series = BoolSeries
 
     def __init__(
         self,
@@ -334,6 +397,9 @@ class BoolProducts(ProductBundle):
 
 class BitwiseProducts(ProductBundle):
     _type = "bitwise"
+    _cube = BitwiseCube
+    _frame = BitwiseFrame
+    _series = BitwiseSeries
 
     def __init__(
         self,
@@ -348,23 +414,32 @@ class BitwiseProducts(ProductBundle):
 
 
 class DataSet:
-    """Class to group related data and error products for batch processing.
+    """Class to group related products for batch processing.
 
     Parameters
     ----------
-    data: Union[Iterable, lkDataTypes, DataProducts, Dict[str, Union[Iterable, lkDataTypes]]]
-        Data which sums linearly. Providing a dictionary
-        of lightkurve data products (DataCube, DataFrame, DataSeries) is recommended.
+    data: Union[Iterable, lkDataTypes, DataProducts,
+                Dict[str, Union[Iterable, lkDataTypes]]]
+        Data which sums linearly. Providing a dictionary of lightkurve data
+        products (DataCube, DataFrame, DataSeries) is recommended and allows
+        for adding multiple products, as well as including relvant uncertainty
+        information.
         However, a singular array-like or a dictionary of array-like data may
         be given and will be converted into the corresponding lkDataType based
         on the shape of the data.
-
-    error: Union[Iterable, lkErrorTypes, ErrorProducts, Dict[str, Union[Iterable, lkErrorTypes]]]
-        Data which sums in quadrature. Providing a dictionary of lightkurve
-        error products (ErrorCube, ErrorFrame, ErrorSeries) is recommended.
-        However, a singular array-like or a dictionary of array-like data may
-        be given and will be converted into the corresponding lkErrorType based
-        on the shape of the data.
+    bools: Union[Iterable, LkBoolTypes, BoolProducts,
+                 Dict[str, Union[Iterable, LkBoolTypes]]]
+        Products with boolean datatypes.
+    bitwise: Union[
+            Iterable,
+            LkBitwiseTypes,
+            BitwiseProducts,
+            Dict[str, Union[Iterable, LkBitwiseTypes]],
+        ]
+        Data with bitwise datatypes. See mixins.BitwiseMixin for more detail.
+    index: pd.MultiIndex, optional
+       A MultiIndex which is used to index the data. If none given, the DataSet
+       constructor will attempt to infer the index from the given products.
 
     Returns
     -------
@@ -395,76 +470,116 @@ class DataSet:
     ):
         self._user_kwargs = []
         self.kwargs = kwargs
+        # Custom keyword arguments given by the user.
+        # They propagate to derivative products, but aren't used otherwise.
         for k, v in kwargs.items():
             setattr(self, k, v)
             if k not in ("ntime", "nrow", "ncol", "columns"):
                 self._user_kwargs.append(k)
 
-        self.data = DataProducts._make_product(
-            data, index=index, time_indices=time_indices, **kwargs
-        )
+        self.data = DataProducts(data, index=index, time_indices=time_indices, **kwargs)
 
-        self.bool = BoolProducts._make_product(
+        self.bool = BoolProducts(
             bools, index=index, time_indices=time_indices, **kwargs
         )
 
-        self.bitwise = BitwiseProducts._make_product(
+        self.bitwise = BitwiseProducts(
             bitwise, index=index, time_indices=time_indices, **kwargs
         )
 
     def __len__(self):
-        return len(self.data)
+        return self.ntime
 
     @property
     def cubes(self) -> dict:
-        """Retrieve all DataCube and ErrorCube objects.
+        """Retrieve all Cube objects.
 
         Returns
         -------
         dict
-            A dictionary containing all DataCube and ErrorCube objects from the
-            Batch object. The keys are the original keys from the data and
-            error dictionaries.
+            A dictionary containing all Cube objects from the DataSet.
+            The keys are the original keys, given or generated.
         """
         cubes = {
-            key: value for key, value in self.data.items() if issubclass(value, Cube)
+            key: value
+            for key, value in self.data.items()
+            if issubclass(type(value), Cube)
         }
 
+        cubes.update(
+            {
+                key: value
+                for key, value in self.bool.items()
+                if issubclass(type(value), Cube)
+            }
+        )
+
+        cubes.update(
+            {
+                key: value
+                for key, value in self.bitwise.items()
+                if issubclass(type(value), Cube)
+            }
+        )
         return cubes
 
     @property
     def frames(self) -> dict:
-        """Retrieve all DataFrame and ErrorFrame objects.
+        """Retrieve all Frame objects.
 
         Returns
         -------
         dict
-            A dictionary containing all DataFrame and ErrorFrame objects from
-            the Batch object. The keys are the original keys from the data and
-            error dictionaries.
+            A dictionary containing all Frame objects from the DataSet.
+            The keys are the original keys, given or generated.
         """
         frames = {
             key: value
             for key, value in self.data.items()
-            if isinstance(value, DataFrame)
+            if issubclass(type(value), Frame)
         }
+        frames.update(
+            {
+                key: value
+                for key, value in self.bool.items()
+                if issubclass(type(value), Frame)
+            }
+        )
+        frames.update(
+            {
+                key: value
+                for key, value in self.bitwise.items()
+                if issubclass(type(value), Frame)
+            }
+        )
         return frames
 
     @property
     def series(self) -> dict:
-        """Retrieve all DataSeries and ErrorSeries objects.
+        """Retrieve all Series objects.
 
         Returns
         -------
         dict
-            A dictionary containing all DataSeries and ErrorSeries objects from
-            the Batch object. The keys are the original keys from the data and
-            error dictionaries.
+            A dictionary containing all Series objects from the DataSet.
+            The keys are the original keys, given or generated.
         """
         series = {
             key: value
             for key, value in self.data.items()
-            if isinstance(value, DataSeries)
+            if issubclass(type(value), Series)
+        }
+        series.update(
+            {
+                key: value
+                for key, value in self.bool.items()
+                if issubclass(type(value), Series)
+            }
+        )
+        series = {
+            key: value
+            for key, value in self.bitwise.items()
+            if issubclass(type(value), Series)
         }
         return series
 
@@ -506,8 +621,6 @@ class DataSet:
         newbatch.index = indices.index
         setattr(newbatch, label, newbatch.index.get_level_values(level=label))
         for val in newbatch.data.values():
-            val.index = indices.index
-        for val in newbatch.error.values():
             val.index = indices.index
 
         return newbatch
@@ -641,31 +754,15 @@ class DataSet:
         return self.__class__(newdata, **all_kwargs)
 
     def __repr__(self):
-        if hasattr(self, "data"):
-            if hasattr(self, "error"):
-                msg = f"""
-                Data Products:
-                {self.data},
-                Error Products:
-                {self.error},
-                Properties:
-                {list(self.kwargs.keys())}
-                """
-            else:
-                msg = f"""
-                Data Products:
-                {self.data}
-                Properties:
-                {list(self.kwargs.keys())}
-                """
-        elif hasattr(self, "error"):
-            msg = f"""
-            Error Products:
-            {self.error}
-            Properties:
-            {list(self.kwargs.keys())}
-            """
-        else:
-            msg = f"Empty Batch. Properties:\n{list(self.kwargs.keys())}"
+        msg = f"""
+        Data Products:
+        {self.data}
+        Bool Products:
+        {self.bool}
+        Bitwise Products:
+        {self.bitwise}
+        Properties:
+        {list(self.kwargs.keys())}
+        """
         msg = dedent(msg)
         return msg

@@ -104,9 +104,9 @@ class IndexProcessor:
                 **self.user_kwargs,
             )
 
-    @classmethod
+    @staticmethod
     def parse_index(
-        cls, index: pd.MultiIndex = None, time_indices: dict = None, ntime: int = 0
+        index: pd.MultiIndex = None, time_indices: dict = None, ntime: int = 0
     ):
         """Parse given indices and return a single pandas MultiIndex"""
         if time_indices:
@@ -660,29 +660,9 @@ class BoolMathMixin(IndexProcessor):
         return self.__add__(val)
 
 
-class BitwiseMathMixin:
-    """Math mixins for lightkurve bool objects."""
-
-    def __add__(self, val):
-        if isinstance(val, self.__class__()):
-            return self._build_instance(
-                np.logical_or(self.to_numpy(), val.to_numpy()),
-                **self._get_math_kwargs(),
-            )
-        else:
-            raise TypeError(f"Adding value type {type(val)} is not supported.")
-
-    def __sub__(self, val):
-        return self.__add__(val)
-
-    def __mul__(self, val):
-        return self.__add__(val)
-
-    def __div__(self, val):
-        return self.__add__(val)
-
-
 class BoolStatsMixin(IndexProcessor):
+    """Mixin to handle aggregation for Boolean data products."""
+
     _stats_type = "bool"
 
     def ds_agg(self, *args, **kwargs):
@@ -697,7 +677,17 @@ class BoolStatsMixin(IndexProcessor):
 
 class BitwiseMixin(IndexProcessor):
     """
-    Mixin class that provides functionality for handling and displaying bitwise data.
+    Mixin class that provides functionality for handling bitwise data.
+
+    Bitwise data are data which are integers in binary form. In the context of
+    the Kepler and TESS Missions, flags are given as integers which, when
+    converted to their binary form, indicate which flags apply to the data.
+    Each flag corresponds to a bit. For an example, see Table 32 of the TESS
+    Science Data Products Description Document. A value of 5 is represented in
+    binary as 101, indicating that the 1st and 3rd bits are "on" corresponding
+    to flags Attitude Tweak and Spacecraft is in a Coarse Point from the table.
+
+    In aggregating bitwise data, i.e. via downsampling, we combine all flags.
     """
 
     _stats_type = "bitwise"
@@ -753,7 +743,8 @@ class BitwiseMixin(IndexProcessor):
     def codes(self, codes_dict):
         self._code_dict = codes_dict
 
-    def breakdown(self, val):
+    @staticmethod
+    def breakdown(val):
         """
         Breaks down an integer into its constituent powers of 2.
         """
@@ -775,8 +766,8 @@ class BitwiseMixin(IndexProcessor):
                 **self._get_math_kwargs(),
             )
         elif isinstance(val, int):
-            orig_data = self.map(val.breakdown)
-            updated_data = self.map(lambda x: x.append(val).to_numpy())
+            orig_data = self.map(self.breakdown)
+            updated_data = self.map(lambda x: x.append(val))
             updated_data = updated_data.map(np.unique)
             return self._build_instance(
                 updated_data,
@@ -786,6 +777,7 @@ class BitwiseMixin(IndexProcessor):
             raise TypeError(f"Adding value of type {type(val)} is not supported.")
 
     def __sub__(self, val):
+        ### NOT READY ###
         if isinstance(val, self.__class__):
             new_data = val.map(bin)
             orig_data = self.map(bin)
@@ -796,15 +788,15 @@ class BitwiseMixin(IndexProcessor):
                 **self._get_math_kwargs(),
             )
         elif isinstance(val, int):
-            orig_data = self.map(val.breakdown)
-            updated_data = self.map(lambda x: x.append(val).to_numpy())
+            orig_data = self.map(self.breakdown)
+            updated_data = orig_data.map(lambda x: x.append(val))
             updated_data = updated_data.map(np.unique)
             return self._build_instance(
                 updated_data,
                 **self._get_math_kwargs(),
             )
         else:
-            raise TypeError(f"Adding value of type {type(val)} is not supported.")
+            raise TypeError(f"Subtracting value of type {type(val)} is not supported.")
 
     def parse_code(self, val):
         """
