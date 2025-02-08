@@ -479,7 +479,7 @@ class DataSet:
 
         self.data = DataProducts(data, index=index, time_indices=time_indices, **kwargs)
 
-        self.bool = BoolProducts(
+        self.bools = BoolProducts(
             bools, index=index, time_indices=time_indices, **kwargs
         )
 
@@ -487,8 +487,176 @@ class DataSet:
             bitwise, index=index, time_indices=time_indices, **kwargs
         )
 
+    @singledispatchmethod
+    def __getitem__(self, key):
+        pass
+
+    @__getitem__.register
+    def _(self, key: str):
+        if key in self.data:
+            return self.data[key]
+        else:
+            raise ValueError("Unrecognized key")
+
+    @__getitem__.register(int)
+    @__getitem__.register(list)
+    @__getitem__.register(np.ndarray)
+    def _(self, key):
+        new_data = {}
+        for data_key, data in self.data.items():
+            new_data[data_key] = data[key]
+        new_data = DataProducts(new_data, self.data.index[np.atleast_1d(key)])
+
+        new_bool = {}
+        for bool_key, bool_data in self.bools.items():
+            new_bool[bool_key] = bool_data[key]
+        new_bool = BoolProducts(new_bool, self.bitwise.index[np.atleast_1d(key)])
+
+        new_bit = {}
+        for bit_key, bit_data in self.bitwise.items():
+            new_bit[bit_key] = bit_data[key]
+        new_bit = BitwiseProducts(new_bit, self.bitwise.index[np.atleast_1d(key)])
+
+        return self._build_instance(newdata=new_data, bools=new_bool, bitwise=new_bit)
+
+    @__getitem__.register(slice)
+    def _(self, key):
+        new_data = {}
+        for data_key, data in self.data.items():
+            new_data[data_key] = data[key]
+        new_data = DataProducts(new_data, self.data.index[key])
+
+        new_bool = {}
+        for bool_key, bool_data in self.bools.items():
+            new_bool[bool_key] = bool_data[key]
+        new_bool = BoolProducts(new_bool, self.bitwise.index[key])
+
+        new_bit = {}
+        for bit_key, bit_data in self.bitwise.items():
+            new_bit[bit_key] = bit_data[key]
+        new_bit = BitwiseProducts(new_bit, self.bitwise.index[key])
+
+        return self._build_instance(newdata=new_data, bools=new_bool, bitwise=new_bit)
+
+    @__getitem__.register
+    def _(self, key: tuple):
+        time_key = key[0]
+        if len(key) not in [1, 2, 3]:
+            raise KeyError(f"Cannot parse key with {len(key)} elements.")
+
+        new_data = {
+            data_key: data[key]
+            for data_key, data in self.data.items()
+            if isinstance(data, DataCube)
+        }
+
+        if len(new_data) > 0:
+            new_columns = list(new_data.values())[0].columns
+        else:
+            new_columns = pd.MultiIndex.from_arrays([[]], names=["series"])
+
+        # Just slicing/selecting on time for Series and Frames
+        new_data.update(
+            {
+                data_key: data[time_key]
+                for data_key, data in self.data.items()
+                if isinstance(data, (DataSeries, DataFrame))
+            }
+        )
+
+        if len(new_data) > 0:
+            new_index = list(new_data.values())[0].index
+        else:
+            new_index = pd.MultiIndex.from_arrays([[]], names=["time_index"])
+
+        new_bool = {
+            data_key: data[key]
+            for data_key, data in self.bools.items()
+            if isinstance(data, BoolCube)
+        }
+
+        if len(new_bool) > 0:
+            new_columns = list(new_bool.values())[0].columns
+        else:
+            new_columns = pd.MultiIndex.from_arrays([[]], names=["series"])
+
+        # Just slicing/selecting on time for Series and Frames
+        new_bool.update(
+            {
+                data_key: data[time_key]
+                for data_key, data in self.bools.items()
+                if isinstance(data, (BoolSeries, BoolFrame))
+            }
+        )
+
+        new_bit = {
+            data_key: data[key]
+            for data_key, data in self.bitwise.items()
+            if isinstance(data, BitwiseCube)
+        }
+
+        if len(new_bit) > 0:
+            new_columns = list(new_bit.values())[0].columns
+        else:
+            new_columns = pd.MultiIndex.from_arrays([[]], names=["series"])
+
+        # Just slicing/selecting on time for Series and Frames
+        new_bit.update(
+            {
+                data_key: data[time_key]
+                for data_key, data in self.bitwise.items()
+                if isinstance(data, (BitwiseSeries, BitwiseFrame))
+            }
+        )
+
+        if len(new_data) > 0:
+            new_index = list(new_data.values())[0].index
+        else:
+            new_index = pd.MultiIndex.from_arrays([[]], names=["time_index"])
+
+        new_kwargs = self.kwargs.copy()
+        new_kwargs["index"] = new_index
+        new_kwargs["columns"] = new_columns
+
+        return self._build_instance(
+            new_data, bools=new_bool, bitwise=new_bit, **new_kwargs
+        )
+
     def __len__(self):
         return self.ntime
+
+    def __repr__(self):
+        msg = f"""
+        Data Products:
+        {self.data}
+        Bool Products:
+        {self.bools}
+        Bitwise Products:
+        {self.bitwise}
+        Properties:
+        {list(self.kwargs.keys())}
+        """
+        msg = dedent(msg)
+        return msg
+
+    def _attr_override(self, attr, val):
+        setattr(self.data, attr, val)
+
+    def _batch_wrapper(self, func):
+        def new_func(*args, **kwargs):
+            newdata = dict(deepcopy(self.data))
+            for key, val in newdata.items():
+                obj_func = getattr(val, func)
+                newdata[key] = obj_func(*args, **kwargs)
+
+            return self._build_instance(newdata)
+
+        return new_func
+
+    def _build_instance(self, newdata, **kwargs):
+        all_kwargs = self.user_kwargs.copy()
+        all_kwargs.update(**kwargs)
+        return self.__class__(newdata, **all_kwargs)
 
     @property
     def cubes(self) -> dict:
@@ -509,7 +677,7 @@ class DataSet:
         cubes.update(
             {
                 key: value
-                for key, value in self.bool.items()
+                for key, value in self.bools.items()
                 if issubclass(type(value), Cube)
             }
         )
@@ -523,65 +691,15 @@ class DataSet:
         )
         return cubes
 
-    @property
-    def frames(self) -> dict:
-        """Retrieve all Frame objects.
+    def downsample(self, nframes: int = 5, level: Union[str, int] = -1):
+        """Downsample all contained data and error products."""
+        downsample = self._batch_wrapper("downsample")
+        return downsample(nframes, level)
 
-        Returns
-        -------
-        dict
-            A dictionary containing all Frame objects from the DataSet.
-            The keys are the original keys, given or generated.
-        """
-        frames = {
-            key: value
-            for key, value in self.data.items()
-            if issubclass(type(value), Frame)
-        }
-        frames.update(
-            {
-                key: value
-                for key, value in self.bool.items()
-                if issubclass(type(value), Frame)
-            }
-        )
-        frames.update(
-            {
-                key: value
-                for key, value in self.bitwise.items()
-                if issubclass(type(value), Frame)
-            }
-        )
-        return frames
-
-    @property
-    def series(self) -> dict:
-        """Retrieve all Series objects.
-
-        Returns
-        -------
-        dict
-            A dictionary containing all Series objects from the DataSet.
-            The keys are the original keys, given or generated.
-        """
-        series = {
-            key: value
-            for key, value in self.data.items()
-            if issubclass(type(value), Series)
-        }
-        series.update(
-            {
-                key: value
-                for key, value in self.bool.items()
-                if issubclass(type(value), Series)
-            }
-        )
-        series = {
-            key: value
-            for key, value in self.bitwise.items()
-            if issubclass(type(value), Series)
-        }
-        return series
+    def droplevel(self, level, axis=0):
+        """Drop a given level from the index."""
+        droplevel = self._batch_wrapper("droplevel")
+        return droplevel(level, axis)
 
     def fold(
         self,
@@ -625,100 +743,48 @@ class DataSet:
 
         return newbatch
 
-    def _batch_wrapper(self, func):
-        def new_func(*args, **kwargs):
-            newdata = dict(deepcopy(self.data))
-            for key, val in newdata.items():
-                obj_func = getattr(val, func)
-                newdata[key] = obj_func(*args, **kwargs)
+    @property
+    def frames(self) -> dict:
+        """Retrieve all Frame objects.
 
-            return self._build_instance(newdata)
-
-        return new_func
-
-    def downsample(self, nframes: int = 5, level: Union[str, int] = -1):
-        """Downsample all contained data and error products."""
-        downsample = self._batch_wrapper("downsample")
-        return downsample(nframes, level)
-
-    def droplevel(self, level, axis=0):
-        """Drop a given level from the index."""
-        droplevel = self._batch_wrapper("droplevel")
-        return droplevel(level, axis)
-
-    @singledispatchmethod
-    def __getitem__(self, key):
-        pass
-
-    @__getitem__.register
-    def _(self, key: str):
-        if key in self.data:
-            return self.data[key]
-        else:
-            raise ValueError("Unrecognized key")
-
-    @__getitem__.register(int)
-    @__getitem__.register(list)
-    @__getitem__.register(np.ndarray)
-    def _(self, key):
-        new_data = {}
-        for data_key, data in self.data.items():
-            new_data[data_key] = data[key]
-        new_data = DataProducts(new_data, self.data.index[np.atleast_1d(key)])
-        return self._build_instance(new_data)
-
-    @__getitem__.register(slice)
-    def _(self, key):
-        new_data = {}
-        for data_key, data in self.data.items():
-            new_data[data_key] = data[key]
-        new_data = DataProducts(new_data, self.data.index[key])
-        return self._build_instance(new_data)
-
-    @__getitem__.register
-    def _(self, key: tuple):
-        time_key = key[0]
-        if len(key) not in [1, 2, 3]:
-            raise KeyError(f"Cannot parse key with {len(key)} elements.")
-
-        new_data = {
-            data_key: data[key]
-            for data_key, data in self.data.items()
-            if isinstance(data, DataCube)
+        Returns
+        -------
+        dict
+            A dictionary containing all Frame objects from the DataSet.
+            The keys are the original keys, given or generated.
+        """
+        frames = {
+            key: value
+            for key, value in self.data.items()
+            if issubclass(type(value), Frame)
         }
-
-        if len(new_data) > 0:
-            new_columns = list(new_data.values())[0].columns
-        else:
-            new_columns = pd.MultiIndex.from_arrays([[]], names=["series"])
-
-        # Just slicing/selecting on time for Series and Frames
-        new_data.update(
+        frames.update(
             {
-                data_key: data[time_key]
-                for data_key, data in self.data.items()
-                if isinstance(data, (DataSeries, DataFrame))
+                key: value
+                for key, value in self.bools.items()
+                if issubclass(type(value), Frame)
             }
         )
-
-        if len(new_data) > 0:
-            new_index = list(new_data.values())[0].index
-        else:
-            new_index = pd.MultiIndex.from_arrays([[]], names=["time_index"])
-
-        new_kwargs = self.kwargs.copy()
-        new_kwargs["index"] = new_index
-        new_kwargs["columns"] = new_columns
-
-        return self._build_instance(new_data, **new_kwargs)
+        frames.update(
+            {
+                key: value
+                for key, value in self.bitwise.items()
+                if issubclass(type(value), Frame)
+            }
+        )
+        return frames
 
     @property
-    def user_kwargs(self):
-        """Keywords passed by the user"""
-        return {key: getattr(self, key, None) for key in self._user_kwargs}
+    def index(self):
+        data_val = getattr(self.data, "index", None)
+        if data_val is not None:
+            return data_val
+        else:
+            return None
 
-    def _attr_override(self, attr, val):
-        setattr(self.data, attr, val)
+    @index.setter
+    def index(self, val):
+        self._attr_override("index", val)
 
     @property
     def ntime(self):
@@ -736,33 +802,35 @@ class DataSet:
             self._attr_override("index", new_index)
 
     @property
-    def index(self):
-        data_val = getattr(self.data, "index", None)
-        if data_val is not None:
-            return data_val
+    def series(self) -> dict:
+        """Retrieve all Series objects.
 
-        else:
-            return None
-
-    @index.setter
-    def index(self, val):
-        self._attr_override("index", val)
-
-    def _build_instance(self, newdata, **kwargs):
-        all_kwargs = self.user_kwargs.copy()
-        all_kwargs.update(**kwargs)
-        return self.__class__(newdata, **all_kwargs)
-
-    def __repr__(self):
-        msg = f"""
-        Data Products:
-        {self.data}
-        Bool Products:
-        {self.bool}
-        Bitwise Products:
-        {self.bitwise}
-        Properties:
-        {list(self.kwargs.keys())}
+        Returns
+        -------
+        dict
+            A dictionary containing all Series objects from the DataSet.
+            The keys are the original keys, given or generated.
         """
-        msg = dedent(msg)
-        return msg
+        series = {
+            key: value
+            for key, value in self.data.items()
+            if issubclass(type(value), Series)
+        }
+        series.update(
+            {
+                key: value
+                for key, value in self.bools.items()
+                if issubclass(type(value), Series)
+            }
+        )
+        series = {
+            key: value
+            for key, value in self.bitwise.items()
+            if issubclass(type(value), Series)
+        }
+        return series
+
+    @property
+    def user_kwargs(self):
+        """Keywords passed by the user"""
+        return {key: getattr(self, key, None) for key in self._user_kwargs}

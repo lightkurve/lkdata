@@ -25,8 +25,8 @@ def test_setup():
     assert df.nrow == nrow
     assert df.ncol == ncol
 
-    assert df.to_array().shape == (ntime, nrow, ncol)
-    assert np.allclose(df.to_array(), test_data)
+    assert df.array.shape == (ntime, nrow, ncol)
+    assert np.allclose(df.array, test_data)
 
     # Should this be an image?
     assert isinstance(df[0], DataCube)
@@ -118,23 +118,23 @@ def test_downsample():
     df = DataCube(test_data, uncertainty=test_data)
     # df_err = ErrorCube(test_data)
     # Time downsample
-    assert (df.downsample(2).to_array() == 2).all()
+    assert (df.downsample(2).array == 2).all()
     assert (df.downsample(4).uncertainty.array == 2).all()
 
     # Spatial downsample
-    assert df.spatial_downsample(2).to_array().shape == (200, 5, 7)
-    assert df.spatial_downsample((2, 1)).to_array().shape == (200, 5, 14)
-    assert df.spatial_downsample((1, 2)).to_array().shape == (200, 10, 7)
+    assert df.spatial_downsample(2).array.shape == (200, 5, 7)
+    assert df.spatial_downsample((2, 1)).array.shape == (200, 5, 14)
+    assert df.spatial_downsample((1, 2)).array.shape == (200, 10, 7)
 
-    assert (df.spatial_downsample(2).to_array() == 4).all()
+    assert (df.spatial_downsample(2).array == 4).all()
     assert all(df.spatial_downsample((2, 1)) == 2)
     assert all(df.spatial_downsample((1, 2)) == 2)
-    assert df[:, :, :-1].spatial_downsample(2).to_array().shape == (200, 5, 6)
+    assert df[:, :, :-1].spatial_downsample(2).array.shape == (200, 5, 6)
     assert (
-        df[:, :, :-1].spatial_downsample(2).to_array()
-        == df[:, :, :-2].spatial_downsample(2).to_array()
+        df[:, :, :-1].spatial_downsample(2).array
+        == df[:, :, :-2].spatial_downsample(2).array
     ).all()
-    assert df[:, :-1, :].spatial_downsample(2).to_array().shape == (200, 4, 7)
+    assert df[:, :-1, :].spatial_downsample(2).array.shape == (200, 4, 7)
 
     assert df.spatial_downsample(2).uncertainty.array.shape == (200, 5, 7)
     assert (df.spatial_downsample(2).uncertainty.array == 2).all()
@@ -145,7 +145,7 @@ def test_downsample():
     ).all()
     assert df[:, :-1, :].spatial_downsample(2).uncertainty.array.shape == (200, 4, 7)
 
-    assert (df.spatial_aggregate(5, 7).to_array().round() == 4).all()
+    assert (df.spatial_aggregate(5, 7).array.round() == 4).all()
     assert (df.spatial_aggregate(5, 7).uncertainty.array.round() == 2).all()  #
 
 
@@ -179,10 +179,10 @@ def test_real_data():
     assert isinstance(flux, DataCube)
     assert isinstance(flux.uncertainty, Uncertainty)
 
-    assert flux.to_array().shape == (50, 6, 6)
+    assert flux.array.shape == (50, 6, 6)
     assert flux.uncertainty.array.shape == (50, 6, 6)
 
-    assert flux.downsample(5).to_array().shape == (8, 6, 6)
+    assert flux.downsample(5).array.shape == (8, 6, 6)
     assert flux.downsample(5).uncertainty.array.shape == (8, 6, 6)
 
     assert isinstance(flux[:, aper], DataFrame)
@@ -191,18 +191,16 @@ def test_real_data():
     assert isinstance(flux[:, aper].sum(axis=1), DataSeries)
     assert isinstance(flux[:, aper].sum(axis=1).uncertainty, Uncertainty)
 
-    assert flux.spatial_downsample(2).to_array().shape == (50, 3, 3)
+    assert flux.spatial_downsample(2).array.shape == (50, 3, 3)
     assert flux.spatial_downsample(2).uncertainty.shape == (50, 3, 3)
 
-    assert flux.spatial_downsample(2).to_array()[0, 0, 0] == flux[0, :2, :2].sum(
-        axis=None
-    )
+    assert flux.spatial_downsample(2).array[0, 0, 0] == flux[0, :2, :2].sum(axis=None)
     assert (
         flux.spatial_downsample(2).uncertainty.array[0, 0, 0]
         == ((flux[0, :2, :2].uncertainty.array ** 2).sum().sum()) ** 0.5
     )
 
-    assert flux.spatial_downsample(2).to_array()[0, -1, -1] == flux[0, -2:, -2:].sum(
+    assert flux.spatial_downsample(2).array[0, -1, -1] == flux[0, -2:, -2:].sum(
         axis=None
     )
     assert (
@@ -240,8 +238,7 @@ def test_bool_cube():
     assert all(BoolCube(true_bool_array).downsample(2))
     assert all(~BoolCube(false_bool_array).downsample(2))
     assert (
-        BoolCube(mixed_bool_array_same).downsample(2).to_array()
-        == mixed_bool_array_same[0]
+        BoolCube(mixed_bool_array_same).downsample(2).array == mixed_bool_array_same[0]
     ).all()
     assert all(BoolCube(mixed_bool_array_opposite).downsample(2))
 
@@ -260,7 +257,7 @@ def test_bit_cube():
     flags = flags.reshape((2, 4, 4))
     code_dict = {i: f"C{i}" for i in [1, 2, 4, 8, 16]}
     bitcube = BitwiseCube(flags, codes=code_dict)
-    assert (bitcube.to_array() == flags).all()
+    assert (bitcube.array == flags).all()
     # Default repr shows data as given
     bitwise_str = strip(bitcube.styler.to_string())
     assert bitwise_str == "col0123row00123145672891011312131415"
@@ -288,9 +285,9 @@ def test_bit_cube():
     bitcube.codes = code_dict
 
     # Downsampling should combine codes without repetition (bitwise or)
-    assert (bitcube.downsample(2).to_array() == np.arange(16, 32).reshape(4, 4)).all()
+    assert (bitcube.downsample(2).array == np.arange(16, 32).reshape(4, 4)).all()
     assert (
-        bitcube.spatial_downsample(2).to_array()
+        bitcube.spatial_downsample(2).array
         == np.array([[[5, 7], [13, 15]], [[21, 23], [29, 31]]])
     ).all()
 
@@ -317,7 +314,7 @@ def test_bit_cube():
     detailed_str = strip(bitframe.styler.to_string())
     assert detailed_str == parsed_str
     # The values should match the derivative product from the cube
-    assert (bitframe.to_array() == bitcube[:, [0, 1, 2, 3], :]).all(axis=None)
+    assert (bitframe.array == bitcube[:, [0, 1, 2, 3], :]).all(axis=None)
 
     # Series
     assert isinstance(bitcube[:, 0, 0], BitwiseSeries)

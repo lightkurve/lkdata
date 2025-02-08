@@ -13,7 +13,7 @@ from .dataseries import DataSeries, BoolSeries, BitwiseSeries
 from .mixins import (
     StatsMixin,
     MathMixin,
-    BoolStatsMixin,
+    BoolMixin,
     BitwiseMixin,
     AggMixin,
     ConvenienceMixins,
@@ -50,6 +50,7 @@ class Cube(
         self.ncol = kwargs.get("ncol", None)
         index = kwargs.get("index", None)
         columns = kwargs.get("columns", None)
+        dtype = kwargs.pop("dtype", float)
 
         for key, val in kwargs.items():
             if key not in ("ntime", "nrow", "ncol", "index", "columns"):
@@ -63,7 +64,7 @@ class Cube(
             columns, row_indices, col_indices, self.nrow, self.ncol, continuous=True
         )
 
-        super().__init__(data, index=index, columns=columns)
+        super().__init__(data, index=index, columns=columns, dtype=dtype)
         self._array = self.to_numpy().reshape(self.ntime, self.nrow, self.ncol)
         self._include_convenience_index()
         self._include_convenience_columns()
@@ -509,7 +510,7 @@ class DataCube(
 
 
 class BoolCube(
-    BoolStatsMixin,
+    BoolMixin,
     Cube,
 ):
     """A Cube object which contains boolean values with time and 2 spatial dimensions."""
@@ -518,12 +519,21 @@ class BoolCube(
     _series_class = BoolSeries
     _pd_class = pd.DataFrame
 
-    def __init__(self, *args, **kwargs):
+    def __init__(
+        self,
+        data: Union[List, np.ndarray],
+        time_indices: Union[Dict, List, None] = None,
+        row_indices: Union[Dict, List, None] = None,
+        col_indices: Union[Dict, List, None] = None,
+        **kwargs,
+    ):
         # For pandas DataFrames subclasses, new properties must
         # be included in the _metadata list
         self._metadata: List[str] = []
         self._user_kwargs: List[str] = []
-        super().__init__(*args, **kwargs)
+        super().__init__(
+            data, time_indices, row_indices, col_indices, dtype=bool, **kwargs
+        )
 
     def __repr__(self):
         return f"⚫️⚪️ BoolCube {self.ntime, self.nrow, self.ncol}"
@@ -536,16 +546,25 @@ class BitwiseCube(BitwiseMixin, Cube):
     _series_class = BitwiseSeries
     _pd_class = pd.DataFrame
 
-    def __init__(self, *args, **kwargs):
+    def __init__(
+        self,
+        data: Union[List, np.ndarray],
+        time_indices: Union[Dict, List, None] = None,
+        row_indices: Union[Dict, List, None] = None,
+        col_indices: Union[Dict, List, None] = None,
+        code_dict: Dict = None,
+        display_as: str = "bitwise",
+        **kwargs,
+    ):
         # For pandas DataFrames subclasses, new properties must
         # be included in the _metadata list
         self._metadata: List[str] = []
         self._user_kwargs: List[str] = []
-        kwargs["codes"] = kwargs.get("codes", {})
-        self.codes = kwargs["codes"]
-        values_display = kwargs.pop("values_display", "bitwise")
-        super().__init__(*args, **kwargs)
-        self.values_display = values_display
+        if code_dict is None:
+            code_dict = {}
+        self.codes = code_dict
+        super().__init__(data, time_indices, row_indices, col_indices, **kwargs)
+        self.values_display = display_as
         self._user_kwargs.append("values_display")
 
     def __repr__(self):

@@ -15,7 +15,7 @@ from .mixins import (
     ConvenienceMixins,
     MathMixin,
     StatsMixin,
-    BoolStatsMixin,
+    BoolMixin,
     BitwiseMixin,
 )
 
@@ -166,6 +166,17 @@ class DataFrame(StatsMixin, Frame):
     _series_class = DataSeries
 
     def __init__(self, *args, **kwargs):
+        """
+        Args:
+            data: Union[List, np.ndarray],
+            uncertainty: Union[List, np.ndarray] = None,
+            index: pd.MultiIndex = None,
+            columns: pd.MultiIndex = None,
+            time_indices: Union[Dict, List, None] = None,
+            row_indices: Union[Dict, List, None] = None,
+            col_indices: Union[Dict, List, None] = None,
+            dtype: type = float
+        """
         uncertainty = kwargs.pop("uncertainty", None)
         self._metadata = []
         self._user_kwargs = []
@@ -183,7 +194,7 @@ class DataFrame(StatsMixin, Frame):
 
 
 class BoolFrame(
-    BoolStatsMixin,
+    BoolMixin,
     Frame,
 ):
     """A Cube object which contains boolean values with time and 2 spatial dimensions."""
@@ -191,11 +202,20 @@ class BoolFrame(
     _series_class = BoolSeries  # BoolSeries
 
     def __init__(self, *args, **kwargs):
+        """
+        Args:
+            data: Union[List, np.ndarray],
+            index: pd.MultiIndex = None,
+            columns: pd.MultiIndex = None,
+            time_indices: Union[Dict, List, None] = None,
+            row_indices: Union[Dict, List, None] = None,
+            col_indices: Union[Dict, List, None] = None,
+        """
         # For pandas DataFrames subclasses, new properties must
         # be included in the _metadata list
         self._metadata = []
         self._user_kwargs = []
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, dtype=bool, **kwargs)
 
     def __repr__(self):
         return f"⚫️⚪️ BoolFrame {self.shape}"
@@ -207,14 +227,25 @@ class BitwiseFrame(BitwiseMixin, Frame):
     _series_class = BitwiseSeries
 
     def __init__(self, *args, **kwargs):
+        """
+        Args:
+            data: Union[List, np.ndarray],
+            index: pd.MultiIndex = None,
+            columns: pd.MultiIndex = None,
+            time_indices: Union[Dict, List, None] = None,
+            row_indices: Union[Dict, List, None] = None,
+            col_indices: Union[Dict, List, None] = None,
+            display_as: str = "bitwise"
+        """
         # For pandas DataFrames subclasses, new properties must
         # be included in the _metadata list
+
         self._metadata = []
         self._user_kwargs = []
         kwargs["codes"] = kwargs.get("codes", {})
         self.codes = kwargs["codes"]
-        values_display = kwargs.pop("values_display", "bitwise")
-        super().__init__(*args, **kwargs)
+        values_display = kwargs.pop("display_as", "bitwise")
+        super().__init__(*args, dtype=object, **kwargs)
         self.values_display = values_display
         self._user_kwargs.append("values_display")
 
@@ -241,13 +272,3 @@ class BitwiseFrame(BitwiseMixin, Frame):
     @styler.setter
     def styler(self, val: Styler):
         self._styler = val
-
-
-class LkFrame:
-    """A lightkurve class with Data, Error, Bool, and Bit Frames.
-
-    This product contains only Frame products and supports all methods for
-    a Frame product, applying to all contained products.
-    """
-
-    ...

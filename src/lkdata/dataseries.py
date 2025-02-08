@@ -11,7 +11,7 @@ from .mixins import (
     ConvenienceMixins,
     MathMixin,
     StatsMixin,
-    BoolStatsMixin,
+    BoolMixin,
     BitwiseMixin,
 )
 
@@ -47,11 +47,7 @@ class Series(
         self.__post_init__()
 
     def __post_init__(self):
-        def stats_post_process(result, **kwargs):
-            return result
-
         self._array = self.to_numpy()
-        self.stats_post_process = stats_post_process
         self._include_convenience_index()
 
     def __deepcopy__(self, *args, **kwargs):
@@ -195,6 +191,7 @@ class DataSeries(MathMixin, StatsMixin, Series):
             **kwargs,
         )
         self.uncertainty = uncertainty
+        self.stats_post_process = lambda x: x  # required for StatsMixin
         self._set_stats_methods()
 
     def __repr__(self):
@@ -203,11 +200,21 @@ class DataSeries(MathMixin, StatsMixin, Series):
 
 class BoolSeries(
     Series,
-    BoolStatsMixin,
+    BoolMixin,
 ):
     """
     pandas.Series-like object for bool datatypes with lightkurve functions.
     """
+
+    def __init__(self, data, index=None, **kwargs):
+        super().__init__(
+            data,
+            index=index,
+            dtype=bool,
+            name=kwargs.pop("name", None),
+            copy=kwargs.pop("copy", None),
+            **kwargs,
+        )
 
     def __repr__(self):
         return f"⚫️⚪️ BoolSeries {self.shape}\n" + super().__repr__()
@@ -240,7 +247,7 @@ class BitwiseSeries(BitwiseMixin, Series):
     def __init__(
         self,
         data: Iterable[Union[Iterable[int], int]],
-        values_display: str = "bitwise",
+        display_as: str = "bitwise",
         index=None,
         **kwargs,
     ):
@@ -258,7 +265,7 @@ class BitwiseSeries(BitwiseMixin, Series):
             copy=kwargs.pop("copy", None),
             **kwargs,
         )
-        self.values_display = values_display
+        self.values_display = display_as
         self._user_kwargs.append("values_display")
 
     def __repr__(self):
@@ -271,13 +278,3 @@ class BitwiseSeries(BitwiseMixin, Series):
         else:
             display = self.apply(int).__repr__()
         return f"📗 BitwiseSeries {self.shape}\n" + display
-
-
-class LkSeries:
-    """A lightkurve class with Data, Error, Bool, and Bit Series.
-
-    This product contains only Series products and supports all methods for
-    a Series product, applying to all contained products.
-    """
-
-    ...

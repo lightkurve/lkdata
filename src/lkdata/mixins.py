@@ -510,29 +510,25 @@ class MathMixin(IndexProcessor):
             self.uncertainty = None
             return result_uncert
 
-        elif (
-            operand is not None
-            and hasattr(operand, "uncertainty")
-            and not operand.uncertainty
-        ):
-            # As with self.uncertainty is None but the other way around.
-            operand.uncertainty = self.uncertainty.__class__(None)
-            result_uncert = self.uncertainty.propagate(
-                operation, operand, result, correlation
-            )
-            operand.uncertainty = None
-            return result_uncert
         elif operand is not None:
-            # operand exists but has no uncertainty, can't propagate
-            return self.uncertainty
-        else:
-            # Both have uncertainties (or there is no operand) so just propagate.
+            if not hasattr(operand, "uncertainty"):
+                # operand exists but has no uncertainty, can't propagate
+                return self.uncertainty
+            elif not operand.uncertainty:
+                # As with self.uncertainty is None but the other way around.
+                operand.uncertainty = self.uncertainty.__class__(None)
+                result_uncert = self.uncertainty.propagate(
+                    operation, operand, result, correlation
+                )
+                operand.uncertainty = None
+                return result_uncert
 
-            # only supply the axis kwarg if one has been specified for a collapsing operation
-            axis_kwarg = dict(axis=kwds["axis"]) if "axis" in kwds else dict()
-            return self.uncertainty.propagate(
-                operation, operand, result, correlation, **axis_kwarg
-            )
+        # Both have uncertainties (or there is no operand) so just propagate.
+        # only supply the axis kwarg if one has been specified for a collapsing operation
+        axis_kwarg = dict(axis=kwds["axis"]) if "axis" in kwds else dict()
+        return self.uncertainty.propagate(
+            operation, operand, result, correlation, **axis_kwarg
+        )
 
     def _prepare_then_do_arithmetic(self, operation, operand):
         """Intermediate method called by public arithmetic (i.e. ``add``)
@@ -638,14 +634,16 @@ class StatsMixin:
         return _method
 
 
-class BoolMathMixin(IndexProcessor):
+class BoolMixin(IndexProcessor):
     """Math mixins for lightkurve bool objects.
 
     All operators should simply return the "logical or" for each element.
     """
 
+    _stats_type = "bool"
+
     def __add__(self, val):
-        if isinstance(val, self.__class__()):
+        if isinstance(val, type(self)):
             return self._build_instance(
                 np.logical_or(self.to_numpy(), val.to_numpy()),
                 **self._get_math_kwargs(),
@@ -658,12 +656,6 @@ class BoolMathMixin(IndexProcessor):
 
     def __mul__(self, val):
         return self.__add__(val)
-
-
-class BoolStatsMixin(IndexProcessor):
-    """Mixin to handle aggregation for Boolean data products."""
-
-    _stats_type = "bool"
 
     def ds_agg(self, *args, **kwargs):
         if kwargs.pop("T", False):
@@ -760,7 +752,7 @@ class BitwiseMixin(IndexProcessor):
             new_data = val.map(val.breakdown)
             orig_data = self.map(val.breakdown)
             updated_data = new_data.to_numpy() + orig_data.to_numpy()
-            updated_data = updated_data.map(np.unique)
+            updated_data = map(updated_data, np.unique)
             return self._build_instance(
                 updated_data,
                 **self._get_math_kwargs(),
