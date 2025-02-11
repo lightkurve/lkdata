@@ -241,7 +241,7 @@ class Cube(
             self.styler = out0
 
         if self.shape[0] > 1:
-            hidden_frames = f"[+{self.shape[0]-1} cadences]"
+            hidden_frames = f"[+{self.shape[0] - 1} cadences]"
             return f"""
             {repr(self)}
             {out0.to_html(max_rows=11, max_columns=11)}
@@ -277,11 +277,21 @@ class Cube(
         with np.printoptions(**printoptions):
             max_name_len = max(map(len, self._metadata))
             print(repr(self) + " (ntime, nrow, ncol)")
+            print(f"pd.DataFrame shape: {self.shape}")
+            print()
+            if hasattr(self, "uncertainty"):
+                print("Uncertainty:")
+                try:
+                    print(
+                        f"\tuncertainty\t:\tUncertainty(np.ndarray{self.uncertainty.shape})"
+                    )
+                except AttributeError:
+                    print("\tuncertainty\t:\tUncertainty(None)")
             print()
             print("Time indices available: " + str(self.index.names))
             for key in self.index.names:
                 print(
-                    f"\t{key.ljust(max_name_len+1)}:\t{getattr(self, key, 'Not Defined')}"
+                    f"\t{key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not Defined')}"
                 )
             print()
             print(f"Number of unique 'series': {len(self.series)}")
@@ -289,20 +299,20 @@ class Cube(
             print("Row names: " + str(self.row_names))
             for key in self.row_names:
                 print(
-                    f"\t{key.ljust(max_name_len+1)}:\t{getattr(self, key, 'Not Defined')}"
+                    f"\t{key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not Defined')}"
                 )
             print()
             print("Column names: " + str(self.col_names))
             for key in self.col_names:
                 print(
-                    f"\t{key.ljust(max_name_len+1)}:\t{getattr(self, key, 'Not Defined')}"
+                    f"\t{key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not Defined')}"
                 )
             print()
             print("User defined attributes accessible via `object.key`")
             print("(displaying only unique values)")
             for key in self._user_kwargs:
                 print(
-                    f'\t{key.ljust(max_name_len+1)}:\t{getattr(self, key, "Not defined")}'
+                    f"\t{key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not defined')}"
                 )
 
     @classmethod
@@ -556,14 +566,46 @@ class BitwiseCube(BitwiseMixin, Cube):
         display_as: str = "bitwise",
         **kwargs,
     ):
+        """A Cube object which contains bitwise values.
+
+        Parameters
+        ----------
+            data : Union[List, np.ndarray]
+                The input data for the BitwiseCube. Values must be integers or
+                sets of integers, or bitwise strings.
+            time_indices : Union[Dict, List, None], optional
+                Indices for the time dimension.
+            row_indices : Union[Dict, List, None], optional
+                Indices for the row dimension.
+            col_indices : Union[Dict, List, None], optional
+                Indices for the column dimension.
+            code_dict : Dict, optional
+                A dictionary mapping bit values to their definitions.
+            display_as : str, optional
+                How to display the values. Options are "bitwise", "parsed",
+                or "detailed".
+            **kwargs
+                Additional keyword arguments to pass to the parent class.
+
+        Attributes
+        ----------
+            codes : Dict
+                A dictionary mapping bit values to their meanings.
+            values_display : str
+                The current display mode for values.
+        """
         # For pandas DataFrames subclasses, new properties must
         # be included in the _metadata list
+        data = BitwiseMixin._set_data_type_to_int(data)
         self._metadata: List[str] = []
         self._user_kwargs: List[str] = []
         if code_dict is None:
             code_dict = {}
         self.codes = code_dict
-        super().__init__(data, time_indices, row_indices, col_indices, **kwargs)
+        super().__init__(
+            data, time_indices, row_indices, col_indices, dtype=int, **kwargs
+        )
+
         self.values_display = display_as
         self._user_kwargs.append("values_display")
 

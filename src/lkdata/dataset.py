@@ -1,4 +1,5 @@
 """Classes and tools for creating data bundles and batches"""
+
 from collections.abc import Iterable
 from copy import deepcopy
 from functools import singledispatchmethod
@@ -430,12 +431,8 @@ class DataSet:
     bools: Union[Iterable, LkBoolTypes, BoolProducts,
                  Dict[str, Union[Iterable, LkBoolTypes]]]
         Products with boolean datatypes.
-    bitwise: Union[
-            Iterable,
-            LkBitwiseTypes,
-            BitwiseProducts,
-            Dict[str, Union[Iterable, LkBitwiseTypes]],
-        ]
+    bitwise: Union[Iterable, LkBitwiseTypes, BitwiseProducts,
+                   Dict[str, Union[Iterable, LkBitwiseTypes]]]
         Data with bitwise datatypes. See mixins.BitwiseMixin for more detail.
     index: pd.MultiIndex, optional
        A MultiIndex which is used to index the data. If none given, the DataSet
@@ -449,6 +446,8 @@ class DataSet:
     """
 
     _user_kwargs = None
+    _index: pd.MultiIndex = None
+    _ntime: int = None
 
     def __init__(
         self,
@@ -486,6 +485,11 @@ class DataSet:
         self.bitwise = BitwiseProducts(
             bitwise, index=index, time_indices=time_indices, **kwargs
         )
+        contents = {}
+        contents.update(self.data)
+        contents.update(self.bools)
+        contents.update(self.bitwise)
+        self.contents = {}
 
     @singledispatchmethod
     def __getitem__(self, key):
@@ -493,8 +497,8 @@ class DataSet:
 
     @__getitem__.register
     def _(self, key: str):
-        if key in self.data:
-            return self.data[key]
+        if key in self.contents:
+            return self.contents[key]
         else:
             raise ValueError("Unrecognized key")
 
@@ -503,6 +507,7 @@ class DataSet:
     @__getitem__.register(np.ndarray)
     def _(self, key):
         new_data = {}
+        # new_data = dict(self.data)
         for data_key, data in self.data.items():
             new_data[data_key] = data[key]
         new_data = DataProducts(new_data, self.data.index[np.atleast_1d(key)])
@@ -641,6 +646,8 @@ class DataSet:
 
     def _attr_override(self, attr, val):
         setattr(self.data, attr, val)
+        setattr(self.bools, attr, val)
+        setattr(self.bitwise, attr, val)
 
     def _batch_wrapper(self, func):
         def new_func(*args, **kwargs):
@@ -670,29 +677,14 @@ class DataSet:
         """
         cubes = {
             key: value
-            for key, value in self.data.items()
+            for key, value in self.contents.items()
             if issubclass(type(value), Cube)
         }
 
-        cubes.update(
-            {
-                key: value
-                for key, value in self.bools.items()
-                if issubclass(type(value), Cube)
-            }
-        )
-
-        cubes.update(
-            {
-                key: value
-                for key, value in self.bitwise.items()
-                if issubclass(type(value), Cube)
-            }
-        )
         return cubes
 
     def downsample(self, nframes: int = 5, level: Union[str, int] = -1):
-        """Downsample all contained data and error products."""
+        """Downsample all contained products."""
         downsample = self._batch_wrapper("downsample")
         return downsample(nframes, level)
 
@@ -741,7 +733,8 @@ class DataSet:
         for val in newbatch.data.values():
             val.index = indices.index
 
-        return newbatch
+        if not inplace:
+            return newbatch
 
     @property
     def frames(self) -> dict:
@@ -755,51 +748,34 @@ class DataSet:
         """
         frames = {
             key: value
-            for key, value in self.data.items()
+            for key, value in self.contents.items()
             if issubclass(type(value), Frame)
         }
-        frames.update(
-            {
-                key: value
-                for key, value in self.bools.items()
-                if issubclass(type(value), Frame)
-            }
-        )
-        frames.update(
-            {
-                key: value
-                for key, value in self.bitwise.items()
-                if issubclass(type(value), Frame)
-            }
-        )
         return frames
 
     @property
     def index(self):
-        data_val = getattr(self.data, "index", None)
-        if data_val is not None:
-            return data_val
-        else:
-            return None
+        return self._index
 
     @index.setter
     def index(self, val):
         self._attr_override("index", val)
+        self._index = val
+        self._ntime = len(val)
 
     @property
     def ntime(self):
-        data_val = getattr(self.data, "ntime", None)
-        if data_val:
-            return data_val
-        else:
-            return 0
+        return self._ntime
 
     @ntime.setter
     def ntime(self, val):
-        self._attr_override("ntime", val)
         if self.index.empty:
+            self._ntime = val
+            self._attr_override("ntime", val)
             new_index = DataCube.parse_index(ntime=val)
             self._attr_override("index", new_index)
+        else:
+            raise (AttributeError("Cannot set ntime when a non-empty index exists."))
 
     @property
     def series(self) -> dict:
@@ -813,19 +789,7 @@ class DataSet:
         """
         series = {
             key: value
-            for key, value in self.data.items()
-            if issubclass(type(value), Series)
-        }
-        series.update(
-            {
-                key: value
-                for key, value in self.bools.items()
-                if issubclass(type(value), Series)
-            }
-        )
-        series = {
-            key: value
-            for key, value in self.bitwise.items()
+            for key, value in self.contents.items()
             if issubclass(type(value), Series)
         }
         return series

@@ -741,11 +741,19 @@ class BitwiseMixin(IndexProcessor):
         Breaks down an integer into its constituent powers of 2.
         """
         codes = []
-        asbin = bin(val)
+        asbin = bin(int(val))
         for pos, b in enumerate(asbin[:1:-1]):
             if int(b):
                 codes.append(2 ** (pos))
         return codes
+
+    @staticmethod
+    @np.vectorize
+    def bin_to_int(binval):
+        """
+        Takes a binary string and converts it to an integer
+        """
+        return int(binval, 2)
 
     def __add__(self, val):
         if isinstance(val, self.__class__):
@@ -820,15 +828,39 @@ class BitwiseMixin(IndexProcessor):
                     "selector": "caption",
                     "props": "caption-side: bottom; font-size:1em; font-weight: bold;",
                 },
-                {"selector": "th", "props": "text-align: center;"},
+                {
+                    "selector": "th",
+                    "props": "text-align: center;",
+                },
                 {
                     "selector": "td",
                     "props": "height: 30px; text-align: center;",
                 },
-                {"selector": ":hover", "props": ""},
+                {
+                    "selector": ":hover",
+                    "props": "",
+                },
             ]
         )
         return out
+
+    @staticmethod
+    @np.vectorize
+    def set_to_int(val):
+        return sum(val)
+
+    @staticmethod
+    def _set_data_type_to_int(data):
+        data_arr = np.array(data)
+        zeroth = data_arr.ravel()[0]
+        if isinstance(zeroth, str):
+            return BitwiseMixin.bin_to_int(data_arr)
+        elif isinstance(zeroth, set):
+            return BitwiseMixin.set_to_int(data_arr)
+        elif isinstance(zeroth, (int, float)):
+            return data_arr.astype(int)
+        else:
+            raise ValueError("Elements have an unsupported data type.")
 
 
 def _expand_frame(data, row_factor, col_factor):
@@ -875,20 +907,36 @@ def _expand_cube_frames(data, row_factor, col_factor):
 
 
 class AggMixin:
-    """ "Mixin class for data aggregation methods"""
+    """Mixin class for data aggregation methods like downsampling"""
 
     def _set_precision(self, func):
         """np.array wrapper to strictly enforce precision."""
 
         def wrap(*args, **kwargs):
             arr = func(*args, **kwargs)
-            npdtype = type(arr[0])
-            precision = np.finfo(npdtype).precision
+            npfinfo = np.finfo(type(arr[0]))
+            precision = npfinfo.precision
             return arr.round(precision)
 
         return wrap
 
     def get_bins(self, index, nframes, right=False):
+        """Calculate bin edges for downsampling.
+
+        Parameters
+        ----------
+        index : array-like
+            The index to be binned.
+        nframes : int
+            Number of frames to average over.
+        right : bool, optional
+            Whether the intervals should be closed on the right (default: False).
+
+        Returns
+        -------
+        pandas.IntervalIndex
+            The bin edges for downsampling.
+        """
         round_arr = self._set_precision(np.array)
         # Find the average spacing of the index
         dt = np.median(np.diff(index)) * nframes
@@ -901,6 +949,35 @@ class AggMixin:
         return bin_edges
 
     def downsample(self, nframes: int = 5, level: Union[int, str] = -1):
+        """Downsample the data by averaging over `nframes` consecutive rows.
+
+        Parameters
+        ----------
+        nframes : int, optional
+            Number of frames to average over. Default is 5.
+        level : Union[int, str], optional
+            Index level to use for downsampling. Default is -1 (last level).
+
+        Returns
+        -------
+        Same type as self
+            A new object with downsampled data.
+
+        Notes
+        -----
+        This method works by creating bins of `nframes` consecutive rows,
+        then averaging the data within each bin. Only bins with exactly
+        `nframes` rows are included in the result.
+
+        If the object has an uncertainty attribute, it will be propagated
+        by summing the squares of the uncertainties within each bin and
+        then taking the square root.
+
+        The resulting object will have a new index that represents the
+        mean of the original indices within each bin. If the original
+        index included a 'time_index' or 'indices' level, this information
+        is preserved in the new index.
+        """
         round_arr = self._set_precision(np.array)
         # Find the index to downsample on
         index = self.index.get_level_values(level=level)
@@ -1001,36 +1078,39 @@ class AggMixin:
     def spatial_downsample(
         self,
         factor=None,
-        row_factor=None,
         col_factor=None,
         row_name=None,
         col_name=None,
     ):
-        """Spatially downsamples a DataCube or a DataFrame by a given factor.
+        """Spatially downsamples a DataCube by a given factor.
 
         Parameters
         ----------
         factor : int or tuple
-            Factor by which to decrease the spatial resolution in each dimension.
-
+            If a tuple is given, the first value will be used as the factor by
+            which to reduce the size of the row axis, and the second as the
+            column factor.
+            If factor is an integer and col_factor is also given, this is the
+            factor by which to decrease the spatial resolution of the row axis.
+            If col_factor is not given, this is the row and column factor.
+        col_factor : int, optional
+            Factor by which to decrease the spatial resolution of the column
+            axis. If `factor` is a tuple, this argument is ignored.
+        row_name : str, optional
+            Name of the axis corresponding to the row to be downsampled. By
+            default the primary row axis is used.
+        col_name : str, optional
+            Name of the axis corresponding to the column to be downsampled. By
+            default the primary column axis is used.
 
         Returns
         -------
-        new_obj : lightkurve DataCube or DataFrame
+        lkdata.DataCube
             A spatially downsampled object of the same type.
-
-
-        Notes
-        -----
-        If `factor` is an int, this will be applied to both rows and columns.
-
-
-        Examples
-        --------
 
         TODO: This shouldn't be a mixin for lk products, it's Cube specific
         with an application to a non-timeseries DataFrame and isn't meaningful
-        for series at all.
+        for Series at all.
         """
         assert isinstance(factor, int) or isinstance(
             factor, tuple
@@ -1038,8 +1118,11 @@ class AggMixin:
 
         if isinstance(factor, int):
             row_factor = factor
-            col_factor = factor
-        else:
+            if col_factor is None:
+                col_factor = factor
+            elif not isinstance(col_factor, int):
+                raise ValueError("`col_factor` must be an integer.")
+        elif isinstance(factor, tuple):
             row_factor = factor[0]
             col_factor = factor[1]
         round_array = self._set_precision(np.array)

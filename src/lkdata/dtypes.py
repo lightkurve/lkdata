@@ -50,28 +50,26 @@ class BitSet(MutableSet, Hashable):
 
         Parameters
         ----------
-        item : Union[int, Iterable]
-            An integer or collection of integers to be broken down
+        item : Union[int, str, Iterable]
+            An integer, binary integer, or collection of integers to be broken down
         """
 
-        def breakdown_int(val):
-            """
-            Breaks down an integer into its constituent powers of 2.
-            """
-            codes = set()
-            asbin = bin(val)
-            for pos, b in enumerate(asbin[:1:-1]):
-                if int(b):
-                    codes.add(2 ** (pos))
+        codes = set()
+        if isinstance(item, Iterable):
+            # Recursion loop until getting to individual values
+            for val in item:
+                codes.update(BitSet.breakdown(val))
             return codes
 
-        if isinstance(item, Iterable):
-            codes = set()
-            for v in item:
-                codes.update(breakdown_int(v))
-            return codes
-        else:
-            return breakdown_int(item)
+        # Ensure properly formatted binary representation
+        if isinstance(item, str):
+            item = int(item, 2)
+        asbin = bin(item)
+        for pos, b in enumerate(asbin[:1:-1]):
+            if int(b):
+                codes.add(2 ** (pos))
+
+        return codes
 
     def __new__(cls, iterable=None):
         selfobj = super(BitSet, cls).__new__(BitSet)
