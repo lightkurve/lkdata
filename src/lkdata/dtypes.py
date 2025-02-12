@@ -44,33 +44,6 @@ class BitSet(MutableSet, Hashable):
         "update",
     )
 
-    @staticmethod
-    def breakdown(item: Union[int, Iterable]):
-        """Breaks down a given item into a single set of bitwise components
-
-        Parameters
-        ----------
-        item : Union[int, str, Iterable]
-            An integer, binary integer, or collection of integers to be broken down
-        """
-
-        codes = set()
-        if isinstance(item, Iterable):
-            # Recursion loop until getting to individual values
-            for val in item:
-                codes.update(BitSet.breakdown(val))
-            return codes
-
-        # Ensure properly formatted binary representation
-        if isinstance(item, str):
-            item = int(item, 2)
-        asbin = bin(item)
-        for pos, b in enumerate(asbin[:1:-1]):
-            if int(b):
-                codes.add(2 ** (pos))
-
-        return codes
-
     def __new__(cls, iterable=None):
         selfobj = super(BitSet, cls).__new__(BitSet)
 
@@ -98,6 +71,105 @@ class BitSet(MutableSet, Hashable):
             )
         return selfobj
 
+    def __add__(self, value):
+        valset = self.breakdown(value)
+        valset.update(self._set)
+        return BitSet(valset)
+
+    def __and__(self, other):
+        if isinstance(other, bool):
+            return bool(self) and other
+        else:
+            return BitSet(self._bitset_method("__and__", other))
+
+    def __bool__(self):
+        # True if sum of values is nonzero
+        return bool(int(self._set))
+
+    def __repr__(self):
+        return f"BitSet {repr(self._set)}"
+
+    def __getattr__(self, attr):
+        return getattr(self._set, attr)
+
+    def __contains__(self, val):
+        valset = self.breakdown(val)
+        return valset.issubset(self._set)
+
+    def __int__(self):
+        return sum(self._set)
+
+    def __iter__(self):
+        return iter(self._set)
+
+    def __eq__(self, value):
+        if isinstance(value, bool):
+            return bool(self) == value
+        return self._bitset_method("__eq__", value)
+
+    def __ge__(self, value):
+        return self._bitset_method("__ge__", value)
+
+    def __gt__(self, value):
+        return self._bitset_method("__gt__", value)
+
+    def __le__(self, value):
+        return self._bitset_method("__le__", value)
+
+    def __len__(self):
+        return len(self._set)
+
+    def __lt__(self, value):
+        return self._bitset_method("__lt__", value)
+
+    def __ne__(self, value):
+        if isinstance(value, bool):
+            return bool(self) != value
+        return self._bitset_method("__ne__", value)
+
+    def __or__(self, other):
+        if isinstance(other, bool):
+            return bool(self) or other
+        else:
+            return BitSet(self._bitset_method("__or__", other))
+
+    def __rand__(self, other):
+        if isinstance(other, bool):
+            return bool(self) and other
+        else:
+            return BitSet(self._bitset_method("__rand__", other))
+
+    def __ror__(self, other):
+        if isinstance(other, bool):
+            return bool(self) or other
+        else:
+            return BitSet(self._bitset_method("__ror__", other))
+
+    def __rxor__(self, other):
+        if isinstance(other, bool):
+            return other.__rxor__(bool(self))
+        else:
+            return BitSet(self._bitset_method("__rxor__", other))
+
+    def __str__(self):
+        return bin(int(self))
+
+    def __sub__(self, value):
+        valset = self.breakdown(value)
+        new = self._set - valset
+        return BitSet(new)
+
+    def __xor__(self, other):
+        if isinstance(other, bool):
+            return bool(self).__xor__(other)
+        else:
+            return BitSet(self._bitset_method("__xor__", other))
+
+    def _bitset_method(self, method_name, value):
+        valset = BitSet.breakdown(value)
+        result = getattr(self._set, method_name)(valset)
+        return result
+
     @classmethod
     def _wrap_method(cls, method_name, obj):
         def method(*args, **kwargs):
@@ -120,86 +192,40 @@ class BitSet(MutableSet, Hashable):
 
         return method
 
-    def __repr__(self):
-        return f"BitSet {repr(self._set)}"
-
-    def __getattr__(self, attr):
-        return getattr(self._set, attr)
-
-    def __contains__(self, val):
-        valset = self.breakdown(val)
-        return valset.issubset(self._set)
-
-    def __len__(self):
-        return len(self._set)
-
-    def __int__(self):
-        return sum(self._set)
-
-    def __str__(self):
-        return bin(int(self))
-
-    def __iter__(self):
-        return iter(self._set)
-
     def add(self, value):
         valset = self.breakdown(value)
         self._set.update(valset)
 
+    @staticmethod
+    def breakdown(item: Union[int, Iterable]):
+        """Breaks down a given item into a single set of bitwise components
+
+        Parameters
+        ----------
+        item : Union[int, str, Iterable]
+            An integer, binary integer, or collection of integers to be broken down
+        """
+
+        codes = set()
+        if isinstance(item, Iterable):
+            # Recursion loop until getting to individual values
+            for val in item:
+                codes.update(BitSet.breakdown(val))
+            return codes
+
+        # Ensure properly formatted binary representation
+        if isinstance(item, str):
+            item = int(item, 2)
+        asbin = bin(item)
+        for pos, b in enumerate(asbin[:1:-1]):
+            if int(b):
+                codes.add(2 ** (pos))
+
+        return codes
+
     def discard(self, value):
         valset = self.breakdown(value)
         self._set = self._set - valset
-
-    def __add__(self, value):
-        valset = self.breakdown(value)
-        valset.update(self._set)
-        return BitSet(valset)
-
-    def __sub__(self, value):
-        valset = self.breakdown(value)
-        new = self._set - valset
-        return BitSet(new)
-
-    def _bitset_method(self, method_name, value):
-        valset = BitSet.breakdown(value)
-        result = getattr(self._set, method_name)(valset)
-        return result
-
-    def __eq__(self, value):
-        return self._bitset_method("__eq__", value)
-
-    def __ge__(self, value):
-        return self._bitset_method("__ge__", value)
-
-    def __gt__(self, value):
-        return self._bitset_method("__gt__", value)
-
-    def __le__(self, value):
-        return self._bitset_method("__le__", value)
-
-    def __lt__(self, value):
-        return self._bitset_method("__lt__", value)
-
-    def __ne__(self, value):
-        return self._bitset_method("__ne__", value)
-
-    def __and__(self, other):
-        return BitSet(self._bitset_method("__and__", other))
-
-    def __or__(self, other):
-        return BitSet(self._bitset_method("__or__", other))
-
-    def __xor__(self, other):
-        return BitSet(self._bitset_method("__xor__", other))
-
-    def __rand__(self, other):
-        return BitSet(self._bitset_method("__rand__", other))
-
-    def __ror__(self, other):
-        return BitSet(self._bitset_method("__ror__", other))
-
-    def __rxor__(self, other):
-        return BitSet(self._bitset_method("__xor__", other))
 
 
 class LkFloat:
