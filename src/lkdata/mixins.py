@@ -5,6 +5,7 @@ from copy import deepcopy
 from typing import Union
 from warnings import warn
 from .uncertainty import NDUncertainty, Uncertainty
+from .dtypes import BitSet
 
 import numpy as np
 import pandas as pd
@@ -694,9 +695,10 @@ class BitwiseMixin(IndexProcessor):
             data = self
 
         # breakdown separates an integer flag into bitwise codes
-        gb = (data.map(self.breakdown)).groupby(*args, **kwargs)
-        # first sum combines lists, second sum adds unique codes together
-        new = gb.agg(lambda x: np.sum(np.unique(np.sum(x)), dtype=int))
+        gb = data.groupby(*args, **kwargs)
+        # first sum combines lists via set+set
+        # second sum adds unique codes together
+        new = gb.agg(np.sum)
         return new
 
     @property
@@ -757,54 +759,55 @@ class BitwiseMixin(IndexProcessor):
         """
         return int(binval, 2)
 
-    def __add__(self, val):
-        if isinstance(val, self.__class__):
-            new_data = val.map(val.breakdown)
-            orig_data = self.map(val.breakdown)
-            updated_data = new_data.to_numpy() + orig_data.to_numpy()
-            updated_data = map(updated_data, np.unique)
-            return self._build_instance(
-                updated_data,
-                **self._get_math_kwargs(),
-            )
-        elif isinstance(val, int):
-            orig_data = self.map(self.breakdown)
-            updated_data = self.map(lambda x: x.append(val))
-            updated_data = updated_data.map(np.unique)
-            return self._build_instance(
-                updated_data,
-                **self._get_math_kwargs(),
-            )
-        else:
-            raise TypeError(f"Adding value of type {type(val)} is not supported.")
+    # def __add__(self, val):
+    #     if isinstance(val, self.__class__):
+    #         new_data = val.map(val.breakdown)
+    #         orig_data = self.map(val.breakdown)
+    #         updated_data = new_data.to_numpy() + orig_data.to_numpy()
+    #         updated_data = map(updated_data, np.unique)
+    #         return self._build_instance(
+    #             updated_data,
+    #             **self._get_math_kwargs(),
+    #         )
+    #     elif isinstance(val, int):
+    #         orig_data = self.map(self.breakdown)
+    #         updated_data = self.map(lambda x: x.append(val))
+    #         updated_data = updated_data.map(np.unique)
+    #         return self._build_instance(
+    #             updated_data,
+    #             **self._get_math_kwargs(),
+    #         )
+    #     else:
+    #         raise TypeError(f"Adding value of type {type(val)} is not supported.")
 
-    def __sub__(self, val):
-        ### NOT READY ###
-        if isinstance(val, self.__class__):
-            new_data = val.map(bin)
-            orig_data = self.map(bin)
-            updated_data = new_data.to_numpy() - orig_data.to_numpy()
-            updated_data = updated_data.map(np.unique)
-            return self._build_instance(
-                updated_data,
-                **self._get_math_kwargs(),
-            )
-        elif isinstance(val, int):
-            orig_data = self.map(self.breakdown)
-            updated_data = orig_data.map(lambda x: x.append(val))
-            updated_data = updated_data.map(np.unique)
-            return self._build_instance(
-                updated_data,
-                **self._get_math_kwargs(),
-            )
-        else:
-            raise TypeError(f"Subtracting value of type {type(val)} is not supported.")
+    # def __sub__(self, val):
+    #     ### NOT READY ###
+    #     if isinstance(val, self.__class__):
+    #         new_data = val.map(bin)
+    #         orig_data = self.map(bin)
+    #         updated_data = new_data.to_numpy() - orig_data.to_numpy()
+    #         updated_data = updated_data.map(np.unique)
+    #         return self._build_instance(
+    #             updated_data,
+    #             **self._get_math_kwargs(),
+    #         )
+    #     elif isinstance(val, int):
+    #         orig_data = self.map(self.breakdown)
+    #         updated_data = orig_data.map(lambda x: x.append(val))
+    #         updated_data = updated_data.map(np.unique)
+    #         return self._build_instance(
+    #             updated_data,
+    #             **self._get_math_kwargs(),
+    #         )
+    #     else:
+    #         raise TypeError(f"Subtracting value of type {type(val)} is not supported.")
 
     def parse_code(self, val):
         """
         Parse a bitwise integer value into a dictionary of corresponding codes.
         """
-        codes = self.breakdown(val)
+        # codes = self.breakdown(val)
+        codes = val
         str_codes = {code: self.codes.get(int(code), code) for code in codes}
         return str_codes
 
@@ -818,11 +821,11 @@ class BitwiseMixin(IndexProcessor):
             out = out.set_caption(kwargs.pop("label"))
 
         if (self._values_display == "parsed") or (self.codes == {}):
-            out = out.format(
-                lambda x: str(self.breakdown(x)).replace("[", "{").replace("]", "}")
-            )
+            out = out.format(str)
         elif self._values_display == "detailed":
             out = out.format(self.parse_code)
+        else:
+            out = out.format(int)
 
         out = out.set_table_styles(
             [
@@ -865,6 +868,12 @@ class BitwiseMixin(IndexProcessor):
                 return data_arr.astype(int)
             except (ValueError, TypeError) as e:
                 raise ValueError("Unable to convert data given to integer type.") from e
+
+    @staticmethod
+    def _set_data_type_to_bitset(data):
+        data_arr = np.array(data)
+        convert = np.vectorize(BitSet)
+        return convert(data_arr)
 
 
 def _expand_frame(data, row_factor, col_factor):

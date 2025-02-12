@@ -152,7 +152,7 @@ class BitSet(MutableSet, Hashable):
             return BitSet(self._bitset_method("__rxor__", other))
 
     def __str__(self):
-        return bin(int(self))
+        return str(self._set)
 
     def __sub__(self, value):
         valset = self.breakdown(value)
@@ -195,6 +195,9 @@ class BitSet(MutableSet, Hashable):
     def add(self, value):
         valset = self.breakdown(value)
         self._set.update(valset)
+
+    def bin(self):
+        return bin(int(self))
 
     @staticmethod
     def breakdown(item: Union[int, Iterable]):

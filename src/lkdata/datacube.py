@@ -596,14 +596,14 @@ class BitwiseCube(BitwiseMixin, Cube):
         """
         # For pandas DataFrames subclasses, new properties must
         # be included in the _metadata list
-        data = BitwiseMixin._set_data_type_to_int(data)
+        data = BitwiseMixin._set_data_type_to_bitset(data)
         self._metadata: List[str] = []
         self._user_kwargs: List[str] = []
         if code_dict is None:
             code_dict = {}
         self.codes = code_dict
         super().__init__(
-            data, time_indices, row_indices, col_indices, dtype=int, **kwargs
+            data, time_indices, row_indices, col_indices, dtype=object, **kwargs
         )
         self.values_display = display_as
         self._user_kwargs.append("values_display")
