@@ -239,14 +239,14 @@ class BitwiseFrame(BitwiseMixin, Frame):
         """
         # For pandas DataFrames subclasses, new properties must
         # be included in the _metadata list
-
+        data = BitwiseMixin._set_data_type_to_int(args[0])
         self._metadata = []
         self._user_kwargs = []
         kwargs["codes"] = kwargs.get("codes", {})
         self.codes = kwargs["codes"]
         values_display = kwargs.pop("display_as", "bitwise")
-        super().__init__(*args, dtype=object, **kwargs)
-        self.values_display = values_display
+        super().__init__(data, *args, dtype=object, **kwargs)
+        self.values_display = values_display  # set after dataframe init
         self._user_kwargs.append("values_display")
 
     def __repr__(self):

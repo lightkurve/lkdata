@@ -605,7 +605,6 @@ class BitwiseCube(BitwiseMixin, Cube):
         super().__init__(
             data, time_indices, row_indices, col_indices, dtype=int, **kwargs
         )
-
         self.values_display = display_as
         self._user_kwargs.append("values_display")
 

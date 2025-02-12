@@ -3,6 +3,7 @@
 import re
 from copy import deepcopy
 from typing import Union
+from warnings import warn
 from .uncertainty import NDUncertainty, Uncertainty
 
 import numpy as np
@@ -722,7 +723,8 @@ class BitwiseMixin(IndexProcessor):
     def values_display(self, value):
         allowed = {"bitwise", "parsed", "detailed"}
         if value.lower() not in allowed:
-            raise AttributeError(f"Display must be one of {allowed}.")
+            warn(f"Display must be one of {allowed}, defaulting to 'bitwise'.")
+            value = "bitwise"
         self._values_display = value.lower()
         self.styler = self.stylize_frame(self)
 
@@ -857,10 +859,12 @@ class BitwiseMixin(IndexProcessor):
             return BitwiseMixin.bin_to_int(data_arr)
         elif isinstance(zeroth, set):
             return BitwiseMixin.set_to_int(data_arr)
-        elif isinstance(zeroth, (int, float)):
-            return data_arr.astype(int)
         else:
-            raise ValueError("Elements have an unsupported data type.")
+            # if it's not a numeric type, this will raise an error
+            try:
+                return data_arr.astype(int)
+            except (ValueError, TypeError) as e:
+                raise ValueError("Unable to convert data given to integer type.") from e
 
 
 def _expand_frame(data, row_factor, col_factor):

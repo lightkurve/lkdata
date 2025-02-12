@@ -253,6 +253,7 @@ class BitwiseSeries(BitwiseMixin, Series):
     ):
         # For pandas DataFrames subclasses, new properties must
         # be included in the _metadata list
+        data = BitwiseMixin._set_data_type_to_int(data)
         self._metadata = []
         self._user_kwargs = []
         kwargs["codes"] = kwargs.get("codes", {})
