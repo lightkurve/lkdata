@@ -4,6 +4,7 @@ import logging
 from abc import ABC
 from typing import Iterable, Union
 
+import numpy as np
 import pandas as pd
 
 from .mixins import (
@@ -69,6 +70,42 @@ class Series(
     @property
     def array(self):
         return self._array
+
+    def describe_series(self, **printoptions):
+        """Print a description of the Series instance.
+
+        This description prints information about the temporal indices
+        available in the Series. It also prints out any additional
+        user-assigned properties given via the kwargs on initialization.
+        """
+        printoptions["linewidth"] = printoptions.get("linewidth", 79)
+        printoptions["edgeitems"] = printoptions.get("edgeitems", 2)
+        printoptions["threshold"] = printoptions.get("threshold", 20)
+        with np.printoptions(**printoptions):
+            max_name_len = max(map(len, self._metadata))
+            print(f"📉 DataSeries {self.shape} (ntime)")
+            print()
+            if hasattr(self, "uncertainty"):
+                print("Uncertainty:")
+                try:
+                    print(
+                        f"\tuncertainty\t:\tUncertainty(np.ndarray{self.uncertainty.shape})"
+                    )
+                except AttributeError:
+                    print("\tuncertainty\t:\tUncertainty(None)")
+            print()
+            print("Time indices available: " + str(self.index.names))
+            for key in self.index.names:
+                print(
+                    f"\t{key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not Defined')}"
+                )
+            print()
+            print("User defined attributes accessible via `object.key`")
+            print("(displaying only unique values)")
+            for key in self._user_kwargs:
+                print(
+                    f"\t{key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not defined')}"
+                )
 
     @property
     def ntime(self):

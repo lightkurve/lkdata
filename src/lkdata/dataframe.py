@@ -139,6 +139,56 @@ class Frame(
     def array(self):
         return self._array
 
+    def describe_frame(self, **printoptions):
+        """Print a description of the Frame instance.
+
+        This description prints information about the temporal and spatial
+        indices available in the Frame. It also prints out any additional
+        user-assigned properties given via the kwargs on initialization.
+        """
+        printoptions["linewidth"] = printoptions.get("linewidth", 79)
+        printoptions["edgeitems"] = printoptions.get("edgeitems", 2)
+        printoptions["threshold"] = printoptions.get("threshold", 20)
+        with np.printoptions(**printoptions):
+            max_name_len = max(map(len, self._metadata))
+            print(repr(self) + " (ntime, nseries)")
+            print()
+            if hasattr(self, "uncertainty"):
+                print("Uncertainty:")
+                try:
+                    print(
+                        f"\tuncertainty\t:\tUncertainty(np.ndarray{self.uncertainty.shape})"
+                    )
+                except AttributeError:
+                    print("\tuncertainty\t:\tUncertainty(None)")
+            print()
+            print("Time indices available: " + str(self.index.names))
+            for key in self.index.names:
+                print(
+                    f"\t{key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not Defined')}"
+                )
+            print()
+            if hasattr(self, "row_names"):
+                print("Row names: " + str(self.row_names))
+                for key in self.row_names:
+                    print(
+                        f"\t{key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not Defined')}"
+                    )
+                print()
+            if hasattr(self, "col_names"):
+                print("Column names: " + str(self.col_names))
+                for key in self.col_names:
+                    print(
+                        f"\t{key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not Defined')}"
+                    )
+                print()
+            print("User defined attributes accessible via `object.key`")
+            print("(displaying only unique values)")
+            for key in self._user_kwargs:
+                print(
+                    f"\t{key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not defined')}"
+                )
+
     @property
     def nseries(self):
         """Number of series in the DataFrame"""
