@@ -45,7 +45,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = ">=3.9"
 numpy = "^1.26.3"
-pandas = {version="^2.1.4", extras=["plot"]}
+pandas = {version="^2.1.4", extras=["plot", "output-formatting"]}
 
 
 [tool.poetry.group.dev.dependencies]

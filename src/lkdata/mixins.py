@@ -112,6 +112,10 @@ class IndexProcessor:
     ):
         """Parse given indices and return a single pandas MultiIndex"""
         if time_indices:
+            if "row" in time_indices:
+                raise ValueError("Key 'row' is reserved for spatial dimensions.")
+            if "col" in time_indices:
+                raise ValueError("Key 'col' is reserved for spatial dimensions.")
             ntime_inds = len(list(time_indices.values())[0])
             if ("time_index" not in time_indices.keys()) and (
                 "mid_index" not in time_indices.keys()
@@ -614,7 +618,7 @@ class StatsMixin:
 
     def _create_stats_method(self, method_name):
         def _method(*args, **kwargs):
-            axis = kwargs.pop("axis", 0)
+            axis = kwargs.pop("axis", None)
             np_method = getattr(np, method_name)
             result, init_kwds = self._arithmetic(
                 np_method, operand=None, data_axis=axis, uncertainty_axis=axis, **kwargs
@@ -927,6 +931,7 @@ class AggMixin:
 
         def wrap(*args, **kwargs):
             arr = func(*args, **kwargs)
+            # TODO: breaks if jumbled?
             npfinfo = np.finfo(type(arr[0]))
             precision = npfinfo.precision
             return arr.round(precision)

@@ -185,6 +185,7 @@ class Cube(
         )
 
     def __repr__(self):
+        # TODO: add uncertainty
         return f"Cube {self.ntime, self.nrow, self.ncol}"
 
     def __str__(self):
@@ -232,6 +233,8 @@ class Cube(
         return data
 
     def _repr_html_(self):
+        # TODO: Something is broken here with multiple time indices
+        # TODO: the name "row" is breaking
         if hasattr(self, "_styler"):
             out0 = self.styler
         else:
@@ -361,13 +364,13 @@ class Cube(
         """
         cadence = int(np.floor(cadence))
 
-        row = getattr(self, self.columns.names[1])
-        col = getattr(self, self.columns.names[2])
+        row = getattr(self, self.row_names[0])
+        col = getattr(self, self.col_names[0])
         df = pd.DataFrame(
             self.array[cadence],
-            index=pd.Series(row[:: self.ncol], name=self.columns.names[1]),
+            index=pd.Series(row[:: self.ncol], name=self.row_names[0]),
             columns=pd.MultiIndex.from_product(
-                [[self.columns.names[2]], pd.Series(col[: self.ncol])]
+                [[self.col_names[0]], pd.Series(col[: self.ncol])]
             ),
         )
         return df
@@ -493,7 +496,9 @@ class DataCube(
         data: Union[List, np.ndarray],
         uncertainty: Union[List, np.ndarray] = None,
         time_indices: Union[Dict, List, None] = None,
-        row_indices: Union[Dict, List, None] = None,
+        row_indices: Union[
+            Dict, List, None
+        ] = None,  # TODO: make this accept arrays/lists
         col_indices: Union[Dict, List, None] = None,
         **kwargs,
     ):
