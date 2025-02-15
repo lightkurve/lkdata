@@ -2,7 +2,7 @@
 
 import re
 from copy import deepcopy
-from typing import Union
+from typing import Iterable, Union
 from warnings import warn
 from .uncertainty import NDUncertainty, Uncertainty
 from .dtypes import BitSet
@@ -49,7 +49,7 @@ STATS_METHOD_NAMES = [
 CUM_METHOD_NAMES = ["cumsum", "cummin", "cummax", "cumprod"]
 
 
-class IndexProcessor:
+class IndexProcessorMixin:
     """Mixins to handle index processing"""
 
     def _fold_index(self, period, t0, level, label):
@@ -155,6 +155,92 @@ class IndexProcessor:
         index = pd.MultiIndex.from_arrays(arrays, names=names)
         return index
 
+    @staticmethod
+    def parse_pos_indices(row_indices, col_indices, nrow, ncol):
+        """Reshape arrays to the appropriate shape for pd.columns
+
+        TPF data are typically stored in an intuitive 3D structure, with
+        time as the 1st dimension, row (or column) as the 2nd, and the
+        column (or row) as the 3rd. In using pandas as the backend for our
+        data, we store time as the index of the DataFrame and need rows and
+        columns to be in the DataFrame.columns.
+
+        The standard for row and column arrays is to provide an array of
+        size nrow and ncol respectively, definining the row and column
+        indices.
+
+        I.e. for a 3x4 image, a possible scenario is that
+        row = [1, 2, 3]
+        and col = [1, 2, 3, 4].
+        In the DataFrame, this must be organized such that each column
+        corresponds to one of the coordinates. So row and col must be
+        flattend to
+        row = [1, 1, 1, 1, 2, 2, ...,  3, 3]
+        and col = [1, 2, 3, 4, 1, 2, ..., 3, 4]
+        so that series[0] is [1, 1], series[2] is [1, 2], ...,
+        and series[11] is [3, 4]
+        """
+
+        def process_listlike(indices, dim_self, dim_other, label, expand_method):
+            """
+            Check and convert the given list-like indices into compatible form
+            """
+            arr = np.array(indices).flatten()
+            if arr.shape[0] == nrow * ncol:
+                # Indices given like coordinates for each datapoint
+                return arr
+            elif arr.shape[0] == dim_self:
+                # Indices given like markers for a grid (expected format)
+                return expand_method(arr, dim_other)
+            else:
+                raise ValueError(
+                    f"Shape of {label} does not match shape of data given."
+                )
+
+        if isinstance(row_indices, Iterable) and not isinstance(row_indices, dict):
+            row = process_listlike(
+                indices=row_indices,
+                dim_self=nrow,
+                dim_other=ncol,
+                label="row",
+                expand_method=np.repeat,
+            )
+            row_indices = {"row": row}
+        row_indices = row_indices or {}
+
+        if isinstance(row_indices, dict):
+            for key, val in row_indices.items():
+                row_indices[key] = process_listlike(
+                    indices=val,
+                    dim_self=nrow,
+                    dim_other=ncol,
+                    label=key,
+                    expand_method=np.repeat,
+                )
+
+        if isinstance(col_indices, Iterable) and not isinstance(col_indices, dict):
+            col = process_listlike(
+                indices=col_indices,
+                dim_self=ncol,
+                dim_other=nrow,
+                label="col",
+                expand_method=np.tile,
+            )
+            col_indices = {"col": col}
+
+        col_indices = col_indices or {}
+        if isinstance(row_indices, dict):
+            for key, val in col_indices.items():
+                col_indices[key] = process_listlike(
+                    indices=val,
+                    dim_self=ncol,
+                    dim_other=ncol,
+                    label=key,
+                    expand_method=np.tile,
+                )
+
+        return row_indices, col_indices
+
     def parse_columns(
         self,
         columns: pd.MultiIndex = None,
@@ -175,9 +261,11 @@ class IndexProcessor:
         col_indices : dict, optional
             A dictionary of column arrays, by default None
         nrow : int, optional
-            The number of rows, by default 0
+            The number of rows, by default 0. Must be defined if row_indices is
+            not None.
         ncol : int, optional
-            The number of columns, by default 0
+            The number of columns, by default 0. Must be defined if col_indices
+            is not None.
         continuous : bool, optional
             Whether the rows and columns in row and col indices should be
             interpreted as continuous.
@@ -201,19 +289,9 @@ class IndexProcessor:
         ):
             return pd.MultiIndex.from_arrays([[]], names=["series"]), None, None
 
-        def flatten(value):
-            """Flatten row and column arrays"""
-            return (value * np.ones((nrow, ncol), dtype=value.dtype)).ravel()
-
-        row_indices = row_indices or {}
-        col_indices = col_indices or {}
-        if (len(row_indices) > 0) and (len(col_indices) > 0) and continuous:
-            nrow = len(list(row_indices.values())[0])
-            ncol = len(list(col_indices.values())[0])
-            for key, val in row_indices.items():
-                row_indices[key] = flatten(val[:, None])
-            for key, val in col_indices.items():
-                col_indices[key] = flatten(val)
+        row_indices, col_indices = self.parse_pos_indices(
+            row_indices, col_indices, nrow, ncol
+        )
 
         if columns is not None:
             parsed_columns = columns.to_frame().reset_index(drop=True)
@@ -231,8 +309,9 @@ class IndexProcessor:
         if (len(row_indices) == 0) or (len(col_indices) == 0):
             # Generate indices if both nrow and ncol are given
             if (nrow > 0) and (ncol > 0) and continuous:
-                row_indices = {"row": flatten(np.arange(nrow)[:, None])}
-                col_indices = {"col": flatten(np.arange(ncol))}
+                row_indices, col_indices = self.parse_pos_indices(
+                    {"row": np.arange(nrow)}, {"col": np.arange(ncol)}, nrow, ncol
+                )
             # Otherwise just return columns, rows and columns are not parseable
             else:
                 return columns, nrow, ncol
@@ -281,7 +360,7 @@ class IndexProcessor:
             return self[df.index.get_level_values(0).values]
 
 
-class MathMixin(IndexProcessor):
+class MathMixin(IndexProcessorMixin):
     """
     Mixin class to add arithmetic to an lightkurve data objects.
 
@@ -640,7 +719,7 @@ class StatsMixin:
         return _method
 
 
-class BoolMixin(IndexProcessor):
+class BoolMixin(IndexProcessorMixin):
     """Math mixins for lightkurve bool objects.
 
     All operators should simply return the "logical or" for each element.
@@ -673,7 +752,7 @@ class BoolMixin(IndexProcessor):
         return new
 
 
-class BitwiseMixin(IndexProcessor):
+class BitwiseMixin(IndexProcessorMixin):
     """
     Mixin class that provides functionality for handling bitwise data.
 
@@ -955,6 +1034,7 @@ class AggMixin:
         pandas.IntervalIndex
             The bin edges for downsampling.
         """
+        index.sort()
         round_arr = self._set_precision(np.array)
         # Find the average spacing of the index
         dt = np.median(np.diff(index)) * nframes

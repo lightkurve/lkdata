@@ -63,7 +63,10 @@ class Cube(
         columns, self.nrow, self.ncol = self.parse_columns(
             columns, row_indices, col_indices, self.nrow, self.ncol, continuous=True
         )
-
+        if len(data) != len(index):
+            raise ValueError("Length of index does not match shape of data.")
+        if len(columns) != data.shape[1]:
+            raise ValueError("problems")
         super().__init__(data, index=index, columns=columns, dtype=dtype)
         self._array = self.to_numpy().reshape(self.ntime, self.nrow, self.ncol)
         self._include_convenience_index()

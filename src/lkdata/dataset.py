@@ -13,7 +13,7 @@ import pandas as pd
 from .datacube import Cube, DataCube, BoolCube, BitwiseCube
 from .dataframe import Frame, DataFrame, BoolFrame, BitwiseFrame
 from .dataseries import Series, DataSeries, BoolSeries, BitwiseSeries
-from .mixins import IndexProcessor
+from .mixins import IndexProcessorMixin
 
 LkDataTypes = Union[DataCube, DataFrame, DataSeries]
 LkBoolTypes = Union[BoolCube, BoolFrame, BoolSeries]
@@ -225,7 +225,7 @@ class ProductBundle(dict, DataProcessorMixin):
     ):
         index = kwargs.pop("index", None)
         time_indices = kwargs.pop("time_indices", None)
-        index = IndexProcessor.parse_index(index, time_indices)
+        index = IndexProcessorMixin.parse_index(index, time_indices)
 
         self._data_types = dict()
         if input_data is not None:
