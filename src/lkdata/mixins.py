@@ -112,15 +112,22 @@ class IndexProcessorMixin:
     ):
         """Parse given indices and return a single pandas MultiIndex"""
         if time_indices:
-            if "row" in time_indices:
-                raise ValueError("Key 'row' is reserved for spatial dimensions.")
-            if "col" in time_indices:
-                raise ValueError("Key 'col' is reserved for spatial dimensions.")
-            ntime_inds = len(list(time_indices.values())[0])
-            if ("time_index" not in time_indices.keys()) and (
-                "mid_index" not in time_indices.keys()
-            ):
-                time_indices.update({"time_index": np.arange(ntime_inds)})
+            if isinstance(time_indices, dict):
+                # If time_indices is given properly as a dictionary:
+                if "row" in time_indices:
+                    raise ValueError("Key 'row' is reserved for spatial dimensions.")
+                if "col" in time_indices:
+                    raise ValueError("Key 'col' is reserved for spatial dimensions.")
+                ntime_inds = len(list(time_indices.values())[0])
+                if ("time_index" not in time_indices.keys()) and (
+                    "mid_index" not in time_indices.keys()
+                ):
+                    # Create a standard index which orders the data.
+                    # This is particularly useful when phase-folding, etc.
+                    time_indices.update({"time_index": np.arange(ntime_inds)})
+            else:
+                # Otherwise assume time_indices was given as an array
+                time_indices = {"time_index": time_indices}
         else:
             time_indices = {}
 
@@ -135,6 +142,8 @@ class IndexProcessorMixin:
                 "mid_index" not in time_indices.keys()
             ):
                 time_indices.update({"time_index": np.arange(ntime_index)})
+        elif index is not None:
+            raise ValueError("'index' must be a pd.MultiIndex or None.")
 
         if time_indices == {}:
             time_indices.update({"time_index": np.arange(ntime)})
@@ -144,6 +153,7 @@ class IndexProcessorMixin:
             arrays = [t0, *list(time_indices.values())]
             names = ["time_index", *list(time_indices.keys())]
         elif "mid_index" in time_indices:
+            # For downsampled data "mid_index" is used in place of "time_index"
             t0 = time_indices.pop("mid_index")
             tfull = time_indices.pop("indices")
             arrays = [t0, tfull, *list(time_indices.values())]
@@ -209,6 +219,8 @@ class IndexProcessorMixin:
         row_indices = row_indices or {}
 
         if isinstance(row_indices, dict):
+            if "time_index" in row_indices:
+                raise ValueError("Key 'time_index' is reserved for time indices'")
             for key, val in row_indices.items():
                 row_indices[key] = process_listlike(
                     indices=val,
@@ -229,7 +241,9 @@ class IndexProcessorMixin:
             col_indices = {"col": col}
 
         col_indices = col_indices or {}
-        if isinstance(row_indices, dict):
+        if isinstance(col_indices, dict):
+            if "time_index" in col_indices:
+                raise ValueError("Key 'time_index' is reserved for time indices'")
             for key, val in col_indices.items():
                 col_indices[key] = process_listlike(
                     indices=val,
@@ -348,16 +362,43 @@ class IndexProcessorMixin:
         return columns, nrow, ncol
 
     def sort_index(self, *args, **kwargs):
-        if "inplace" in kwargs:
-            inplace = kwargs["inplace"]
-            kwargs["inplace"] = False
-        else:
-            inplace = False
-        df = super(self._pd_class, self).sort_index(*args, **kwargs)
+        init_kwds = self.user_kwargs.copy()
+
+        inplace = kwargs.pop("inplace", False)
+        pdobj = super(self._pd_class, self).sort_index(*args, **kwargs)
         if inplace:
-            super(self._pd_class, self).__init__(df)
+            super(self._pd_class, self).__init__(pdobj)
+        time_inds = pdobj.index.get_level_values("time_index")
+        if hasattr(pdobj, "columns"):
+            series_inds = pdobj.columns.get_level_values("series")
         else:
-            return self[df.index.get_level_values(0).values]
+            series_inds = None
+
+        dfarray = pdobj.to_numpy()
+        if "axis" in kwargs and kwargs["axis"] in [0, "index"] or "axis" not in kwargs:
+            dfarray = dfarray.reshape((self.ntime, self.nrow, self.ncol))
+        if inplace:
+            self.array = dfarray
+
+        if hasattr(self, "uncertainty"):
+            uncertainty_array = self.uncertainty.array
+            uncertainty_array = uncertainty_array.reshape(self.shape)
+            uncertainty_array = uncertainty_array[time_inds]
+            if series_inds is not None:
+                uncertainty_array = uncertainty_array[series_inds]
+            uncertainty_array = uncertainty_array.reshape(dfarray.shape)
+            if inplace:
+                self.uncertainty.array = uncertainty_array
+            else:
+                init_kwds["uncertainty"] = uncertainty_array
+        if inplace:
+            self._include_convenience_index()
+            if hasattr(self, "columns"):
+                self._include_convenience_columns()
+        else:
+            return self.__class__.from_pandas(
+                pdobj, nrow=self.nrow, ncol=self.ncol, **init_kwds
+            )
 
 
 class MathMixin(IndexProcessorMixin):
@@ -1008,16 +1049,18 @@ class AggMixin:
     def _set_precision(self, func):
         """np.array wrapper to strictly enforce precision."""
 
-        def wrap(*args, **kwargs):
+        def wrap(*args, **kwargs) -> np.ndarray:
             arr = func(*args, **kwargs)
             # TODO: breaks if jumbled?
             npfinfo = np.finfo(type(arr[0]))
-            precision = npfinfo.precision
-            return arr.round(precision)
+            if hasattr(npfinfo, "precision"):
+                precision = npfinfo.precision
+                return arr.round(precision)
+            return arr
 
         return wrap
 
-    def get_bins(self, index, nframes, right=False):
+    def get_bins(self, index: np.ndarray, nframes: int, right=False):
         """Calculate bin edges for downsampling.
 
         Parameters
@@ -1035,12 +1078,12 @@ class AggMixin:
             The bin edges for downsampling.
         """
         index.sort()
-        round_arr = self._set_precision(np.array)
         # Find the average spacing of the index
         dt = np.median(np.diff(index)) * nframes
         nbins = int(np.ceil((index.max() - index.min()) / dt) + 1)
         # Calculate what bin edges result in this spacing
         bins = np.arange(index.min(), index.min() + nbins * dt, dt)
+        round_arr = self._set_precision(np.array)
         bins = round_arr(bins)
 
         bin_edges = pd.cut(np.sort(index), bins, right=right)
@@ -1082,7 +1125,8 @@ class AggMixin:
         try:
             index = round_arr(index)
         except ValueError:
-            pass
+            # Can't round integers
+            index = np.array(index)
 
         # groupby these bin edges
         bin_edges_left = self.get_bins(index, nframes, right=False)
@@ -1134,7 +1178,8 @@ class AggMixin:
                 .values
             )
             cadences = cadences[bin_mask]
-        # if the old index was time based, use the mean of the bin for the new index
+        # if the old index was time based (dtype=float), use the mean of the
+        # bin for the new index
         new_index_left = new_index_left.mean().reset_index(drop=True)[bin_mask]
         index_names = list(self.index.names)
         if ("time_index" in new_index_left) or ("mid_index" in new_index_left):
