@@ -385,7 +385,7 @@ class IndexProcessorMixin:
             uncertainty_array = uncertainty_array.reshape(self.shape)
             uncertainty_array = uncertainty_array[time_inds]
             if series_inds is not None:
-                uncertainty_array = uncertainty_array[series_inds]
+                uncertainty_array = uncertainty_array[:, series_inds]
             uncertainty_array = uncertainty_array.reshape(dfarray.shape)
             if inplace:
                 self.uncertainty.array = uncertainty_array
@@ -721,6 +721,7 @@ class StatsMixin:
     """Defines a mixin class which will let us postprocess all our pandas stats"""
 
     _stats_type = "data"
+    ds_agg_func = "sum"
 
     def ds_agg(self, *args, **kwargs):
         if kwargs.pop("T", False):
@@ -767,6 +768,7 @@ class BoolMixin(IndexProcessorMixin):
     """
 
     _stats_type = "bool"
+    ds_agg_func = np.logical_or.reduce
 
     def __add__(self, val):
         if isinstance(val, type(self)):
@@ -811,8 +813,10 @@ class BitwiseMixin(IndexProcessorMixin):
     _stats_type = "bitwise"
     _code_dict = None
     _values_display = None
+    ds_agg_func = "sum"
 
     def ds_agg(self, *args, **kwargs):
+        """Downsample Aggregation"""
         if kwargs.pop("T", False):
             data = self.T
         else:
@@ -1046,7 +1050,8 @@ def _expand_cube_frames(data, row_factor, col_factor):
 class AggMixin:
     """Mixin class for data aggregation methods like downsampling"""
 
-    def _set_precision(self, func):
+    @staticmethod
+    def _set_precision(func):
         """np.array wrapper to strictly enforce precision."""
 
         def wrap(*args, **kwargs) -> np.ndarray:
@@ -1060,7 +1065,8 @@ class AggMixin:
 
         return wrap
 
-    def get_bins(self, index: np.ndarray, nframes: int, right=False):
+    @staticmethod
+    def get_bins(index: np.ndarray, nframes: int, right=False):
         """Calculate bin edges for downsampling.
 
         Parameters
@@ -1083,7 +1089,7 @@ class AggMixin:
         nbins = int(np.ceil((index.max() - index.min()) / dt) + 1)
         # Calculate what bin edges result in this spacing
         bins = np.arange(index.min(), index.min() + nbins * dt, dt)
-        round_arr = self._set_precision(np.array)
+        round_arr = AggMixin._set_precision(np.array)
         bins = round_arr(bins)
 
         bin_edges = pd.cut(np.sort(index), bins, right=right)
@@ -1119,9 +1125,12 @@ class AggMixin:
         index included a 'time_index' or 'indices' level, this information
         is preserved in the new index.
         """
-        round_arr = self._set_precision(np.array)
-        # Find the index to downsample on
-        index = self.index.get_level_values(level=level)
+        round_arr = AggMixin._set_precision(np.array)
+        dfcopy = self.iloc[:]
+        # Get the values of the index on which to downsample
+        index = dfcopy.index.get_level_values(level=level)
+        index_names = list(dfcopy.index.names)
+
         try:
             index = round_arr(index)
         except ValueError:
@@ -1129,22 +1138,25 @@ class AggMixin:
             index = np.array(index)
 
         # groupby these bin edges
-        bin_edges_left = self.get_bins(index, nframes, right=False)
-        gb = self.groupby(bin_edges_left, observed=False)
+        bin_edges_left = AggMixin.get_bins(index, nframes, right=False)
+        gb = dfcopy.groupby(bin_edges_left, observed=False)
 
         # We only accept cases where the number of points in a bin is the same
         # as the number of frames we downsample to
-        if hasattr(self, "columns"):
-            count = gb[int(self.columns.get_level_values(0)[0])].count()
+        if hasattr(dfcopy, "columns"):
+            count = gb[int(dfcopy.columns.get_level_values(0)[0])].count()
             bin_mask = np.asarray(count == nframes)[:, 0]
         else:
             # for DataSeries
             count = gb.count()
             bin_mask = np.asarray(count == nframes)
 
-        # Downsampling aggregation depends on data type. See relevant mixin for details.
-        new = self.ds_agg(bin_edges_left, observed=False)[bin_mask]
+        # Downsampling aggregation depends on data type.
+        # See relevant mixin for details.
+        # I.e. for numerical data:
         # new = gb.agg("sum")[bin_mask]
+        new = gb.agg(self.ds_agg_func)[bin_mask]
+
         if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
             error = self.uncertainty.array.reshape(self.shape)
             error = pd.DataFrame(error**2)
@@ -1152,48 +1164,59 @@ class AggMixin:
             error = error.agg("sum")[bin_mask].to_numpy()
             error = error**0.5
 
-        # We have to create a new index. We take the mean of each bin.
-        new_index_left = self.index.to_frame().groupby(bin_edges_left, observed=False)
+        # We have to create a new index.
+        new_index_gb = dfcopy.index.to_frame().groupby(bin_edges_left, observed=False)
 
-        if "indices" in self.index.names:
-
+        if "indices" in index_names:
+            # If previously downsampled, "indices" will contain strings that
+            # look like lists. This combines those "lists".
             def repack(vals):
-                # If previously downsampled, "indices" will contain strings that
-                # look like lists. This combines those "lists".
                 allvals = [int(num) for v in vals for num in re.findall(r"\d+", v)]
                 return str(allvals)
 
-            cadences = new_index_left["indices"].apply(repack).values
-            cadences = cadences[bin_mask]
-            new_index_left = (
-                self.index.to_frame()
-                .drop(["indices"], axis=1)
-                .groupby(bin_edges_left, observed=False)
+            indices_in_bin = new_index_gb["indices"].apply(repack).values
+            index_names.remove("indices")  # remove so groupby.mean can work
+            new_index_gb = new_index_gb[index_names]
+
+        elif "time_index" in index_names:
+            indices_in_bin = (
+                new_index_gb["time_index"].apply(lambda val: str(np.unique(val))).values
             )
-            self.index = self.index.droplevel("indices")
-        elif "time_index" in self.index.names:
-            cadences = (
-                new_index_left["time_index"]
-                .apply(lambda val: str(np.unique(val)))
-                .values
+
+        elif "mid_index" in index_names:
+            # "mid_index" should only exist when "indices" does, but if it was
+            # removed, carry on by combining the mid_index values combined
+            indices_in_bin = (
+                new_index_gb["mid_index"].apply(lambda val: str(np.unique(val))).values
             )
-            cadences = cadences[bin_mask]
-        # if the old index was time based (dtype=float), use the mean of the
-        # bin for the new index
-        new_index_left = new_index_left.mean().reset_index(drop=True)[bin_mask]
-        index_names = list(self.index.names)
-        if ("time_index" in new_index_left) or ("mid_index" in new_index_left):
-            new_index_left["indices"] = cadences
+
+        else:
+            indices_in_bin = []
+
+        # use the mean of the bin for the new index
+        new_index_left = new_index_gb.mean().reset_index(drop=True)[bin_mask]
+        if len(indices_in_bin) > 0:
+            new_index_left["indices"] = indices_in_bin[bin_mask]
             index_names.append("indices")
         new_index = new_index_left.set_index(index_names).index
+
         if "time_index" in new_index.names:
-            new_index.set_levels(
-                new_index.get_level_values("time_index").astype(int), level="time_index"
-            )
+            # Ensure index is int
+            t_ind_as_int = new_index.get_level_values("time_index").astype(int)
+            try:
+                new_index.set_levels(t_ind_as_int, level="time_index")
+            except ValueError:
+                # Non-linear time indices (possibly folded)
+                # -> possible repeat mid_index when forced to int
+                new_index.set_levels(
+                    new_index.get_level_values("time_index"), level="time_index"
+                )
+            # Rename "time_index" to "mid_index" to reflect downsampling
             new_index = new_index.rename({"time_index": "mid_index"})
 
         if hasattr(self, "columns"):
             if hasattr(self, "nrow") and hasattr(self, "ncol"):
+                # Cube (maybe Frame)
                 new_obj = self._build_instance(
                     new.to_numpy(),
                     index=new_index,
@@ -1202,12 +1225,14 @@ class AggMixin:
                     ncol=self.ncol,
                 )
             else:
+                # Frame
                 new_obj = self._build_instance(
                     new.to_numpy(),
                     index=new_index,
                     columns=self.columns,
                 )
         else:
+            # Series
             new_obj = self._build_instance(
                 new.to_numpy(),
                 index=new_index,
