@@ -639,7 +639,7 @@ class MathMixin(IndexProcessorMixin):
         elif operand is not None:
             if not hasattr(operand, "uncertainty"):
                 # operand exists but has no uncertainty, can't propagate
-                return self.uncertainty
+                return deepcopy(self.uncertainty)
             elif not operand.uncertainty:
                 # As with self.uncertainty is None but the other way around.
                 operand.uncertainty = self.uncertainty.__class__(None)
