@@ -723,14 +723,6 @@ class StatsMixin:
     _stats_type = "data"
     ds_agg_func = "sum"
 
-    def ds_agg(self, *args, **kwargs):
-        if kwargs.pop("T", False):
-            data = self.T
-        else:
-            data = self
-        gb = data.groupby(*args, **kwargs)
-        return gb.agg("sum")
-
     def _set_stats_methods(self):
         for method_name in STATS_METHOD_NAMES:
             setattr(self, method_name, self._create_stats_method(method_name))
@@ -785,15 +777,6 @@ class BoolMixin(IndexProcessorMixin):
     def __mul__(self, val):
         return self.__add__(val)
 
-    def ds_agg(self, *args, **kwargs):
-        if kwargs.pop("T", False):
-            data = self.T
-        else:
-            data = self
-        gb = data.groupby(*args, **kwargs)
-        new = gb.agg(np.logical_or.reduce)
-        return new
-
 
 class BitwiseMixin(IndexProcessorMixin):
     """
@@ -814,20 +797,6 @@ class BitwiseMixin(IndexProcessorMixin):
     _code_dict = None
     _values_display = None
     ds_agg_func = "sum"
-
-    def ds_agg(self, *args, **kwargs):
-        """Downsample Aggregation"""
-        if kwargs.pop("T", False):
-            data = self.T
-        else:
-            data = self
-
-        # breakdown separates an integer flag into bitwise codes
-        gb = data.groupby(*args, **kwargs)
-        # first sum combines lists via set+set
-        # second sum adds unique codes together
-        new = gb.agg(np.sum)
-        return new
 
     @property
     def values_display(self):
@@ -887,49 +856,6 @@ class BitwiseMixin(IndexProcessorMixin):
         """
         return int(binval, 2)
 
-    # def __add__(self, val):
-    #     if isinstance(val, self.__class__):
-    #         new_data = val.map(val.breakdown)
-    #         orig_data = self.map(val.breakdown)
-    #         updated_data = new_data.to_numpy() + orig_data.to_numpy()
-    #         updated_data = map(updated_data, np.unique)
-    #         return self._build_instance(
-    #             updated_data,
-    #             **self._get_math_kwargs(),
-    #         )
-    #     elif isinstance(val, int):
-    #         orig_data = self.map(self.breakdown)
-    #         updated_data = self.map(lambda x: x.append(val))
-    #         updated_data = updated_data.map(np.unique)
-    #         return self._build_instance(
-    #             updated_data,
-    #             **self._get_math_kwargs(),
-    #         )
-    #     else:
-    #         raise TypeError(f"Adding value of type {type(val)} is not supported.")
-
-    # def __sub__(self, val):
-    #     ### NOT READY ###
-    #     if isinstance(val, self.__class__):
-    #         new_data = val.map(bin)
-    #         orig_data = self.map(bin)
-    #         updated_data = new_data.to_numpy() - orig_data.to_numpy()
-    #         updated_data = updated_data.map(np.unique)
-    #         return self._build_instance(
-    #             updated_data,
-    #             **self._get_math_kwargs(),
-    #         )
-    #     elif isinstance(val, int):
-    #         orig_data = self.map(self.breakdown)
-    #         updated_data = orig_data.map(lambda x: x.append(val))
-    #         updated_data = updated_data.map(np.unique)
-    #         return self._build_instance(
-    #             updated_data,
-    #             **self._get_math_kwargs(),
-    #         )
-    #     else:
-    #         raise TypeError(f"Subtracting value of type {type(val)} is not supported.")
-
     def parse_code(self, val):
         """
         Parse a bitwise integer value into a dictionary of corresponding codes.
@@ -979,7 +905,8 @@ class BitwiseMixin(IndexProcessorMixin):
 
     @staticmethod
     @np.vectorize
-    def set_to_int(val):
+    def convert_set_to_int(val):
+        """Convert a set to an int by summing"""
         return sum(val)
 
     @staticmethod
@@ -989,7 +916,7 @@ class BitwiseMixin(IndexProcessorMixin):
         if isinstance(zeroth, str):
             return BitwiseMixin.bin_to_int(data_arr)
         elif isinstance(zeroth, set):
-            return BitwiseMixin.set_to_int(data_arr)
+            return BitwiseMixin.convert_set_to_int(data_arr)
         else:
             # if it's not a numeric type, this will raise an error
             try:
@@ -1056,7 +983,6 @@ class AggMixin:
 
         def wrap(*args, **kwargs) -> np.ndarray:
             arr = func(*args, **kwargs)
-            # TODO: breaks if jumbled?
             npfinfo = np.finfo(type(arr[0]))
             if hasattr(npfinfo, "precision"):
                 precision = npfinfo.precision
@@ -1244,11 +1170,7 @@ class AggMixin:
         return new_obj
 
     def spatial_downsample(
-        self,
-        factor=None,
-        col_factor=None,
-        row_name=None,
-        col_name=None,
+        self, factor=None, col_factor=None, row_name=None, col_name=None, **kwargs
     ):
         """Spatially downsamples a DataCube by a given factor.
 
@@ -1280,10 +1202,7 @@ class AggMixin:
         with an application to a non-timeseries DataFrame and isn't meaningful
         for Series at all.
         """
-        assert isinstance(factor, int) or isinstance(
-            factor, tuple
-        ), "`factor` must be an integer or a tuple of (row_factor, col_factor)"
-
+        factor = kwargs.get("row_factor", factor)
         if isinstance(factor, int):
             row_factor = factor
             if col_factor is None:
@@ -1293,11 +1212,15 @@ class AggMixin:
         elif isinstance(factor, tuple):
             row_factor = factor[0]
             col_factor = factor[1]
+        else:
+            raise (
+                ValueError(
+                    "`factor` must be an integer or a tuple of (row_factor, col_factor)"
+                )
+            )
         round_array = self._set_precision(np.array)
-        row_name = row_name or self.columns.names[1]
-        col_name = col_name or self.columns.names[2]
-        row = self.__getattribute__(row_name)
-        col = self.__getattribute__(col_name)
+        row = getattr(self, row_name, self.row_names[0])
+        col = getattr(self, col_name, self.col_names[0])
 
         if row.dtype == int and col.dtype == int:
             indexed = True
@@ -1374,15 +1297,19 @@ class AggMixin:
         return new_obj
 
     def super_sample(self, nrows, ncols):
+        """Split pixels for super sampling"""
         pass
 
     def spatial_aggregate(self, nrows, ncols):
-        # TODO: This shouldn't be a mixin for lk products, it's Cube specific
-        # with an application to a non-timeseries DataFrame and isn't
-        # meaningful for series at all.
+        """Similar to spatial downsample, but specify desired dimensions
+
+        TODO: This shouldn't be a mixin for lk products, it's Cube specific
+        with an application to a non-timeseries DataFrame and isn't
+        meaningful for series at all.
+        """
         data = self.array
-        row = self.__getattribute__(self.columns.names[1])
-        col = self.__getattribute__(self.columns.names[2])
+        row = getattr(self, self.row_names[0])
+        col = getattr(self, self.col_names[0])
         assert len(data.shape) in [2, 3], "data must be a DataFrame or a DataCube"
         # Frames
         if len(data.shape) == 2:
