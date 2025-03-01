@@ -575,7 +575,7 @@ class MathMixin(IndexProcessorMixin):
         if operand is not None:
             return operation(self.array, self._process_math_val(operand), **kwargs)
         else:
-            return operation(self.array, **kwargs)
+            return operation(self, **kwargs)
 
     def _arithmetic_uncertainty(self, operation, operand, result, correlation, **kwds):
         """
@@ -651,10 +651,18 @@ class MathMixin(IndexProcessorMixin):
 
         # Both have uncertainties (or there is no operand) so just propagate.
         # only supply the axis kwarg if one has been specified for a collapsing operation
-        axis_kwarg = dict(axis=kwds["axis"]) if "axis" in kwds else dict()
-        return self.uncertainty.propagate(
-            operation, operand, result, correlation, **axis_kwarg
-        )
+        axis_kwarg = kwds.get("axis", None)
+
+        if axis_kwarg in [1, "series"]:
+            uncertainty_copy = deepcopy(self.uncertainty)
+            uncertainty_copy = uncertainty_copy.reshape(self.shape)
+            return uncertainty_copy.propagate(
+                operation, operand, result, correlation, axis=axis_kwarg
+            )
+        else:
+            return self.uncertainty.propagate(
+                operation, operand, result, correlation, axis=axis_kwarg
+            )
 
     def _prepare_then_do_arithmetic(self, operation, operand):
         """Intermediate method called by public arithmetic (i.e. ``add``)
@@ -723,11 +731,13 @@ class StatsMixin:
     _stats_type = "data"
     ds_agg_func = "sum"
 
-    def _set_stats_methods(self):
-        for method_name in STATS_METHOD_NAMES:
-            setattr(self, method_name, self._create_stats_method(method_name))
-        for method_name in CUM_METHOD_NAMES:
-            setattr(self, method_name, self._create_cum_method(method_name))
+    def _create_cum_method(self, method_name):
+        def _method(*args, **kwargs):
+            pandas_method = getattr(super(self._pd_class, self), method_name)
+            new = pandas_method(*args, **kwargs)
+            return self._build_instance(new.to_numpy())
+
+        return _method
 
     def _create_stats_method(self, method_name):
         def _method(*args, **kwargs):
@@ -744,13 +754,11 @@ class StatsMixin:
 
         return _method
 
-    def _create_cum_method(self, method_name):
-        def _method(*args, **kwargs):
-            pandas_method = getattr(super(self._pd_class, self), method_name)
-            new = pandas_method(*args, **kwargs)
-            return self._build_instance(new.to_numpy())
-
-        return _method
+    def _set_stats_methods(self):
+        for method_name in STATS_METHOD_NAMES:
+            setattr(self, method_name, self._create_stats_method(method_name))
+        for method_name in CUM_METHOD_NAMES:
+            setattr(self, method_name, self._create_cum_method(method_name))
 
 
 class BoolMixin(IndexProcessorMixin):
