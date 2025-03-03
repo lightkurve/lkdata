@@ -2,6 +2,7 @@
 
 import re
 from copy import deepcopy
+from textwrap import dedent
 from typing import Iterable, Union
 from warnings import warn
 from .uncertainty import NDUncertainty, Uncertainty
@@ -115,9 +116,21 @@ class IndexProcessorMixin:
             if isinstance(time_indices, dict):
                 # If time_indices is given properly as a dictionary:
                 if "row" in time_indices:
-                    raise ValueError("Key 'row' is reserved for spatial dimensions.")
+                    msg = dedent(
+                        """\
+                        Key 'row' is reserved for spatial dimensions. Rename or
+                        remove the offending item from `time_indices`.
+                        """
+                    ).replace("\n", " ")
+                    raise ValueError(msg)
                 if "col" in time_indices:
-                    raise ValueError("Key 'col' is reserved for spatial dimensions.")
+                    msg = dedent(
+                        """\
+                        Key 'col' is reserved for spatial dimensions. Rename or
+                        remove the offending item from `time_indices`.
+                        """
+                    ).replace("\n", " ")
+                    raise ValueError(msg)
                 ntime_inds = len(list(time_indices.values())[0])
                 if ("time_index" not in time_indices.keys()) and (
                     "mid_index" not in time_indices.keys()
