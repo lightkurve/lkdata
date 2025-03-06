@@ -33,7 +33,7 @@ _AGG_FUNCS = {
 
 # Which methods should we port in from DataFrame, and update with our post_processing
 STATS_METHOD_NAMES = [
-    "mean",
+    # "mean",
     "median",
     "sum",
     "std",
@@ -261,7 +261,7 @@ class IndexProcessorMixin:
                 col_indices[key] = process_listlike(
                     indices=val,
                     dim_self=ncol,
-                    dim_other=ncol,
+                    dim_other=nrow,
                     label=key,
                     expand_method=np.tile,
                 )
@@ -379,8 +379,6 @@ class IndexProcessorMixin:
 
         inplace = kwargs.pop("inplace", False)
         pdobj = super(self._pd_class, self).sort_index(*args, **kwargs)
-        if inplace:
-            super(self._pd_class, self).__init__(pdobj)
         time_inds = pdobj.index.get_level_values("time_index")
         if hasattr(pdobj, "columns"):
             series_inds = pdobj.columns.get_level_values("series")
@@ -388,12 +386,14 @@ class IndexProcessorMixin:
             series_inds = None
 
         dfarray = pdobj.to_numpy()
-        if "axis" in kwargs and kwargs["axis"] in [0, "index"] or "axis" not in kwargs:
+        if ("axis" in kwargs and kwargs["axis"] in [0, "index"]) or (
+            "axis" not in kwargs
+        ):
             dfarray = dfarray.reshape((self.ntime, self.nrow, self.ncol))
         if inplace:
             self.array = dfarray
 
-        if hasattr(self, "uncertainty"):
+        if hasattr(self, "uncertainty") and bool(self.uncertainty):
             uncertainty_array = self.uncertainty.array
             uncertainty_array = uncertainty_array.reshape(self.shape)
             uncertainty_array = uncertainty_array[time_inds]
@@ -405,6 +405,7 @@ class IndexProcessorMixin:
             else:
                 init_kwds["uncertainty"] = uncertainty_array
         if inplace:
+            super(self._pd_class, self).__init__(pdobj)
             self._include_convenience_index()
             if hasattr(self, "columns"):
                 self._include_convenience_columns()
@@ -588,7 +589,8 @@ class MathMixin(IndexProcessorMixin):
         if operand is not None:
             return operation(self.array, self._process_math_val(operand), **kwargs)
         else:
-            return operation(self, **kwargs)
+            # Collapsing functions should operate on pd.DataFrame-like array
+            return operation(self.to_numpy(), **kwargs)
 
     def _arithmetic_uncertainty(self, operation, operand, result, correlation, **kwds):
         """
@@ -766,6 +768,42 @@ class StatsMixin:
             # return self.stats_post_process(pandas_method(*args, **kwargs), axis=axis)
 
         return _method
+
+    def _get_median_uncertainty(self, result, axis):
+        """Get the uncertainty of the data along the given axis."""
+        # ! Work In Progress
+        uncertainty = np.zeros_like(result)
+        orig = self.to_numpy()
+        orig_uncertainty = self.uncertainty.reshape(self.shape)
+        for i, line in enumerate(result):
+            if axis == 0:
+                iloc = np.where(orig[:, i], line)
+                uncertainty[i] = orig_uncertainty.array[iloc, i]
+            elif axis == 1:
+                iloc = np.where(orig[i, :], line)
+                uncertainty[i] = orig_uncertainty.array[i, iloc]
+            else:
+                iloc = np.where(orig, line)
+                uncertainty[i] = orig_uncertainty.array[iloc]
+        return uncertainty
+
+    def median_dev(self, **kwargs):
+        """Get the median of the data along the given axis.
+
+        See np.ndarray.median for more details.
+
+        ! Work In Progress
+        """
+        axis = kwargs.pop("axis", None)
+        result = np.median(self.to_numpy(), axis=axis, **kwargs)
+        ### Uncertainty should correspond to the flux median
+        # uncertainty = self._get_median_uncertainty(result, axis)
+
+        uncertainty = None
+        init_kwds = {"uncertainty": uncertainty}
+        init_kwds.update(self._get_math_kwargs())
+        result = self.stats_post_process(result, axis=axis, **init_kwds)
+        return result
 
     def _set_stats_methods(self):
         for method_name in STATS_METHOD_NAMES:

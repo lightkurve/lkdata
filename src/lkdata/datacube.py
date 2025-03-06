@@ -270,6 +270,10 @@ class Cube(
     def array(self):
         return self._array
 
+    @array.setter
+    def array(self, val):
+        self._array = np.array(val)
+
     def describe_cube(self, **printoptions):
         """Print a description of the Cube instance.
 
