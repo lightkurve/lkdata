@@ -87,7 +87,9 @@ class BitSet(MutableSet, Hashable):
         return bool(int(self._set))
 
     def __repr__(self):
-        return f"BitSet {repr(self._set)}"
+        lset = list(self._set)
+        lset.sort()
+        return f"BitSet {repr(lset).replace('[', '{').replace(']', '}')}"
 
     def __getattr__(self, attr):
         return getattr(self._set, attr)
@@ -152,7 +154,11 @@ class BitSet(MutableSet, Hashable):
             return BitSet(self._bitset_method("__rxor__", other))
 
     def __str__(self):
-        return str(self._set)
+        if self._set:
+            ordered = list(self._set)
+            ordered.sort()
+            return str(ordered).replace("[", "{").replace("]", "}")
+        return "{}"
 
     def __sub__(self, value):
         valset = self.breakdown(value)

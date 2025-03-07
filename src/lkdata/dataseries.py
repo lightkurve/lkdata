@@ -37,7 +37,7 @@ class Series(
         index = self.parse_index(index, time_indices, data.shape[0])
 
         for key, val in kwargs.items():
-            if key not in ("ntime", "index", "dtype"):
+            if key not in ("ntime", "index", "dtype", "name", "copy"):
                 self._user_kwargs.append(key)
                 self._metadata.append(key)
                 setattr(self, key, val)
@@ -295,6 +295,7 @@ class BitwiseSeries(BitwiseMixin, Series):
         self._user_kwargs = []
         kwargs["codes"] = kwargs.get("codes", {})
         self.codes = kwargs["codes"]
+        display_as = kwargs.pop("values_display", None) or display_as
         super().__init__(
             data,
             index=index,

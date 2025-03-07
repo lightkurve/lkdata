@@ -614,6 +614,7 @@ class BitwiseCube(BitwiseMixin, Cube):
         if code_dict is None:
             code_dict = {}
         self.codes = code_dict
+        display_as = kwargs.pop("values_display", None) or display_as
         super().__init__(
             data, time_indices, row_indices, col_indices, dtype=object, **kwargs
         )

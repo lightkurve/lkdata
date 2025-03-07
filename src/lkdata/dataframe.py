@@ -294,8 +294,11 @@ class BitwiseFrame(BitwiseMixin, Frame):
         self._user_kwargs = []
         kwargs["codes"] = kwargs.get("codes", {})
         self.codes = kwargs["codes"]
-        values_display = kwargs.pop("display_as", "bitwise")
-        super().__init__(data, *args, dtype=object, **kwargs)
+        values_display = kwargs.pop("values_display", None) or kwargs.pop(
+            "display_as", "bitwise"
+        )
+        kwargs.pop("dtype", None)
+        super().__init__(data, *args[1:], dtype=object, **kwargs)
         self.values_display = values_display  # set after dataframe init
         self._user_kwargs.append("values_display")
 

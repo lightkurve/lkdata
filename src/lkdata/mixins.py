@@ -920,7 +920,8 @@ class BitwiseMixin(IndexProcessorMixin):
         Parse a bitwise integer value into a dictionary of corresponding codes.
         """
         # codes = self.breakdown(val)
-        codes = val
+        codes = list(val)
+        codes.sort()
         str_codes = {code: self.codes.get(int(code), code) for code in codes}
         return str_codes
 
@@ -1278,8 +1279,12 @@ class AggMixin:
                 )
             )
         round_array = self._set_precision(np.array)
-        row = getattr(self, row_name, self.row_names[0])
-        col = getattr(self, col_name, self.col_names[0])
+
+        row_name = row_name or self.row_names[0]
+        row = getattr(self, row_name)
+
+        col_name = col_name or self.col_names[0]
+        col = getattr(self, col_name)
 
         if row.dtype == int and col.dtype == int:
             indexed = True
@@ -1315,21 +1320,19 @@ class AggMixin:
         count = gb[int(self.index.get_level_values(0)[0])].count()
         bin_mask = np.asarray(count == row_factor * col_factor)[:, 0]
 
-        new_index_left = self.columns.to_frame().groupby(
+        new_columns_left = self.columns.to_frame().groupby(
             [bin_edges_left_row, bin_edges_left_col], observed=False
         )
         if indexed:
             # If the old indices weren't positional, use min index for each bin for new index
-            new_index_left = new_index_left.min().reset_index(drop=True)
+            new_columns_left = new_columns_left.min().reset_index(drop=True)
         else:
             # If old indices were positional, use mean of bin for new index
-            new_index_left = new_index_left.mean().reset_index(drop=True)
+            new_columns_left = new_columns_left.mean().reset_index(drop=True)
 
-        new_index = new_index_left.set_index(self.columns.names).index
+        new_columns = new_columns_left.set_index(self.columns.names).index[bin_mask]
 
-        new_data = self.ds_agg(
-            [bin_edges_left_row, bin_edges_left_col], T=True, observed=False
-        )
+        new_data = gb.agg(self.ds_agg_func)[bin_mask]
 
         if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
             error = self.uncertainty.array.reshape(self.shape)
@@ -1343,11 +1346,11 @@ class AggMixin:
             error = None
 
         new_obj = self._build_instance(
-            new_data[bin_mask].T.to_numpy(),
-            nrow=len(new_index[bin_mask].get_level_values(row_name).unique()),
-            ncol=len(new_index[bin_mask].get_level_values(col_name).unique()),
+            new_data.T.to_numpy(),
+            nrow=len(new_columns.get_level_values(row_name).unique()),
+            ncol=len(new_columns.get_level_values(col_name).unique()),
             index=self.index,
-            columns=new_index[bin_mask],
+            columns=new_columns,
         )
 
         if error is not None:
