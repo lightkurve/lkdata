@@ -33,7 +33,7 @@ _AGG_FUNCS = {
 
 # Which methods should we port in from DataFrame, and update with our post_processing
 STATS_METHOD_NAMES = [
-    # "mean",
+    "mean",
     "median",
     "sum",
     "std",
@@ -671,6 +671,8 @@ class MathMixin(IndexProcessorMixin):
         if axis_kwarg in [1, "series"]:
             uncertainty_copy = deepcopy(self.uncertainty)
             uncertainty_copy = uncertainty_copy.reshape(self.shape)
+            parentdata = self.to_numpy()
+            uncertainty_copy.parent_nddata = parentdata
             return uncertainty_copy.propagate(
                 operation, operand, result, correlation, axis=axis_kwarg
             )
@@ -795,6 +797,8 @@ class StatsMixin:
         ! Work In Progress
         """
         axis = kwargs.pop("axis", None)
+        if axis == 2:
+            raise (ValueError("For Cubes, axis=2 is not supported."))
         result = np.median(self.to_numpy(), axis=axis, **kwargs)
         ### Uncertainty should correspond to the flux median
         # uncertainty = self._get_median_uncertainty(result, axis)

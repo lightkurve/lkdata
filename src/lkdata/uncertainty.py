@@ -124,7 +124,7 @@ class NDUncertainty(metaclass=ABCMeta):
         self.parent_nddata = None  # no associated NDData - until it is set!
 
     def __bool__(self):
-        return (self.array is not None) and (len(self.array) > 0)
+        return (self.array is not None) and (len(np.atleast_1d(self.array)) > 0)
 
     @property
     @abstractmethod

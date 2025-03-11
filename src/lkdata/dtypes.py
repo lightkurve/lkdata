@@ -84,7 +84,7 @@ class BitSet(MutableSet, Hashable):
 
     def __bool__(self):
         # True if sum of values is nonzero
-        return bool(int(self._set))
+        return bool(self._set)
 
     def __repr__(self):
         lset = list(self._set)

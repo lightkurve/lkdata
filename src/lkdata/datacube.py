@@ -238,6 +238,9 @@ class Cube(
     def _repr_html_(self):
         # TODO: Something is broken here with multiple time indices
         # TODO: the name "row" is breaking
+        if self.ntime == 0:
+            return repr(self)
+
         if hasattr(self, "_styler"):
             out0 = self.styler
         else:
@@ -386,7 +389,12 @@ class Cube(
         """Statistics post processer to format return data."""
         axis = kwargs.pop("axis")
         uncertainty = kwargs.pop("uncertainty", None)
-        if axis in [0, "time"]:
+        if axis is None:
+            if uncertainty:
+                return result, uncertainty
+            else:
+                return result
+        elif axis in [0, "time"]:
             if uncertainty:
                 return (
                     result.reshape(self.nrow, self.ncol),
