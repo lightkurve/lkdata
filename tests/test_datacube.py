@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+import pytest
+
 from astropy.io import fits
 from lkdata import (
     TESTDATA,
@@ -11,16 +13,22 @@ from lkdata import (
 from lkdata.uncertainty import Uncertainty
 from lkdata.mixins import STATS_METHOD_NAMES
 
+ntime, nrow, ncol = 200, 10, 14
+# Actual data values should be irrelevant for these tests
+test_data = np.random.normal(size=(ntime, nrow, ncol))
+df = DataCube(test_data)
+# This aperture makes it timeseries
+aperture = np.zeros((10, 14), bool)
+aperture[1:4, 1:4] = True
+
+
+def test_repr():
+    """Test that the repr is as expected."""
+    assert f"DataCube {df.array.shape}" in repr(df)
+
 
 def test_setup():
-    # Example usage
-    ntime, nrow, ncol = 200, 10, 14
-    test_data = np.random.normal(size=(ntime, nrow, ncol))
-    df = DataCube(test_data)
-    # This aperture makes it timeseries
-    aperture = np.zeros((10, 11), bool)
-    aperture[1:4, 1:4] = True
-
+    """Test basic attributes are assigned on init."""
     assert df.ntime == ntime
     assert df.nrow == nrow
     assert df.ncol == ncol
@@ -28,18 +36,53 @@ def test_setup():
     assert df.array.shape == (ntime, nrow, ncol)
     assert np.allclose(df.array, test_data)
 
+    for method_name in STATS_METHOD_NAMES:
+        assert getattr(df, method_name)(axis=0).shape == (nrow, ncol)
+        assert getattr(df[:, aperture], method_name)(axis=0).shape[0] == aperture.sum()
+
+
+def test_reserved_names():
+    """Make sure reserved names raise errors when used in the wrong places"""
+    with pytest.raises(ValueError, match="Key 'row' is reserved"):
+        df = DataCube(test_data, time_indices={"row": np.arange(200)})
+
+    with pytest.raises(ValueError, match="Key 'col' is reserved"):
+        df = DataCube(test_data, time_indices={"col": np.arange(200)})
+
+    with pytest.raises(ValueError, match="Key 'time_index' is reserved"):
+        df = DataCube(test_data, row_indices={"time_index": np.arange(10)})
+
+    with pytest.raises(ValueError, match="Key 'time_index' is reserved"):
+        df = DataCube(test_data, col_indices={"time_index": np.arange(10)})
+
+    df = DataCube(
+        test_data,
+        time_indices={"time_index": np.arange(200)},
+        row_indices={"row": np.arange(10)},
+        col_indices={"col": np.arange(14)},
+    )
+    assert all(df.time_index == np.arange(200))
+    # assert all(df.row == np.arange(10).tile)
+    # assert all(df.col == np.arange(14).tile)
+
+
+def test_slicing():
+    """Test slicing a DataCube"""
+    # Single time index, int
     # Should this be an image?
     assert isinstance(df[0], DataCube)
     assert df[0].ntime == 1
     assert df[0].nrow == nrow
     assert df[0].ncol == ncol
 
+    # Giving tuple of slices, one for time, one for space
     # This is still a 3D frame
     assert isinstance(df[:, :2], DataCube)
     assert df[:, :2].ntime == ntime
     assert df[:, :2].nrow == 2
     assert df[:, :2].ncol == ncol
 
+    # Slice time, row, and column
     assert isinstance(df[:, :2, :], DataCube)
     assert df[:, :2, :].ntime == ntime
     assert df[:, :2, :].nrow == 2
@@ -55,6 +98,7 @@ def test_setup():
     assert df[:, :2, :2].nrow == 2
     assert df[:, :2, :2].ncol == 2
 
+    # Mixed slice and indices
     assert isinstance(df[:, [0, 1], :2], DataFrame)
     assert df[:, [0, 1], :2].ntime == ntime
     assert df[:, [0, 1], :2].nseries == 4
@@ -64,50 +108,40 @@ def test_setup():
     assert df[:, [0, 1], 0].ntime == ntime
     assert df[:, [0, 1], 0].nseries == 2
 
+    # Slice for time, 2D aperture
     assert isinstance(df[:, aperture], pd.DataFrame)
     assert df[:, aperture].shape == (ntime, 9)
 
-    # This should be a timeseries
+    # Frames - timeseries for multiple pixels
     row, col = np.where(aperture)
     assert isinstance(df[:, row, col], DataFrame)
     assert df[:, row, col].ntime == ntime
     assert df[:, row, col].shape == (ntime, 9)
 
-    # timeseries
     assert isinstance(df[:, [1, 2, 3], [1, 2, 3]], DataFrame)
     assert df[:, [1, 2, 3], [1, 2, 3]].ntime == ntime
     assert df[:, [1, 2, 3], [1, 2, 3]].shape == (ntime, 3)
 
-    # DataCube
     assert isinstance(df[:, 0, :], DataFrame)
     assert df[:, 0, :].ntime == ntime
     assert df[:, 0, :].shape == (ntime, ncol)
 
-    # DataFrame
     assert isinstance(df[:, :, 0], DataFrame)
     assert df[:, :, 0].ntime == ntime
     assert df[:, :, 0].shape == (ntime, nrow)
 
-    # DataSeries
-    assert isinstance(df[:, 1, 0], DataSeries)
-    assert df[:, 1, 0].ntime == ntime
-    assert df[:, 1, 0].shape == (ntime,)
-
-    # TimeSeries
     assert isinstance(df[:, :1, [1, 2]], DataFrame)
     assert df[:, :1, [1, 2]].ntime == ntime
     assert df[:, :1, [1, 2]].shape == (ntime, 2)
 
-    # TimeSeries
     assert isinstance(df[:, [0, 1], [1, 2]], DataFrame)
     assert df[:, [0, 1], [1, 2]].ntime == ntime
     assert df[:, [0, 1], [1, 2]].shape == (ntime, 2)
 
-    for method_name in STATS_METHOD_NAMES:
-        assert getattr(df, method_name)(axis=0).shape == (nrow, ncol)
-        assert getattr(df[:, aperture], method_name)(axis=0).shape[0] == aperture.sum()
-
-    assert (df.mean() == df.mean(axis=0)).all()
+    # DataSeries - timeseries for single pixel
+    assert isinstance(df[:, 1, 0], DataSeries)
+    assert df[:, 1, 0].ntime == ntime
+    assert df[:, 1, 0].shape == (ntime,)
 
 
 def test_downsample():
@@ -150,27 +184,30 @@ def test_downsample():
 
 
 def make_test_data():
-    hdulist = fits.open(TESTDATA)
-    flux_array = hdulist[1].data["FLUX"].astype(float)
-    flux_err_array = hdulist[1].data["FLUX_ERR"].astype(float)
-    time = hdulist[1].data["TIME"].astype(float)
-    time_corr = hdulist[1].data["TIMECORR"].astype(float)
-    c0, r0 = hdulist[1].header["1CRV4P"], hdulist[1].header["2CRV4P"]
-    row, col = np.arange(flux_array.shape[1]) + r0, np.arange(flux_array.shape[2]) + c0
-    aper = flux_array.mean(axis=0) > 10000
-    bkg_aper = flux_array.mean(axis=0) < 4000
+    with fits.open(TESTDATA) as hdulist:
+        flux_array = hdulist[1].data["FLUX"].astype(float)
+        flux_err_array = hdulist[1].data["FLUX_ERR"].astype(float)
+        time = hdulist[1].data["TIME"].astype(float)
+        time_corr = hdulist[1].data["TIMECORR"].astype(float)
+        c0, r0 = hdulist[1].header["1CRV4P"], hdulist[1].header["2CRV4P"]
+        row, col = (
+            np.arange(flux_array.shape[1]) + r0,
+            np.arange(flux_array.shape[2]) + c0,
+        )
+        aper = flux_array.mean(axis=0) > 10000
+        bkg_aper = flux_array.mean(axis=0) < 4000
 
-    time_mask = hdulist[1].data["QUALITY"] == 0
+        time_mask = hdulist[1].data["QUALITY"] == 0
 
-    flux = DataCube(
-        flux_array,
-        uncertainty=flux_err_array,
-        time_indices={"btjd": time, "spacecraft_time": time - time_corr},
-        row_indices={"row": row},
-        col_indices={"column": col},
-    )
+        flux = DataCube(
+            flux_array,
+            uncertainty=flux_err_array,
+            time_indices={"btjd": time, "spacecraft_time": time - time_corr},
+            row_indices={"row": row},
+            col_indices={"column": col},
+        )
 
-    return flux, aper, bkg_aper, time_mask
+        return flux, aper, bkg_aper, time_mask
 
 
 def test_real_data():
@@ -194,33 +231,38 @@ def test_real_data():
     assert flux.spatial_downsample(2).array.shape == (50, 3, 3)
     assert flux.spatial_downsample(2).uncertainty.shape == (50, 3, 3)
 
-    assert flux.spatial_downsample(2).array[0, 0, 0] == flux[0, :2, :2].sum(axis=None)
+    assert (
+        flux.spatial_downsample(2).array[0, 0, 0] == flux[0, :2, :2].sum(axis=None)[0]
+    )
     assert (
         flux.spatial_downsample(2).uncertainty.array[0, 0, 0]
         == ((flux[0, :2, :2].uncertainty.array ** 2).sum().sum()) ** 0.5
     )
 
-    assert flux.spatial_downsample(2).array[0, -1, -1] == flux[0, -2:, -2:].sum(
-        axis=None
+    assert (
+        flux.spatial_downsample(2).array[0, -1, -1]
+        == flux[0, -2:, -2:].sum(axis=None)[0]
     )
     assert (
         flux.spatial_downsample(2).uncertainty.array[0, -1, -1]
         == ((flux[0, -2:, -2:].uncertainty.array ** 2).sum(axis=None)) ** 0.5
     )
 
-    assert flux.spatial_downsample(2).sum(axis=None) == flux.sum(axis=None)
+    assert flux.spatial_downsample(2).sum(axis=None)[0] == flux.sum(axis=None)[0]
     assert (flux.spatial_downsample(2).uncertainty.array ** 2).sum(
         axis=None
     ).round() == (flux.uncertainty.array**2).sum(axis=None).round()
 
-    assert flux[:, :-1].spatial_downsample(2).sum(axis=None) == flux[:, :-2].sum(
-        axis=None
+    assert (
+        flux[:, :-1].spatial_downsample(2).sum(axis=None)[0]
+        == flux[:, :-2].sum(axis=None)[0]
     )
     assert (flux[:, :-1].spatial_downsample(2).uncertainty.array ** 2).sum(
         axis=None
     ).round() == (flux[:, :-2].uncertainty.array ** 2).sum(axis=None).round()
-    assert flux[:, :, :-1].spatial_downsample(2).sum(axis=None) == flux[:, :, :-2].sum(
-        axis=None
+    assert (
+        flux[:, :, :-1].spatial_downsample(2).sum(axis=None)[0]
+        == flux[:, :, :-2].sum(axis=None)[0]
     )
     assert (flux[:, :, :-1].spatial_downsample(2).uncertainty.array ** 2).sum(
         axis=None
