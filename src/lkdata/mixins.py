@@ -378,8 +378,10 @@ class IndexProcessorMixin:
         init_kwds = self.user_kwargs.copy()
 
         inplace = kwargs.pop("inplace", False)
+        level = kwargs.get("level", None)
         pdobj = super(self._pd_class, self).sort_index(*args, **kwargs)
-        time_inds = pdobj.index.get_level_values("time_index")
+        sort_inds = np.argsort(self.index.get_level_values(level))
+
         if hasattr(pdobj, "columns"):
             series_inds = pdobj.columns.get_level_values("series")
         else:
@@ -396,7 +398,7 @@ class IndexProcessorMixin:
         if hasattr(self, "uncertainty") and bool(self.uncertainty):
             uncertainty_array = self.uncertainty.array
             uncertainty_array = uncertainty_array.reshape(self.shape)
-            uncertainty_array = uncertainty_array[time_inds]
+            uncertainty_array = uncertainty_array[sort_inds]
             if series_inds is not None:
                 uncertainty_array = uncertainty_array[:, series_inds]
             uncertainty_array = uncertainty_array.reshape(dfarray.shape)
@@ -1116,10 +1118,12 @@ class AggMixin:
         is preserved in the new index.
         """
         round_arr = AggMixin._set_precision(np.array)
-        dfcopy = self.iloc[:]
         # Get the values of the index on which to downsample
-        index = dfcopy.index.get_level_values(level=level)
-        index_names = list(dfcopy.index.names)
+        index = self.index.get_level_values(level=level)
+        index_names = list(self.index.names)
+
+        sorted_inds = np.argsort(index)
+        dfcopy = self.iloc[sorted_inds]
 
         try:
             index = round_arr(index)
@@ -1148,7 +1152,7 @@ class AggMixin:
         new = gb.agg(self.ds_agg_func)[bin_mask]
 
         if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
-            error = self.uncertainty.array.reshape(self.shape)
+            error = self.uncertainty.array[sorted_inds].reshape(self.shape)
             error = pd.DataFrame(error**2)
             error = error.groupby(bin_edges_left, observed=False)
             error = error.agg("sum")[bin_mask].to_numpy()

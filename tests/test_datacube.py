@@ -36,9 +36,13 @@ def test_setup():
     assert df.array.shape == (ntime, nrow, ncol)
     assert np.allclose(df.array, test_data)
 
+    # Test overridden pandas methods return correct shapes
+    # Data products return tuples for and uncertainty
     for method_name in STATS_METHOD_NAMES:
-        assert getattr(df, method_name)(axis=0).shape == (nrow, ncol)
-        assert getattr(df[:, aperture], method_name)(axis=0).shape[0] == aperture.sum()
+        assert getattr(df, method_name)(axis=0)[0].shape == (nrow, ncol)
+        assert (
+            getattr(df[:, aperture], method_name)(axis=0)[0].shape[0] == aperture.sum()
+        )
 
 
 def test_reserved_names():
@@ -144,25 +148,31 @@ def test_slicing():
     assert df[:, 1, 0].shape == (ntime,)
 
 
+ntime, nrow, ncol = 200, 10, 14  # avoid square data shapes
+test_data = np.ones((ntime, nrow, ncol))
+df = DataCube(test_data, uncertainty=test_data)
+
+
 def test_downsample():
-    # Example usage
-    ntime, nrow, ncol = 200, 10, 14
-    test_data = np.ones((ntime, nrow, ncol))
-    test_data = np.ones((ntime, nrow, ncol))
-    df = DataCube(test_data, uncertainty=test_data)
-    # df_err = ErrorCube(test_data)
+    """Test downsampling methods"""
     # Time downsample
     assert (df.downsample(2).array == 2).all()
+    # Uncetainty adds in quadrature
     assert (df.downsample(4).uncertainty.array == 2).all()
 
-    # Spatial downsample
+    # Spatial downsample data
     assert df.spatial_downsample(2).array.shape == (200, 5, 7)
     assert df.spatial_downsample((2, 1)).array.shape == (200, 5, 14)
     assert df.spatial_downsample((1, 2)).array.shape == (200, 10, 7)
 
+    # A spatial factor of 2 combines 4 pixels (a 2x2 grid)
     assert (df.spatial_downsample(2).array == 4).all()
-    assert all(df.spatial_downsample((2, 1)) == 2)
+    # Specify a different factor for row and column
+    assert all(df.spatial_downsample((2, 1)) == 2)  # tuple input
+    assert all(df.spatial_downsample(2, 1) == 2)  # args input
+    assert all(df.spatial_downsample(row_factor=2, col_factor=1) == 2)  # kwargs input
     assert all(df.spatial_downsample((1, 2)) == 2)
+    # Downsampling should drop data which don't have enough pixels in the bin
     assert df[:, :, :-1].spatial_downsample(2).array.shape == (200, 5, 6)
     assert (
         df[:, :, :-1].spatial_downsample(2).array
@@ -170,6 +180,7 @@ def test_downsample():
     ).all()
     assert df[:, :-1, :].spatial_downsample(2).array.shape == (200, 4, 7)
 
+    # Spatial downsample uncertainty
     assert df.spatial_downsample(2).uncertainty.array.shape == (200, 5, 7)
     assert (df.spatial_downsample(2).uncertainty.array == 2).all()
     assert df[:, :, :-1].spatial_downsample(2).uncertainty.array.shape == (200, 5, 6)
@@ -183,34 +194,64 @@ def test_downsample():
     assert (df.spatial_aggregate(5, 7).uncertainty.array.round() == 2).all()  #
 
 
+def test_downsample_order():
+    """Ensure that downsampling sorts on the level and isn't affected by order
+    of operations.
+    """
+    t0 = np.linspace(0.1, 10, 99)
+    t1 = np.append(t0[::3], [t0[1::3], t0[2::3]])
+    range_repeated = np.repeat(range(1, 4), 33).reshape(99, 1, 1)
+    cube = DataCube(
+        range_repeated, uncertainty=range_repeated, time_indices={"t0": t0, "t1": t1}
+    )
+    assert all(
+        cube.downsample(3, level="t1").sort_index(level="t1")
+        == cube.sort_index(level="t1").downsample(3, level="t1")
+    )
+
+    ds = cube.downsample(nframes=33, level="t0")
+    result = ds.uncertainty.array.flatten()
+    assert all(ds.to_numpy().flatten() == np.array([i * 33 for i in range(1, 4)]))
+    assert all(result == np.array([(i**2 * 33) ** 0.5 for i in range(1, 4)]))
+    ds = cube.downsample(nframes=33, level="t1")
+    result = ds.uncertainty.array.flatten()
+    assert all(ds.to_numpy().flatten() == (1 + 2 + 3) * 11)
+    assert all(result == ((1**2 + 2**2 + 3**2) * 11) ** 0.5)
+
+
 def make_test_data():
+    """Make a Cube from real data for testing."""
     with fits.open(TESTDATA) as hdulist:
-        flux_array = hdulist[1].data["FLUX"].astype(float)
-        flux_err_array = hdulist[1].data["FLUX_ERR"].astype(float)
-        time = hdulist[1].data["TIME"].astype(float)
-        time_corr = hdulist[1].data["TIMECORR"].astype(float)
-        c0, r0 = hdulist[1].header["1CRV4P"], hdulist[1].header["2CRV4P"]
-        row, col = (
-            np.arange(flux_array.shape[1]) + r0,
-            np.arange(flux_array.shape[2]) + c0,
-        )
-        aper = flux_array.mean(axis=0) > 10000
-        bkg_aper = flux_array.mean(axis=0) < 4000
+        if hasattr(hdulist[1], "data"):
+            flux_array = hdulist[1].data["FLUX"].astype(float)
+            flux_err_array = hdulist[1].data["FLUX_ERR"].astype(float)
+            time = hdulist[1].data["TIME"].astype(float)
+            time_corr = hdulist[1].data["TIMECORR"].astype(float)
+            c0, r0 = hdulist[1].header["1CRV4P"], hdulist[1].header["2CRV4P"]
+            row, col = (
+                np.arange(flux_array.shape[1]) + r0,
+                np.arange(flux_array.shape[2]) + c0,
+            )
+            aper = flux_array.mean(axis=0) > 10000
+            bkg_aper = flux_array.mean(axis=0) < 4000
 
-        time_mask = hdulist[1].data["QUALITY"] == 0
+            time_mask = hdulist[1].data["QUALITY"] == 0
 
-        flux = DataCube(
-            flux_array,
-            uncertainty=flux_err_array,
-            time_indices={"btjd": time, "spacecraft_time": time - time_corr},
-            row_indices={"row": row},
-            col_indices={"column": col},
-        )
+            flux = DataCube(
+                flux_array,
+                uncertainty=flux_err_array,
+                time_indices={"btjd": time, "spacecraft_time": time - time_corr},
+                row_indices={"row": row},
+                col_indices={"column": col},
+            )
 
-        return flux, aper, bkg_aper, time_mask
+            return flux, aper, bkg_aper, time_mask
+        else:
+            raise AttributeError(f"HDUList from {TESTDATA} has no data.")
 
 
 def test_real_data():
+    """Test methods on real data"""
     flux, aper, _, _ = make_test_data()
 
     assert isinstance(flux, DataCube)
@@ -270,6 +311,7 @@ def test_real_data():
 
 
 def test_bool_cube():
+    """Test BoolCube methods"""
     true_bool_array = np.ones(32).reshape((2, 4, 4)).astype(bool)
     assert "BoolCube (2, 4, 4)" in repr(BoolCube(true_bool_array))
     false_bool_array = ~true_bool_array
@@ -290,6 +332,7 @@ def test_bool_cube():
 
 
 def test_bit_cube():
+    """Test BitwiseCube methods"""
     from lkdata import BitwiseCube, BitwiseFrame, BitwiseSeries
 
     def strip(string):
