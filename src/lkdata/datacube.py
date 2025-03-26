@@ -536,7 +536,7 @@ class DataCube(
         self._set_stats_methods()
 
     def __repr__(self):
-        return f"📘 DataCube {self.ntime, self.nrow, self.ncol}"
+        return f"📘 DataCube {self.ntime, self.nrow, self.ncol}, Uncertainty: {bool(self.uncertainty)}"
 
 
 class BoolCube(

@@ -802,11 +802,18 @@ class StatsMixin:
         if axis == 2:
             raise (ValueError("For Cubes, axis=2 is not supported."))
         result = np.median(self.to_numpy(), axis=axis, **kwargs)
-        ### Uncertainty should correspond to the flux median
-        # uncertainty = self._get_median_uncertainty(result, axis)
 
-        uncertainty = None
-        init_kwds = {"uncertainty": uncertainty}
+        # The uncertainty of the median is related to the uncertainty of the mean by a scalar factor
+        _, init_kwds = self._arithmetic(
+            np.mean, operand=None, data_axis=axis, uncertainty_axis=axis, **kwargs
+        )
+        uncertainty_mean = init_kwds["uncertainty"]
+
+        N = self.shape[axis]
+        var_ratio = (4 * (N - 1) / 2) / (
+            np.pi * N
+        )  # ratio of the variance of the mean to the variance of the median
+        init_kwds["uncertainty"].array = uncertainty_mean.array / var_ratio**0.5
         init_kwds.update(self._get_math_kwargs())
         result = self.stats_post_process(result, axis=axis, **init_kwds)
         return result
@@ -1202,9 +1209,7 @@ class AggMixin:
             except ValueError:
                 # Non-linear time indices (possibly folded)
                 # -> possible repeat mid_index when forced to int
-                new_index.set_levels(
-                    new_index.get_level_values("time_index"), level="time_index"
-                )
+                pass
             # Rename "time_index" to "mid_index" to reflect downsampling
             new_index = new_index.rename({"time_index": "mid_index"})
 
@@ -1521,6 +1526,23 @@ class ConvenienceMixins:
             if (key not in self._metadata) and (key != "columns"):
                 self._metadata.append(key)
                 setattr(self, key, index)
+
+    def fillna(self, *args, **kwargs):
+        """Overwrite pandas method to return lk object"""
+        pandas_method = getattr(super(self._pd_class, self), "fillna")
+        new = pandas_method(*args, **kwargs)
+        if hasattr(self, "ncol"):
+            return self.from_pandas(
+                new,
+                nrow=self.nrow,
+                ncol=self.ncol,
+                **self.user_kwargs,
+            )
+        else:
+            return self.from_pandas(
+                new,
+                **self.user_kwargs,
+            )
 
     def fold(
         self,
