@@ -219,6 +219,9 @@ class IndexProcessorMixin:
                     f"Shape of {label} does not match shape of data given."
                 )
 
+        if isinstance(row_indices, int) and nrow is not None and nrow > 0:
+            row_indices = {"row": np.arange(row_indices, row_indices + nrow)}
+
         if isinstance(row_indices, Iterable) and not isinstance(row_indices, dict):
             row = process_listlike(
                 indices=row_indices,
@@ -228,8 +231,8 @@ class IndexProcessorMixin:
                 expand_method=np.repeat,
             )
             row_indices = {"row": row}
-        row_indices = row_indices or {}
 
+        row_indices = row_indices or {}
         if isinstance(row_indices, dict):
             if "time_index" in row_indices:
                 raise ValueError("Key 'time_index' is reserved for time indices'")
@@ -241,6 +244,9 @@ class IndexProcessorMixin:
                     label=key,
                     expand_method=np.repeat,
                 )
+
+        if isinstance(col_indices, int) and ncol is not None and ncol > 0:
+            col_indices = {"col": np.arange(col_indices, col_indices + ncol)}
 
         if isinstance(col_indices, Iterable) and not isinstance(col_indices, dict):
             col = process_listlike(
@@ -331,7 +337,7 @@ class IndexProcessorMixin:
             parsed_columns = pd.DataFrame()
 
         # If the column names weren't parseable,
-        # and the given row and col indices were empty
+        # and the row and col indices were empty or not given
         if (len(row_indices) == 0) or (len(col_indices) == 0):
             # Generate indices if both nrow and ncol are given
             if (nrow > 0) and (ncol > 0) and continuous:
