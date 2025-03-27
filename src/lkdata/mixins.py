@@ -34,7 +34,6 @@ _AGG_FUNCS = {
 # Which methods should we port in from DataFrame, and update with our post_processing
 STATS_METHOD_NAMES = [
     "mean",
-    "median",
     "sum",
     "std",
     "var",
@@ -773,47 +772,28 @@ class StatsMixin:
 
         return _method
 
-    def _get_median_uncertainty(self, result, axis):
-        """Get the uncertainty of the data along the given axis."""
-        # ! Work In Progress
-        uncertainty = np.zeros_like(result)
-        orig = self.to_numpy()
-        orig_uncertainty = self.uncertainty.reshape(self.shape)
-        for i, line in enumerate(result):
-            if axis == 0:
-                iloc = np.where(orig[:, i], line)
-                uncertainty[i] = orig_uncertainty.array[iloc, i]
-            elif axis == 1:
-                iloc = np.where(orig[i, :], line)
-                uncertainty[i] = orig_uncertainty.array[i, iloc]
-            else:
-                iloc = np.where(orig, line)
-                uncertainty[i] = orig_uncertainty.array[iloc]
-        return uncertainty
-
-    def median_dev(self, **kwargs):
+    def median(self, **kwargs):
         """Get the median of the data along the given axis.
 
         See np.ndarray.median for more details.
 
-        ! Work In Progress
         """
         axis = kwargs.pop("axis", None)
         if axis == 2:
             raise (ValueError("For Cubes, axis=2 is not supported."))
         result = np.median(self.to_numpy(), axis=axis, **kwargs)
 
-        # The uncertainty of the median is related to the uncertainty of the mean by a scalar factor
+        # The uncertainty of the median is related to the uncertainty of the
+        # mean by a scalar factor modulated by the number of data points
         _, init_kwds = self._arithmetic(
             np.mean, operand=None, data_axis=axis, uncertainty_axis=axis, **kwargs
         )
         uncertainty_mean = init_kwds["uncertainty"]
 
         N = self.shape[axis]
-        var_ratio = (4 * (N - 1) / 2) / (
-            np.pi * N
-        )  # ratio of the variance of the mean to the variance of the median
-        init_kwds["uncertainty"].array = uncertainty_mean.array / var_ratio**0.5
+        # Efficiency of the variance of the median to the variance of the mean
+        var_ratio = (np.pi * N) / (2 * (N - 1))
+        init_kwds["uncertainty"].array = uncertainty_mean.array * var_ratio**0.5
         init_kwds.update(self._get_math_kwargs())
         result = self.stats_post_process(result, axis=axis, **init_kwds)
         return result
