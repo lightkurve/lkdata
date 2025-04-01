@@ -7,7 +7,7 @@ class BitSet(MutableSet, Hashable):
 
     This datatype combines the utility of sets and the succinct representation
     of integer numbers as used for data quality flags in astronomical data.
-    Integers are essentially treated as sets of their constituent powers of 2.
+    Integers are treated as sets of their constituent powers of 2.
     """
 
     name = "bitwise"
@@ -29,7 +29,6 @@ class BitSet(MutableSet, Hashable):
 
     wrap_w_breakdown = (
         "difference",
-        "discard",
         "intersection",
         "symmetric_difference",
         "union",
@@ -38,7 +37,6 @@ class BitSet(MutableSet, Hashable):
     wrap_w_breakdown_mod = (
         "difference_update",
         "intersection_update",
-        "remove",
         "symmetric_difference_update",
         "update",
     )
@@ -71,18 +69,20 @@ class BitSet(MutableSet, Hashable):
         return selfobj
 
     def __add__(self, value):
+        """Add component values of given to the BitSet"""
         valset = self.breakdown(value)
         valset.update(self._set)
         return BitSet(valset)
 
     def __and__(self, other):
+        """Compares to bool or returns BitSet of common values"""
         if isinstance(other, bool):
             return bool(self) and other
         else:
             return BitSet(self._bitset_method("__and__", other))
 
     def __bool__(self):
-        # True if sum of values is nonzero
+        """True if sum of values is nonzero"""
         return bool(self._set)
 
     def __repr__(self):
@@ -98,55 +98,66 @@ class BitSet(MutableSet, Hashable):
         return valset.issubset(self._set)
 
     def __int__(self):
+        """Sum of component values in BitSet"""
         return sum(self._set)
 
     def __iter__(self):
         return iter(self._set)
 
     def __eq__(self, value):
+        """Compares BitSet represetnation of given value"""
         if isinstance(value, bool):
             return bool(self) == value
         return self._bitset_method("__eq__", value)
 
     def __ge__(self, value):
+        """Superset"""
         return self._bitset_method("__ge__", value)
 
     def __gt__(self, value):
+        """Proper Superset"""
         return self._bitset_method("__gt__", value)
 
     def __le__(self, value):
+        """Subset"""
         return self._bitset_method("__le__", value)
 
     def __len__(self):
         return len(self._set)
 
     def __lt__(self, value):
+        """Proper Subset"""
         return self._bitset_method("__lt__", value)
 
     def __ne__(self, value):
+        """Compares BitSet represetnation of given value"""
         if isinstance(value, bool):
             return bool(self) != value
         return self._bitset_method("__ne__", value)
 
     def __or__(self, other):
+        """Union"""
         if isinstance(other, bool):
             return bool(self) or other
         else:
             return BitSet(self._bitset_method("__or__", other))
 
     def __rand__(self, other):
+        """Intersection"""
         if isinstance(other, bool):
             return bool(self) and other
         else:
             return BitSet(self._bitset_method("__rand__", other))
 
     def __ror__(self, other):
+        """Union"""
         if isinstance(other, bool):
             return bool(self) or other
         else:
             return BitSet(self._bitset_method("__ror__", other))
 
     def __rxor__(self, other):
+        """Symmetric Difference"""
         if isinstance(other, bool):
             return other.__rxor__(bool(self))
         else:
@@ -160,17 +171,20 @@ class BitSet(MutableSet, Hashable):
         return "{}"
 
     def __sub__(self, value):
+        """Difference"""
         valset = self.breakdown(value)
         new = self._set - valset
         return BitSet(new)
 
     def __xor__(self, other):
+        """Symmetric Difference"""
         if isinstance(other, bool):
             return bool(self).__xor__(other)
         else:
             return BitSet(self._bitset_method("__xor__", other))
 
     def _bitset_method(self, method_name, value):
+        """Wrapper for set methods"""
         valset = BitSet.breakdown(value)
         result = getattr(self._set, method_name)(valset)
         return result
@@ -202,10 +216,11 @@ class BitSet(MutableSet, Hashable):
         self._set.update(valset)
 
     def bin(self):
+        """Return binary represenation"""
         return bin(int(self))
 
     @staticmethod
-    def breakdown(item: Union[int, Iterable]):
+    def breakdown(item: Union[int, Iterable]) -> set:
         """Breaks down a given item into a single set of bitwise components
 
         Parameters
@@ -232,5 +247,22 @@ class BitSet(MutableSet, Hashable):
         return codes
 
     def discard(self, value):
+        """Breakdown value to powers of 2, remove common elements"""
         valset = self.breakdown(value)
         self._set = self._set - valset
+
+    def remove(self, value):
+        """Breakdown value to powers of 2 and remove
+
+        Raises:
+            KeyError - If not all powers of 2 exist within BitSet
+        """
+        valset = self.breakdown(value)
+        if valset not in self:
+            missing = valset - self.intersection(valset)
+            raise KeyError(
+                f"{value} interpreted as {valset}, "
+                f"KeyError: {missing} not in {self}"
+            )
+        else:
+            self._set = self._set - valset
