@@ -194,6 +194,59 @@ def test_downsample():
     assert (df.spatial_aggregate(5, 7).uncertainty.array.round() == 2).all()  #
 
 
+def test_math():
+    """Basic mathematical operations on data with uncertainty"""
+    # addition
+    df2 = df + df
+    assert all(df2 == 2)
+    assert (df2.uncertainty.array == np.sqrt(2)).all()
+
+    df2 = df + 1
+    assert all(df2 == 2)
+    assert (df2.uncertainty.array == 1).all()
+
+    # subtraction
+    df2 = df - df
+    assert all(df2 == 0)
+    assert (df2.uncertainty.array == np.sqrt(2)).all()
+
+    df2 = df - 1
+    assert all(df2 == 0)
+    assert (df2.uncertainty.array == 1).all()
+
+    # multiplication
+    df2 = df * 2
+    assert all(df2 == 2)
+    assert (df2.uncertainty.array == 2).all()
+
+    df2 = df * df
+    assert all(df2 == 1)
+    assert (df2.uncertainty.array == np.sqrt(2)).all()
+
+    df2 = DataCube(test_data * 2, uncertainty=test_data)
+    df3 = df * df2
+    assert all(df3 == 2)
+    assert (df3.uncertainty.array == np.sqrt(5)).all()
+
+    # division
+    df2 = df / 2
+    assert all(df2 == 1 / 2)
+    assert (df2.uncertainty.array == 1 / 2).all()
+
+    df2 = df / df
+    assert all(df2 == 1)
+    assert (df2.uncertainty.array == np.sqrt(2)).all()
+
+    df2 = DataCube(test_data * 2, uncertainty=test_data)
+    df3 = df2 / df
+    assert all(df3 == 2)
+    assert (df3.uncertainty.array == np.sqrt(5)).all()
+
+    df3 = df / df2
+    assert all(df3 == 1 / 2)
+    assert (df3.uncertainty.array == np.sqrt(5) / 4).all()
+
+
 def test_downsample_order():
     """Ensure that downsampling sorts on the level and isn't affected by order
     of operations.

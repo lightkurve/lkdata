@@ -83,7 +83,7 @@ class Cube(
         """
         Note: keys given to __getitem__ are interpreted as iloc indices.
         """
-        pass
+        raise KeyError("Unsupported type given for key.")
 
     @__getitem__.register(slice)
     @__getitem__.register(np.ndarray)

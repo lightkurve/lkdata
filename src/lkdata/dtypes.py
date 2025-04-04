@@ -69,10 +69,8 @@ class BitSet(MutableSet, Hashable):
         return selfobj
 
     def __add__(self, value):
-        """Add component values of given to the BitSet"""
-        valset = self.breakdown(value)
-        valset.update(self._set)
-        return BitSet(valset)
+        """Alias for Union"""
+        return self.union(value)
 
     def __and__(self, other):
         """Compares to bool or returns BitSet of common values"""
@@ -230,15 +228,16 @@ class BitSet(MutableSet, Hashable):
         """
 
         codes = set()
+        # Ensure properly formatted binary representation
+        if isinstance(item, str):
+            item = int(item, 2)
+
         if isinstance(item, Iterable):
             # Recursion loop until getting to individual values
             for val in item:
                 codes.update(BitSet.breakdown(val))
             return codes
 
-        # Ensure properly formatted binary representation
-        if isinstance(item, str):
-            item = int(item, 2)
         asbin = bin(item)
         for pos, b in enumerate(asbin[:1:-1]):
             if int(b):

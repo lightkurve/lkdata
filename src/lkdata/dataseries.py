@@ -244,6 +244,7 @@ class BoolSeries(
     """
 
     def __init__(self, data, index=None, **kwargs):
+        kwargs.pop("dtype", None)
         super().__init__(
             data,
             index=index,
@@ -293,6 +294,7 @@ class BitwiseSeries(BitwiseMixin, Series):
         data = BitwiseMixin._set_data_type_to_bitset(data)
         self._metadata = []
         self._user_kwargs = []
+        kwargs.pop("dtype", None)
         kwargs["codes"] = kwargs.get("codes", {})
         self.codes = kwargs["codes"]
         display_as = kwargs.pop("values_display", None) or display_as

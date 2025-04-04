@@ -76,3 +76,6 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.coverage.run]
 relative_files = true
+omit = [
+    "tests/*"
+]

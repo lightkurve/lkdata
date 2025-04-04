@@ -24,7 +24,6 @@ log = logging.getLogger()
 
 class Frame(
     ABC,
-    MathMixin,
     AggMixin,
     ConvenienceMixins,
     pd.DataFrame,
@@ -87,7 +86,7 @@ class Frame(
 
     @singledispatchmethod
     def __getitem__(self, key):
-        pass
+        return super().__getitem__(key)
 
     @__getitem__.register(Iterable)
     @__getitem__.register(slice)
@@ -97,8 +96,6 @@ class Frame(
             init_kwds["uncertainty"] = self.uncertainty[key]
         return self.__class__.from_pandas(
             self.iloc[key],
-            index=self.index[key],
-            columns=self.columns,
             **init_kwds,
         )
 
@@ -109,7 +106,7 @@ class Frame(
 
     @__getitem__.register
     def _(self, key: tuple):
-        time_key = key[0]
+        time_key = np.atleast_1d(key[0])
         init_kwds = self.user_kwargs.copy()
         if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
             init_kwds["uncertainty"] = self.uncertainty[key]
@@ -118,11 +115,18 @@ class Frame(
             series_index = np.arange(self.nseries)[key[1]]
         elif isinstance(key[1], Iterable):
             series_index = key[1]
-        else:
+        elif isinstance(key[1], int):
             return self._series_class(
                 self.iloc[time_key, key[1]],
                 index=self.index[time_key],
                 **init_kwds,
+            )
+        else:
+            raise ValueError(
+                "Location based indexing can only have [integer, "
+                "integer slice (START point is INCLUDED, END "
+                "point is EXCLUDED), listlike of integers, "
+                "boolean array] types"
             )
 
         return self.__class__.from_pandas(
@@ -189,6 +193,11 @@ class Frame(
                     f"\t{key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not defined')}"
                 )
 
+    @classmethod
+    def from_pandas(cls, data: pd.DataFrame, **kwargs):
+        """Convert a pd.DataFrame to a DataFrame"""
+        return cls(data.to_numpy(), index=data.index, columns=data.columns, **kwargs)
+
     @property
     def nseries(self):
         """Number of series in the DataFrame"""
@@ -212,7 +221,7 @@ class Frame(
             return result
 
 
-class DataFrame(StatsMixin, Frame):
+class DataFrame(MathMixin, StatsMixin, Frame):
     _series_class = DataSeries
 
     def __init__(self, *args, **kwargs):
@@ -237,11 +246,6 @@ class DataFrame(StatsMixin, Frame):
     def __repr__(self):
         return f"🟦 DataFrame {self.shape}"
 
-    @staticmethod
-    def from_pandas(data, **kwargs):
-        """Convert a pd.DataFrame to a DataFrame"""
-        return DataFrame(data, **kwargs)
-
 
 class BoolFrame(
     BoolMixin,
@@ -265,6 +269,7 @@ class BoolFrame(
         # be included in the _metadata list
         self._metadata = []
         self._user_kwargs = []
+        kwargs.pop("dtype", None)
         super().__init__(*args, dtype=bool, **kwargs)
 
     def __repr__(self):

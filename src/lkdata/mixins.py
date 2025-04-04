@@ -143,7 +143,7 @@ class IndexProcessorMixin:
         else:
             time_indices = {}
 
-        if isinstance(index, pd.MultiIndex):
+        if isinstance(index, pd.Index):
             time_names = index.names
             time_indices.update(
                 {name: index.get_level_values(name) for name in time_names}
