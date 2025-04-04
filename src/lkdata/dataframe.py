@@ -85,7 +85,7 @@ class Frame(
         )
 
     @singledispatchmethod
-    def __getitem__(self, key):
+    def __getitem__(self, key):  # pragma: no cover
         return super().__getitem__(key)
 
     @__getitem__.register(Iterable)
@@ -106,7 +106,10 @@ class Frame(
 
     @__getitem__.register
     def _(self, key: tuple):
-        time_key = np.atleast_1d(key[0])
+        time_key = key[0]
+        if not isinstance(time_key, slice):
+            # return Frame or Series even if it's a single value
+            time_key = np.atleast_1d(time_key)
         init_kwds = self.user_kwargs.copy()
         if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
             init_kwds["uncertainty"] = self.uncertainty[key]
@@ -121,7 +124,7 @@ class Frame(
                 index=self.index[time_key],
                 **init_kwds,
             )
-        else:
+        else:  # pragma: no cover
             raise ValueError(
                 "Location based indexing can only have [integer, "
                 "integer slice (START point is INCLUDED, END "
@@ -131,19 +134,17 @@ class Frame(
 
         return self.__class__.from_pandas(
             self.iloc[time_key, series_index],
-            index=self.index[time_key],
-            columns=self.columns[series_index],
             **init_kwds,
         )
 
-    def _repr_html_(self):
+    def _repr_html_(self):  # pragma: no cover
         return repr(self) + super()._repr_html_()
 
     @property
     def array(self):
         return self._array
 
-    def describe_frame(self, **printoptions):
+    def describe_frame(self, **printoptions):  # pragma: no cover
         """Print a description of the Frame instance.
 
         This description prints information about the temporal and spatial
@@ -243,7 +244,7 @@ class DataFrame(MathMixin, StatsMixin, Frame):
         self.uncertainty = uncertainty
         self._set_stats_methods()
 
-    def __repr__(self):
+    def __repr__(self):  # pragma: no cover
         return f"🟦 DataFrame {self.shape}"
 
 

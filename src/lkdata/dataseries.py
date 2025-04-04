@@ -71,7 +71,7 @@ class Series(
     def array(self):
         return self._array
 
-    def describe_series(self, **printoptions):
+    def describe_series(self, **printoptions):  # pragma: no cover
         """Print a description of the Series instance.
 
         This description prints information about the temporal indices

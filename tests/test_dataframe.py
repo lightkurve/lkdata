@@ -45,7 +45,8 @@ def test_dataframe_getitem():
     assert isinstance(df[0], DataFrame)
     assert isinstance(df[:5], DataFrame)
     assert isinstance(df[[0, 1]], DataFrame)
-    assert isinstance(df[0, 0], DataSeries)
+    assert isinstance(df[0, 1:3], DataFrame)
+    assert isinstance(df[:, 0], DataSeries)
     with pytest.raises(TypeError, match="non-integer key"):
         _ = df["one"]
     with pytest.raises(ValueError, match="integer, integer"):
@@ -57,7 +58,8 @@ def test_boolframe_getitem():
     assert isinstance(bool_df[0], BoolFrame)
     assert isinstance(bool_df[:5], BoolFrame)
     assert isinstance(bool_df[[0, 1]], BoolFrame)
-    assert isinstance(bool_df[0, 0], BoolSeries)
+    assert isinstance(bool_df[0, 1:3], BoolFrame)
+    assert isinstance(bool_df[:, 0], BoolSeries)
     with pytest.raises(TypeError, match="non-integer key"):
         _ = bool_df["one"]
     with pytest.raises(ValueError, match="integer, integer"):
@@ -69,7 +71,8 @@ def test_bitwiseframe_getitem():
     assert isinstance(bitwise_df[0], BitwiseFrame)
     assert isinstance(bitwise_df[:5], BitwiseFrame)
     assert isinstance(bitwise_df[[0, 1]], BitwiseFrame)
-    assert isinstance(bitwise_df[0, 0], BitwiseSeries)
+    assert isinstance(bitwise_df[0, 1:3], BitwiseFrame)
+    assert isinstance(bitwise_df[:, 0], BitwiseSeries)
     with pytest.raises(TypeError, match="non-integer key"):
         _ = bitwise_df["one"]
     with pytest.raises(ValueError, match="integer, integer"):

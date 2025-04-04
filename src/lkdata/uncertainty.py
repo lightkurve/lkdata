@@ -15,9 +15,6 @@ __all__ = [
     "IncompatibleUncertaintiesException",
     "NDUncertainty",
     "Uncertainty",
-    "UnknownUncertainty",
-    "VarianceUncertainty",
-    "InverseVariance",
 ]
 
 # mapping from collapsing operations to the complementary methods used for `to_variance`
@@ -71,19 +68,19 @@ collapse_from_variance_mapping = {
 }
 
 
-class IncompatibleUncertaintiesException(Exception):
+class IncompatibleUncertaintiesException(Exception):  # pragma: no cover
     """This exception should be used to indicate cases in which uncertainties
     with two different classes can not be propagated.
     """
 
 
-class MissingDataAssociationException(Exception):
+class MissingDataAssociationException(Exception):  # pragma: no cover
     """This exception should be used to indicate that an uncertainty instance
     has not been associated with a parent `~astropy.nddata.NDData` object.
     """
 
 
-class NDUncertainty(metaclass=ABCMeta):
+class NDUncertainty(metaclass=ABCMeta):  # pragma: no cover
     """This is the metaclass for uncertainty classes used with `NDData`.
 
     Parameters
@@ -283,8 +280,8 @@ class NDUncertainty(metaclass=ABCMeta):
                 )
 
         if other_nddata is not None:
-            # Get the other uncertainty (and convert it to a matching one)
-            other_uncert = self._convert_uncertainty(other_nddata.uncertainty)
+            # Get the other uncertainty
+            other_uncert = other_nddata.uncertainty
 
             if operation.__name__ == "add":
                 result = self._propagate_add(other_uncert, result_data, correlation)
@@ -306,38 +303,6 @@ class NDUncertainty(metaclass=ABCMeta):
 
         return self.__class__(result, copy=False)
 
-    def _convert_uncertainty(self, other_uncert):
-        """Checks if the uncertainties are compatible for propagation.
-
-        Checks if the other uncertainty is `NDUncertainty`-like and if so
-        verify that the uncertainty_type is equal. If the latter is not the
-        case try returning ``self.__class__(other_uncert)``.
-
-        Parameters
-        ----------
-        other_uncert : `NDUncertainty` subclass
-            The other uncertainty.
-
-        Returns
-        -------
-        other_uncert : `NDUncertainty` subclass
-            but converted to a compatible `NDUncertainty` subclass if
-            possible and necessary.
-
-        Raises
-        ------
-        IncompatibleUncertaintiesException:
-            If the other uncertainty cannot be converted to a compatible
-            `NDUncertainty` subclass.
-        """
-        if isinstance(other_uncert, NDUncertainty):
-            if self.uncertainty_type == other_uncert.uncertainty_type:
-                return other_uncert
-            else:
-                return self.__class__(other_uncert)
-        else:
-            raise IncompatibleUncertaintiesException
-
     @abstractmethod
     def _propagate_add(self, other_uncert, result_data, correlation):
         return None
@@ -357,39 +322,6 @@ class NDUncertainty(metaclass=ABCMeta):
     @abstractmethod
     def _propagate_collapse(self, operation, axis):
         return None
-
-    def represent_as(self, other_uncert):
-        """Convert this uncertainty to a different uncertainty type.
-
-        Parameters
-        ----------
-        other_uncert : `NDUncertainty` subclass
-            The `NDUncertainty` subclass to convert to.
-
-        Returns
-        -------
-        resulting_uncertainty : `NDUncertainty` instance
-            An instance of ``other_uncert`` subclass containing the uncertainty
-            converted to the new uncertainty type.
-
-        Raises
-        ------
-        TypeError
-            If either the initial or final subclasses do not support
-            conversion, a `TypeError` is raised.
-        """
-        as_variance = getattr(self, "_convert_to_variance", None)
-        if as_variance is None:
-            raise TypeError(
-                f"{type(self)} does not support conversion to another uncertainty type."
-            )
-        from_variance = getattr(other_uncert, "_convert_from_variance", None)
-        if from_variance is None:
-            raise TypeError(
-                f"{other_uncert.__name__} does not support conversion from "
-                "another uncertainty type."
-            )
-        return from_variance(as_variance())
 
     def reshape(self, *args, **kwargs):
         """See NDUncertainty.array.reshape()"""
@@ -399,54 +331,6 @@ class NDUncertainty(metaclass=ABCMeta):
     def shape(self):
         """NDUncertainty.array.shape"""
         return self.array.shape
-
-
-class UnknownUncertainty(NDUncertainty):
-    """This class implements any unknown uncertainty type.
-
-    The main purpose of having an unknown uncertainty class is to prevent
-    uncertainty propagation.
-
-    Parameters
-    ----------
-    args, kwargs :
-        see `NDUncertainty`
-    """
-
-    @property
-    def supports_correlated(self):
-        """`False` : Uncertainty propagation is *not* possible for this class."""
-        return False
-
-    @property
-    def uncertainty_type(self):
-        """``"unknown"`` : `UnknownUncertainty` implements any unknown \
-                           uncertainty type.
-        """
-        return "unknown"
-
-    def _convert_uncertainty(self, other_uncert):
-        """Raise an Exception because unknown uncertainty types cannot
-        implement propagation.
-        """
-        msg = "Uncertainties of unknown type cannot be propagated."
-        raise IncompatibleUncertaintiesException(msg)
-
-    def _propagate_add(self, other_uncert, result_data, correlation):
-        """Not possible for unknown uncertainty types."""
-        return None
-
-    def _propagate_subtract(self, other_uncert, result_data, correlation):
-        return None
-
-    def _propagate_multiply(self, other_uncert, result_data, correlation):
-        return None
-
-    def _propagate_divide(self, other_uncert, result_data, correlation):
-        return None
-
-    def _propagate_collapse(self, operation, axis):
-        return None
 
 
 class _VariancePropagationMixin:
@@ -779,12 +663,6 @@ class Uncertainty(_VariancePropagationMixin, NDUncertainty):
         """``"std"`` : `Uncertainty` implements standard deviation."""
         return "std"
 
-    def _convert_uncertainty(self, other_uncert):
-        if isinstance(other_uncert, Uncertainty):
-            return other_uncert
-        else:
-            raise IncompatibleUncertaintiesException
-
     def _propagate_add(self, other_uncert, result_data, correlation):
         return super()._propagate_add_sub(
             other_uncert,
@@ -828,214 +706,3 @@ class Uncertainty(_VariancePropagationMixin, NDUncertainty):
     def _propagate_collapse(self, numpy_operation, axis):
         # defer to _VariancePropagationMixin
         return super()._propagate_collapse(numpy_operation, axis=axis)
-
-    def _convert_to_variance(self):
-        new_array = None if self.array is None else self.array**2
-        return VarianceUncertainty(new_array)
-
-    @classmethod
-    def _convert_from_variance(cls, var_uncert):
-        new_array = None if var_uncert.array is None else var_uncert.array ** (1 / 2)
-        return cls(new_array)
-
-
-class VarianceUncertainty(_VariancePropagationMixin, NDUncertainty):
-    """
-    Variance uncertainty assuming first order Gaussian error
-    propagation.
-
-    This class implements uncertainty propagation for ``addition``,
-    ``subtraction``, ``multiplication`` and ``division`` with other instances
-    of `VarianceUncertainty`.
-    Also support for correlation is possible but requires the
-    correlation as input. It cannot handle correlation determination itself.
-
-    Parameters
-    ----------
-    args, kwargs :
-        see `NDUncertainty`
-
-    Examples
-    --------
-    Compare this example to that in `Error`; the uncertainties
-    in the examples below are equivalent to the uncertainties in
-    `Error`.
-
-    `VarianceUncertainty` should always be associated with an `NDData`-like
-    instance, either by creating it during initialization::
-
-        >>> from astropy.nddata import NDData, VarianceUncertainty
-        >>> ndd = NDData([1,2,3],
-        ...              uncertainty=VarianceUncertainty([0.01, 0.01, 0.01]))
-        >>> ndd.uncertainty  # doctest: +FLOAT_CMP
-        VarianceUncertainty([0.01, 0.01, 0.01])
-
-    or by setting it manually on the `NDData` instance::
-
-        >>> ndd.uncertainty = VarianceUncertainty([0.04], copy=True)
-        >>> ndd.uncertainty  # doctest: +FLOAT_CMP
-        VarianceUncertainty([0.04])
-
-    the uncertainty ``array`` can also be set directly::
-
-        >>> ndd.uncertainty.array = 4
-        >>> ndd.uncertainty
-        VarianceUncertainty(4)
-    """
-
-    @property
-    def uncertainty_type(self):
-        """``"var"`` : `VarianceUncertainty` implements variance."""
-        return "var"
-
-    @property
-    def supports_correlated(self):
-        """`True` : `VarianceUncertainty` allows to propagate correlated \
-                    uncertainties.
-
-        ``correlation`` must be given, this class does not implement computing
-        it by itself.
-        """
-        return True
-
-    def _propagate_add(self, other_uncert, result_data, correlation):
-        return super()._propagate_add_sub(
-            other_uncert, result_data, correlation, subtract=False
-        )
-
-    def _propagate_subtract(self, other_uncert, result_data, correlation):
-        return super()._propagate_add_sub(
-            other_uncert, result_data, correlation, subtract=True
-        )
-
-    def _propagate_multiply(self, other_uncert, result_data, correlation):
-        return super()._propagate_multiply_divide(
-            other_uncert, result_data, correlation, divide=False
-        )
-
-    def _propagate_divide(self, other_uncert, result_data, correlation):
-        return super()._propagate_multiply_divide(
-            other_uncert, result_data, correlation, divide=True
-        )
-
-    def _convert_to_variance(self):
-        return self
-
-    @classmethod
-    def _convert_from_variance(cls, var_uncert):
-        return var_uncert
-
-
-def _inverse(x):
-    """Just a simple inverse for use in the InverseVariance."""
-    return 1 / x
-
-
-class InverseVariance(_VariancePropagationMixin, NDUncertainty):
-    """
-    Inverse variance uncertainty assuming first order Gaussian error
-    propagation.
-
-    This class implements uncertainty propagation for ``addition``,
-    ``subtraction``, ``multiplication`` and ``division`` with other instances
-    of `InverseVariance`.
-    Also support for correlation is possible but requires
-    the correlation as input. It cannot handle correlation determination
-    itself.
-
-    Parameters
-    ----------
-    args, kwargs :
-        see `NDUncertainty`
-
-    Examples
-    --------
-    Compare this example to that in `Error`; the uncertainties
-    in the examples below are equivalent to the uncertainties in
-    `Error`.
-
-    `InverseVariance` should always be associated with an `NDData`-like
-    instance, either by creating it during initialization::
-
-        >>> from astropy.nddata import NDData, InverseVariance
-        >>> ndd = NDData([1,2,3],
-        ...              uncertainty=InverseVariance([100, 100, 100]))
-        >>> ndd.uncertainty  # doctest: +FLOAT_CMP
-        InverseVariance([100, 100, 100])
-
-    or by setting it manually on the `NDData` instance::
-
-        >>> ndd.uncertainty = InverseVariance([25], copy=True)
-        >>> ndd.uncertainty  # doctest: +FLOAT_CMP
-        InverseVariance([25])
-
-    the uncertainty ``array`` can also be set directly::
-
-        >>> ndd.uncertainty.array = 0.25
-        >>> ndd.uncertainty
-        InverseVariance(0.25)
-    """
-
-    @property
-    def uncertainty_type(self):
-        """``"ivar"`` : `InverseVariance` implements inverse variance."""
-        return "ivar"
-
-    @property
-    def supports_correlated(self):
-        """`True` : `InverseVariance` allows to propagate correlated \
-                    uncertainties.
-
-        ``correlation`` must be given, this class does not implement computing
-        it by itself.
-        """
-        return True
-
-    def _propagate_add(self, other_uncert, result_data, correlation):
-        return super()._propagate_add_sub(
-            other_uncert,
-            result_data,
-            correlation,
-            subtract=False,
-            to_variance=_inverse,
-            from_variance=_inverse,
-        )
-
-    def _propagate_subtract(self, other_uncert, result_data, correlation):
-        return super()._propagate_add_sub(
-            other_uncert,
-            result_data,
-            correlation,
-            subtract=True,
-            to_variance=_inverse,
-            from_variance=_inverse,
-        )
-
-    def _propagate_multiply(self, other_uncert, result_data, correlation):
-        return super()._propagate_multiply_divide(
-            other_uncert,
-            result_data,
-            correlation,
-            divide=False,
-            to_variance=_inverse,
-            from_variance=_inverse,
-        )
-
-    def _propagate_divide(self, other_uncert, result_data, correlation):
-        return super()._propagate_multiply_divide(
-            other_uncert,
-            result_data,
-            correlation,
-            divide=True,
-            to_variance=_inverse,
-            from_variance=_inverse,
-        )
-
-    def _convert_to_variance(self):
-        new_array = None if self.array is None else 1 / self.array
-        return VarianceUncertainty(new_array)
-
-    @classmethod
-    def _convert_from_variance(cls, var_uncert):
-        new_array = None if var_uncert.array is None else 1 / var_uncert.array
-        return cls(new_array)

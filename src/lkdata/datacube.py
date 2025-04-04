@@ -278,7 +278,7 @@ class Cube(
     def array(self, val):
         self._array = np.array(val)
 
-    def describe_cube(self, **printoptions):
+    def describe_cube(self, **printoptions):  # pragma: no cover
         """Print a description of the Cube instance.
 
         This description prints information about the temporal and spatial
