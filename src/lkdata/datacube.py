@@ -79,7 +79,7 @@ class Cube(
         )
 
     @singledispatchmethod
-    def __getitem__(self, key):
+    def __getitem__(self, key):  # pragma: no cover
         """
         Note: keys given to __getitem__ are interpreted as iloc indices.
         """

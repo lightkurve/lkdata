@@ -45,6 +45,18 @@ def test_setup():
         )
 
 
+def test_bad_setup():
+    # Actual data values should be irrelevant for these tests
+    data_mismatch = np.random.normal(size=(ntime + 10, nrow, ncol))
+    index = df.index
+    columns = df.columns
+    with pytest.raises(ValueError, match="Length of index"):
+        _ = DataCube(data_mismatch, index=index, columns=columns)
+    data_mismatch = np.random.normal(size=(ntime, nrow + 10, ncol))
+    with pytest.raises(ValueError, match="problems"):
+        _ = DataCube(data_mismatch, index=index, columns=columns)
+
+
 def test_reserved_names():
     """Make sure reserved names raise errors when used in the wrong places"""
     with pytest.raises(ValueError, match="Key 'row' is reserved"):
@@ -270,6 +282,37 @@ def test_downsample_order():
     result = ds.uncertainty.array.flatten()
     assert all(ds.to_numpy().flatten() == (1 + 2 + 3) * 11)
     assert all(result == ((1**2 + 2**2 + 3**2) * 11) ** 0.5)
+
+
+def test_fold():
+    time = np.arange(10, step=0.1)
+    sine10 = np.sin(time)
+    data = np.array([v * np.ones((10, 14)) for v in sine10]).reshape((100, 10, 14))
+    time_indices = {"days": time, "hours": time / 24, "minutes": time / (24 * 60)}
+    cube = DataCube(data)
+    folded = cube.fold(2 * np.pi)
+    assert "phase" in folded.index.names
+    folded = cube.fold(2 * np.pi, t0=np.pi)
+    assert "phase" in folded.index.names
+    cube = DataCube(data, time_indices=time_indices)
+    folded = cube.fold(2 * np.pi, level="days")
+    assert "phase" in folded.index.names
+    folded = folded.fold(2 * np.pi, label="phase")
+    assert "phase" in folded.index.names
+    cube.fold(2 * np.pi, level="days", inplace=True)
+    assert "phase" in cube.index.names
+    cube.sort_index(level="days", inplace=True)
+
+
+def test_drop_level():
+    time = np.arange(10, step=0.1)
+    time_indices = {"days": time, "hours": time / 24, "minutes": time / (24 * 60)}
+
+    sine10 = np.sin(time)
+    data = np.array([v * np.ones((10, 14)) for v in sine10]).reshape((100, 10, 14))
+    cube = DataCube(data, time_indices=time_indices)
+    cube_dropped = cube.droplevel("minutes")
+    assert "minutes" not in cube_dropped.index.names
 
 
 def make_test_data():
