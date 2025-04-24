@@ -271,9 +271,10 @@ class BitwiseSeries(BitwiseMixin, Series):
         A dictionary of codes with keys that are powers of 2 and values are
         definitions of the code.
     values_display : str, default "int"
-        What kind of display should be used? Must be one of "int", "parsed", or
+        What kind of display should be used? Must be one of "int", "bitset", or
         "detailed". "detailed" requires code_reference to  be provided, or else
-        is identical to "parsed".
+        is identical to "parsed" which displays a set of the bits indicated by
+        the binary representation of the integer value.
     index : array-like or Index (1d)
         Values must be hashable and have the same length as `data`.
         Non-unique index values are allowed. Will default to
@@ -285,7 +286,7 @@ class BitwiseSeries(BitwiseMixin, Series):
     def __init__(
         self,
         data: Iterable[Union[Iterable[int], int]],
-        display_as: str = "bitwise",
+        display_as: str = "int",
         index=None,
         **kwargs,
     ):
@@ -312,7 +313,7 @@ class BitwiseSeries(BitwiseMixin, Series):
     def __repr__(self):
         if self._values_display == "detailed":
             display = self.apply(lambda x: self.parse_code(x)).__repr__()
-        elif self._values_display == "parsed":
+        elif self._values_display == "bitset":
             display = self.apply(
                 lambda x: str(self.breakdown(x)).replace("[", "{").replace("]", "}")
             ).__repr__()

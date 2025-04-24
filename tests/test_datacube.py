@@ -442,10 +442,10 @@ def test_bit_cube():
     # Default repr shows data as given
     bitwise_str = strip(bitcube.styler.to_string())
     assert bitwise_str == "col0123row00123145672891011312131415"
-    # Parsed repr shows codes individually, without description
-    bitcube.values_display = "parsed"
-    parsed_str = strip(bitcube.styler.to_string())
-    assert parsed_str == (
+    # bitset repr shows codes individually, without description
+    bitcube.values_display = "bitset"
+    bitset_str = strip(bitcube.styler.to_string())
+    assert bitset_str == (
         "col0123row0{}{1}{2}{1,2}1{4}{1,4}{2,4}{1,2,4}"
         "2{8}{1,8}{2,8}{1,2,8}3{4,8}{1,4,8}{2,4,8}{1,2,4,8}"
     )
@@ -500,10 +500,10 @@ def test_bit_cube():
     )
 
     bitframe = BitwiseFrame(np.arange(0, 32).reshape(2, 16))
-    # New bitframe has no codes_dict, detailed display should be the same as parsed
-    bitframe.values_display = "parsed"
-    parsed_str = strip(bitframe.styler.to_string())
-    assert parsed_str == (
+    # New bitframe has no codes_dict, detailed display should be the same as bitset
+    bitframe.values_display = "bitset"
+    bitset_str = strip(bitframe.styler.to_string())
+    assert bitset_str == (
         "01234567891011121314150{}{1}{2}{1,2}{4}{1,4}{2,4}{1,2,4}{8}"
         "{1,8}{2,8}{1,2,8}{4,8}{1,4,8}{2,4,8}{1,2,4,8}1{16}{1,16}{2,16}"
         "{1,2,16}{4,16}{1,4,16}{2,4,16}{1,2,4,16}{8,16}{1,8,16}{2,8,16}"
@@ -511,7 +511,7 @@ def test_bit_cube():
     )
     bitframe.values_display = "detailed"
     detailed_str = strip(bitframe.styler.to_string())
-    assert detailed_str == parsed_str
+    assert detailed_str == bitset_str
     # The values should match the derivative product from the cube
     assert (bitframe.array == bitcube[:, [0, 1, 2, 3], :]).all(axis=None)
 
@@ -520,9 +520,9 @@ def test_bit_cube():
     bitseries = BitwiseSeries(np.arange(0, 16), codes=code_dict)
     bitwise_str = strip(repr(bitseries))[29:-12]
     assert bitwise_str == "0011223344556677889910101111121213131414151"
-    bitseries.values_display = "parsed"
-    parsed_str = strip(repr(bitseries))[29:-12]
-    assert parsed_str == (
+    bitseries.values_display = "bitset"
+    bitset_str = strip(repr(bitseries))[29:-12]
+    assert bitset_str == (
         "0{}1{1}2{2}3{1,2}4{4}5{1,4}6{2,4}7{1,2,4}8{8}9{1,8}"
         "10{2,8}11{1,2,8}12{4,8}13{1,4,8}14{2,4,8}15{1,2,4,8}"
     )

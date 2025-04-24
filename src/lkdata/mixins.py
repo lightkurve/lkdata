@@ -859,29 +859,29 @@ class BitwiseMixin(IndexProcessorMixin):
     @property
     def values_display(self):
         """
-        Get the current display mode for bitwise values.
+        Get the current display mode for values.
 
         Returns
         -------
         str
-            The current display mode for bitwise values. Possible values are:
-            - 'bitwise': Display the raw integer values.
-            - 'parsed': Display the values as sets of powers of 2.
+            The current display mode for values. Possible values are:
+            - 'int': Display the raw integer values.
+            - 'bitset': Display the values as sets of powers of 2.
             - 'detailed': Display the values as dictionaries mapping powers of 2 to their corresponding codes.
 
         Notes
         -----
-        This property is used to control how bitwise values are displayed in the object's string representation
+        This property is used to control how values are displayed in the object's string representation
         and in any generated output (e.g., when using Jupyter notebooks).
         """
         return self._values_display
 
     @values_display.setter
     def values_display(self, value):
-        allowed = {"bitwise", "parsed", "detailed"}
+        allowed = {"int", "bitset", "detailed"}
         if value.lower() not in allowed:
-            warn(f"Display must be one of {allowed}, defaulting to 'bitwise'.")
-            value = "bitwise"
+            warn(f"Display must be one of {allowed}, defaulting to 'int'.")
+            value = "int"
         self._values_display = value.lower()
         self.styler = self.stylize_frame(self)
 
@@ -916,7 +916,7 @@ class BitwiseMixin(IndexProcessorMixin):
 
     def parse_code(self, val):
         """
-        Parse a bitwise integer value into a dictionary of corresponding codes.
+        Parse a bitset into a dictionary of corresponding codes.
         """
         # codes = self.breakdown(val)
         codes = list(val)
@@ -926,14 +926,14 @@ class BitwiseMixin(IndexProcessorMixin):
 
     def stylize_frame(self, df, **kwargs) -> Styler:
         """
-        Overrides default to remove background gradient and to parse bitwise
-        integers to a set of codes.
+        Overrides default to remove background gradient and to parse
+        integers to a set of codes based on binary representation.
         """
         out = Styler(df)
         if "label" in kwargs:
             out = out.set_caption(kwargs.pop("label"))
 
-        if (self._values_display == "parsed") or (self.codes == {}):
+        if (self._values_display == "bitset") or (self.codes == {}):
             out = out.format(str)
         elif self._values_display == "detailed":
             out = out.format(self.parse_code)

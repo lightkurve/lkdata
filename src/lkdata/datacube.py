@@ -584,7 +584,7 @@ class BitwiseCube(BitwiseMixin, Cube):
         row_indices: Union[Dict, List, None] = None,
         col_indices: Union[Dict, List, None] = None,
         code_dict: Dict = None,
-        display_as: str = "bitwise",
+        display_as: str = "int",
         **kwargs,
     ):
         """A Cube object which contains bitwise values.
@@ -603,7 +603,7 @@ class BitwiseCube(BitwiseMixin, Cube):
             code_dict : Dict, optional
                 A dictionary mapping bit values to their definitions.
             display_as : str, optional
-                How to display the values. Options are "bitwise", "parsed",
+                How to display the values. Options are "int", "bitset",
                 or "detailed".
             **kwargs
                 Additional keyword arguments to pass to the parent class.
@@ -639,7 +639,7 @@ class BitwiseCube(BitwiseMixin, Cube):
 
     @values_display.setter
     def values_display(self, value):
-        allowed = {"bitwise", "parsed", "detailed"}
+        allowed = {"int", "bitset", "detailed"}
         if value.lower() not in allowed:
             raise AttributeError(f"Display must be one of {allowed}.")
         self._values_display = value.lower()

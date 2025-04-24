@@ -291,7 +291,7 @@ class BitwiseFrame(BitwiseMixin, Frame):
             time_indices: Union[Dict, List, None] = None,
             row_indices: Union[Dict, List, None] = None,
             col_indices: Union[Dict, List, None] = None,
-            display_as: str = "bitwise"
+            display_as: str = "int"
         """
         # For pandas DataFrames subclasses, new properties must
         # be included in the _metadata list
@@ -301,7 +301,7 @@ class BitwiseFrame(BitwiseMixin, Frame):
         kwargs["codes"] = kwargs.get("codes", {})
         self.codes = kwargs["codes"]
         values_display = kwargs.pop("values_display", None) or kwargs.pop(
-            "display_as", "bitwise"
+            "display_as", "int"
         )
         kwargs.pop("dtype", None)
         super().__init__(data, *args[1:], dtype=object, **kwargs)
