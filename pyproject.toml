@@ -3,13 +3,13 @@ name = "lkdata"
 version = "0.1.0"
 description = "A friendly package for analysing TESS & Kepler time series data"
 authors = [
-    {name = "TESS Science Support Center", email= "tesshelp@bigbang.gsfc.nasa.gov"}]
+    { name = "TESS Science Support Center", email = "tesshelp@bigbang.gsfc.nasa.gov" }]
 license = "MIT"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
     "numpy>=1.26.3",
-    "pandas[plot, output-formatting]>=2.1.4",  # for styling the dataframe
+    "pandas[plot, output-formatting]>=2.1.4", # for styling the dataframe
 ]
 
 [project.optional-dependencies]
@@ -34,19 +34,16 @@ dev = [
     "sphinx-copybutton >= 0.5.2",
 ]
 
-[tool.poetry.group.coverage.dependencies]
-coverage = {version = ">=7.4.0", extras = ["toml"]}
-pytest = {version = ">=7.4.4"}
-
 [tool.poetry.group.dev]
 optional = true
 
 [tool.poetry.group.dev.dependencies]
 astropy = "*"
 bump2version = ">= 1.0.1"
+coverage = { version = ">=7.4.0", extras = ["toml"] }
 ipykernel = ">= 6.29.5"
 IPython = ">= 8.18.1"
-jupyter= " >= 1.0.0"
+jupyter = " >= 1.0.0"
 line-profiler = ">= 4.1.2"
 mypy = ">= 1.8.0"
 nbsphinx = ">= 0.9.3"
