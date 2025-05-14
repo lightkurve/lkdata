@@ -2,6 +2,7 @@
 
 from collections.abc import Iterable
 from copy import deepcopy
+from dataclasses import dataclass
 from functools import singledispatchmethod
 from textwrap import dedent
 from typing import Dict, Union
@@ -72,7 +73,7 @@ class DataProcessorMixin:
     }
     kwargs: dict = None
 
-    def _check_attrs(self, data_product):
+    def _check_attrs(self, data_product, name=""):
         if issubclass(type(data_product), Cube):
             attrs = self.CLASS_CHECKS["cubes"]
         else:
@@ -83,25 +84,47 @@ class DataProcessorMixin:
                 if getattr(self, attr) != getattr(data_product, attr):
                     raise ValueError(
                         f"""
-                        Dataset value for {attr} != given data {attr}
+                        Mismatch: Dataset value for `{attr}` != `{attr}` for {name}
                         {getattr(self, attr)} != {getattr(data_product, attr)}
                         """
                     )
             else:
                 setattr(self, attr, getattr(data_product, attr, None))
-        # Checking indices/columns are the same shapes, not strict on values.
-        # TODO: reconsider
+        # Checking indices/columns are the same length, not strict on values.
         for attr in attrs.intersection({"index", "columns"}):
-            if hasattr(self, attr) and (getattr(self, attr) is not None):
-                if getattr(self, attr).shape != getattr(data_product, attr).shape:
+            working_attr = getattr(self, attr, None)
+            check_attr = getattr(data_product, attr, None)
+            if working_attr is not None:
+                if working_attr == check_attr:
+                    # attributes match
+                    pass
+                elif len(working_attr) != len(check_attr):
+                    # attributes don't match and are incompatible based on length
                     raise ValueError(
                         f"""
                         Dataset shape for {attr} does not match given data {attr}.
-                        {getattr(self, attr).shape} != {getattr(data_product, attr).shape}
+                        {working_attr.shape} != {check_attr.shape}
                         """
                     )
+                elif attr == "colunmns":
+                    # columns are indexed differently
+                    # TODO: resolve this
+                    pass
+                elif attr == "index":
+                    # attributes don't match, but indices are the same length and can be combined
+                    new_index = pd.merge(
+                        working_attr.to_frame().reset_index(drop=True),
+                        check_attr.to_frame().reset_index(drop=True),
+                        on="time_index",
+                        how="inner",
+                        suffixes=(None, f"_{name}"),
+                    )
+                    new_index = pd.MultiIndex.from_frame(new_index)
+
+                    setattr(self, "index", new_index)
             else:
-                setattr(self, attr, getattr(data_product, attr, None))
+                # bundle does not have this property yet, assign it
+                setattr(self, attr, check_attr)
 
     def _build_data_product(self, data_arr: Iterable):
         data_arr = np.asarray(data_arr)
@@ -223,7 +246,6 @@ class ProductBundle(dict, DataProcessorMixin):
         index: pd.MultiIndex = None,
         **kwargs,
     ):
-        index = kwargs.pop("index", None)
         time_indices = kwargs.pop("time_indices", None)
         index = IndexProcessorMixin.parse_index(index, time_indices)
 
@@ -231,6 +253,9 @@ class ProductBundle(dict, DataProcessorMixin):
         if input_data is not None:
             input_data = self._unpack_input(input_data)
             self.update(input_data)
+            for v in self.values():
+                v.index = self.index
+                v.ntime = self.ntime
 
     def __deepcopy__(self, *args, **kwargs):
         return self.__class__({key: deepcopy(val) for key, val in self.items()})
@@ -414,26 +439,14 @@ class BitwiseProducts(ProductBundle):
         super().__init__(bitwise, index)
 
 
+@dataclass
 class DataSet:
     """Class to group related products for batch processing.
 
     Parameters
     ----------
-    data: Union[Iterable, lkDataTypes, DataProducts,
-                Dict[str, Union[Iterable, lkDataTypes]]]
-        Data which sums linearly. Providing a dictionary of lightkurve data
-        products (DataCube, DataFrame, DataSeries) is recommended and allows
-        for adding multiple products, as well as including relvant uncertainty
-        information.
-        However, a singular array-like or a dictionary of array-like data may
-        be given and will be converted into the corresponding lkDataType based
-        on the shape of the data.
-    bools: Union[Iterable, LkBoolTypes, BoolProducts,
-                 Dict[str, Union[Iterable, LkBoolTypes]]]
-        Products with boolean datatypes.
-    bitwise: Union[Iterable, LkBitwiseTypes, BitwiseProducts,
-                   Dict[str, Union[Iterable, LkBitwiseTypes]]]
-        Data with bitwise datatypes. See mixins.BitwiseMixin for more detail.
+    products: Dict[str, lkDataTypes]
+        A dictionary of lkdata objects which share the same time and spatial indices.
     index: pd.MultiIndex, optional
        A MultiIndex which is used to index the data. If none given, the DataSet
        constructor will attempt to infer the index from the given products.
@@ -446,23 +459,15 @@ class DataSet:
     """
 
     _user_kwargs = None
-    _index: pd.MultiIndex = None
-    _ntime: int = None
+    _index = None
+    _ntime = None
+    _contents: dict = None
 
     def __init__(
         self,
-        data: Union[
-            Iterable, LkDataTypes, DataProducts, Dict[str, Union[Iterable, LkDataTypes]]
-        ] = None,
-        bools: Union[
-            Iterable, LkBoolTypes, BoolProducts, Dict[str, Union[Iterable, LkBoolTypes]]
-        ] = None,
-        bitwise: Union[
-            Iterable,
-            LkBitwiseTypes,
-            BitwiseProducts,
-            Dict[str, Union[Iterable, LkBitwiseTypes]],
-        ] = None,
+        data_products: Dict[str, Union[LkDataTypes, Iterable]] = None,
+        bool_products: Dict[str, Union[LkBoolTypes, Iterable]] = None,
+        bitwise_products: Dict[str, Union[LkBitwiseTypes, Iterable]] = None,
         index: pd.MultiIndex = None,
         time_indices: Dict[str, Iterable] = None,
         **kwargs,
@@ -476,20 +481,23 @@ class DataSet:
             if k not in ("ntime", "nrow", "ncol", "columns"):
                 self._user_kwargs.append(k)
 
-        self.data = DataProducts(data, index=index, time_indices=time_indices, **kwargs)
-
-        self.bools = BoolProducts(
-            bools, index=index, time_indices=time_indices, **kwargs
+        # WIP
+        self.data_products = DataProducts(
+            data_products, index=index, time_indices=time_indices, **kwargs
+        )
+        self.bool_products = BoolProducts(
+            bool_products, index=index, time_indices=time_indices, **kwargs
+        )
+        self.bitwise_products = BitwiseProducts(
+            bitwise_products, index=index, time_indices=time_indices, **kwargs
         )
 
-        self.bitwise = BitwiseProducts(
-            bitwise, index=index, time_indices=time_indices, **kwargs
-        )
-        contents = {}
-        contents.update(self.data)
-        contents.update(self.bools)
-        contents.update(self.bitwise)
+        self.index = self._combine_indices(index=index)
+
         self.contents = {}
+        self.contents.update(self.data_products)
+        self.contents.update(self.bool_products)
+        self.contents.update(self.bitwise_products)
 
     @singledispatchmethod
     def __getitem__(self, key):
@@ -508,38 +516,42 @@ class DataSet:
     def _(self, key):
         new_data = {}
         # new_data = dict(self.data)
-        for data_key, data in self.data.items():
+        for data_key, data in self.data_products.items():
             new_data[data_key] = data[key]
-        new_data = DataProducts(new_data, self.data.index[np.atleast_1d(key)])
+        new_data = DataProducts(new_data, self.data_products.index[np.atleast_1d(key)])
 
         new_bool = {}
-        for bool_key, bool_data in self.bools.items():
+        for bool_key, bool_data in self.bool_products.items():
             new_bool[bool_key] = bool_data[key]
-        new_bool = BoolProducts(new_bool, self.bitwise.index[np.atleast_1d(key)])
+        new_bool = BoolProducts(
+            new_bool, self.bitwise_products.index[np.atleast_1d(key)]
+        )
 
         new_bit = {}
-        for bit_key, bit_data in self.bitwise.items():
+        for bit_key, bit_data in self.bitwise_products.items():
             new_bit[bit_key] = bit_data[key]
-        new_bit = BitwiseProducts(new_bit, self.bitwise.index[np.atleast_1d(key)])
+        new_bit = BitwiseProducts(
+            new_bit, self.bitwise_products.index[np.atleast_1d(key)]
+        )
 
         return self._build_instance(newdata=new_data, bools=new_bool, bitwise=new_bit)
 
     @__getitem__.register(slice)
     def _(self, key):
         new_data = {}
-        for data_key, data in self.data.items():
+        for data_key, data in self.data_products.items():
             new_data[data_key] = data[key]
-        new_data = DataProducts(new_data, self.data.index[key])
+        new_data = DataProducts(new_data, self.data_products.index[key])
 
         new_bool = {}
-        for bool_key, bool_data in self.bools.items():
+        for bool_key, bool_data in self.bool_products.items():
             new_bool[bool_key] = bool_data[key]
-        new_bool = BoolProducts(new_bool, self.bitwise.index[key])
+        new_bool = BoolProducts(new_bool, self.bitwise_products.index[key])
 
         new_bit = {}
-        for bit_key, bit_data in self.bitwise.items():
+        for bit_key, bit_data in self.bitwise_products.items():
             new_bit[bit_key] = bit_data[key]
-        new_bit = BitwiseProducts(new_bit, self.bitwise.index[key])
+        new_bit = BitwiseProducts(new_bit, self.bitwise_products.index[key])
 
         return self._build_instance(newdata=new_data, bools=new_bool, bitwise=new_bit)
 
@@ -551,7 +563,7 @@ class DataSet:
 
         new_data = {
             data_key: data[key]
-            for data_key, data in self.data.items()
+            for data_key, data in self.data_products.items()
             if isinstance(data, DataCube)
         }
 
@@ -564,7 +576,7 @@ class DataSet:
         new_data.update(
             {
                 data_key: data[time_key]
-                for data_key, data in self.data.items()
+                for data_key, data in self.data_products.items()
                 if isinstance(data, (DataSeries, DataFrame))
             }
         )
@@ -576,7 +588,7 @@ class DataSet:
 
         new_bool = {
             data_key: data[key]
-            for data_key, data in self.bools.items()
+            for data_key, data in self.bool_products.items()
             if isinstance(data, BoolCube)
         }
 
@@ -589,14 +601,14 @@ class DataSet:
         new_bool.update(
             {
                 data_key: data[time_key]
-                for data_key, data in self.bools.items()
+                for data_key, data in self.bool_products.items()
                 if isinstance(data, (BoolSeries, BoolFrame))
             }
         )
 
         new_bit = {
             data_key: data[key]
-            for data_key, data in self.bitwise.items()
+            for data_key, data in self.bitwise_products.items()
             if isinstance(data, BitwiseCube)
         }
 
@@ -609,7 +621,7 @@ class DataSet:
         new_bit.update(
             {
                 data_key: data[time_key]
-                for data_key, data in self.bitwise.items()
+                for data_key, data in self.bitwise_products.items()
                 if isinstance(data, (BitwiseSeries, BitwiseFrame))
             }
         )
@@ -633,11 +645,11 @@ class DataSet:
     def __repr__(self):
         msg = f"""
         Data Products:
-        {self.data}
+        {self.data_products}
         Bool Products:
-        {self.bools}
+        {self.bool_products}
         Bitwise Products:
-        {self.bitwise}
+        {self.bitwise_products}
         Properties:
         {list(self.kwargs.keys())}
         """
@@ -645,13 +657,13 @@ class DataSet:
         return msg
 
     def _attr_override(self, attr, val):
-        setattr(self.data, attr, val)
-        setattr(self.bools, attr, val)
-        setattr(self.bitwise, attr, val)
+        setattr(self.data_products, attr, val)
+        setattr(self.bool_products, attr, val)
+        setattr(self.bitwise_products, attr, val)
 
     def _batch_wrapper(self, func):
         def new_func(*args, **kwargs):
-            newdata = dict(deepcopy(self.data))
+            newdata = dict(deepcopy(self.data_products))
             for key, val in newdata.items():
                 obj_func = getattr(val, func)
                 newdata[key] = obj_func(*args, **kwargs)
@@ -664,6 +676,47 @@ class DataSet:
         all_kwargs = self.user_kwargs.copy()
         all_kwargs.update(**kwargs)
         return self.__class__(newdata, **all_kwargs)
+
+    def _combine_indices(self, index) -> pd.MultiIndex:
+        """Combine indices of contents into a single MultiIndex."""
+
+        def combine(working_index, check_index, suffix=""):
+            if check_index is not None and working_index is not None:
+                if len(check_index) != len(working_index):
+                    raise ValueError(
+                        "Length of BoolProducts index"
+                        f"({len(check_index)})"
+                        "does not match the length of DataSet index"
+                        f"({len(working_index)})"
+                    )
+                else:
+                    index_df1 = working_index.to_frame().reset_index(drop=True)
+                    index_df2 = check_index.to_frame().reset_index(drop=True)
+                    common_cols = index_df1.columns.intersection(index_df2.columns)
+                    matching_cols = common_cols[
+                        (index_df1[common_cols] == index_df2[common_cols]).all()
+                    ]
+                    new_index = pd.merge(
+                        index_df1,
+                        index_df2,
+                        on=list(matching_cols),
+                        how="inner",
+                        suffixes=(None, suffix),
+                    )
+                    new_index = pd.MultiIndex.from_frame(new_index)
+                    working_index = new_index
+            elif working_index is None:
+                working_index = check_index
+            return working_index
+
+        working_index = index
+        working_index = combine(working_index, self.data_products.index, "_data")
+        working_index = combine(working_index, self.bool_products.index, "_bool")
+        working_index = combine(working_index, self.bitwise_products.index, "_bitwise")
+        self.data_products.index = working_index
+        self.bool_products.index = working_index
+        self.bitwise_products.index = working_index
+        return working_index
 
     @property
     def cubes(self) -> dict:
@@ -682,6 +735,78 @@ class DataSet:
         }
 
         return cubes
+
+    @property
+    def frames(self) -> dict:
+        """Retrieve all Frame objects.
+
+        Returns
+        -------
+        dict
+            A dictionary containing all Frame objects from the DataSet.
+            The keys are the original keys, given or generated.
+        """
+        frames = {
+            key: value
+            for key, value in self.contents.items()
+            if issubclass(type(value), Frame)
+        }
+        return frames
+
+    @property
+    def index(self) -> pd.MultiIndex:
+        return self._index
+
+    @index.setter
+    def index(self, val: pd.MultiIndex):
+        self._attr_override("index", val)
+        self._index = val
+        self._ntime = len(val)
+
+    @property
+    def ntime(self) -> int:
+        return self._ntime
+
+    @ntime.setter
+    def ntime(self, val):
+        if self.index.empty:
+            self._ntime = val
+            self._attr_override("ntime", val)
+            new_index = DataCube.parse_index(ntime=val)
+            self._attr_override("index", new_index)
+        else:
+            raise (AttributeError("Cannot set ntime when a non-empty index exists."))
+
+    @property
+    def contents(self) -> dict:
+        """All contained lkdata objects"""
+        return self._contents
+
+    @contents.setter
+    def contents(self, val: dict):
+        self._contents = val
+
+    @property
+    def series(self) -> dict:
+        """Retrieve all Series objects.
+
+        Returns
+        -------
+        dict
+            A dictionary containing all Series objects from the DataSet.
+            The keys are the original keys, given or generated.
+        """
+        series = {
+            key: value
+            for key, value in self.products.items()
+            if issubclass(type(value), Series)
+        }
+        return series
+
+    @property
+    def user_kwargs(self) -> dict:
+        """Keywords passed by the user"""
+        return {key: getattr(self, key, None) for key in self._user_kwargs}
 
     def downsample(self, nframes: int = 5, level: Union[str, int] = -1):
         """Downsample all contained products."""
@@ -730,71 +855,8 @@ class DataSet:
 
         newbatch.index = indices.index
         setattr(newbatch, label, newbatch.index.get_level_values(level=label))
-        for val in newbatch.data.values():
+        for val in newbatch.data_products.values():
             val.index = indices.index
 
         if not inplace:
             return newbatch
-
-    @property
-    def frames(self) -> dict:
-        """Retrieve all Frame objects.
-
-        Returns
-        -------
-        dict
-            A dictionary containing all Frame objects from the DataSet.
-            The keys are the original keys, given or generated.
-        """
-        frames = {
-            key: value
-            for key, value in self.contents.items()
-            if issubclass(type(value), Frame)
-        }
-        return frames
-
-    @property
-    def index(self):
-        return self._index
-
-    @index.setter
-    def index(self, val):
-        self._attr_override("index", val)
-        self._index = val
-        self._ntime = len(val)
-
-    @property
-    def ntime(self):
-        return self._ntime
-
-    @ntime.setter
-    def ntime(self, val):
-        if self.index.empty:
-            self._ntime = val
-            self._attr_override("ntime", val)
-            new_index = DataCube.parse_index(ntime=val)
-            self._attr_override("index", new_index)
-        else:
-            raise (AttributeError("Cannot set ntime when a non-empty index exists."))
-
-    @property
-    def series(self) -> dict:
-        """Retrieve all Series objects.
-
-        Returns
-        -------
-        dict
-            A dictionary containing all Series objects from the DataSet.
-            The keys are the original keys, given or generated.
-        """
-        series = {
-            key: value
-            for key, value in self.contents.items()
-            if issubclass(type(value), Series)
-        }
-        return series
-
-    @property
-    def user_kwargs(self):
-        """Keywords passed by the user"""
-        return {key: getattr(self, key, None) for key in self._user_kwargs}
