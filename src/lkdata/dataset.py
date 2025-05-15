@@ -461,7 +461,6 @@ class DataSet:
     _user_kwargs = None
     _index = None
     _ntime = None
-    _contents: dict = None
 
     def __init__(
         self,
@@ -493,11 +492,6 @@ class DataSet:
         )
 
         self.index = self._combine_indices(index=index)
-
-        self.contents = {}
-        self.contents.update(self.data_products)
-        self.contents.update(self.bool_products)
-        self.contents.update(self.bitwise_products)
 
     @singledispatchmethod
     def __getitem__(self, key):
@@ -662,20 +656,25 @@ class DataSet:
         setattr(self.bitwise_products, attr, val)
 
     def _batch_wrapper(self, func):
-        def new_func(*args, **kwargs):
-            newdata = dict(deepcopy(self.data_products))
-            for key, val in newdata.items():
-                obj_func = getattr(val, func)
-                newdata[key] = obj_func(*args, **kwargs)
+        def batch_func(*args, **kwargs):
+            def do_batch_func(bundle):
+                for key, val in bundle.items():
+                    obj_func = getattr(val, func)
+                    bundle[key] = obj_func(*args, **kwargs)
+                return bundle
 
-            return self._build_instance(newdata)
+            newdata = do_batch_func(dict(deepcopy(self.data_products)))
+            newbools = do_batch_func(dict(deepcopy(self.bool_products)))
+            newbits = do_batch_func(dict(deepcopy(self.bitwise_products)))
 
-        return new_func
+            return self._build_instance(newdata, newbools, newbits)
 
-    def _build_instance(self, newdata, **kwargs):
+        return batch_func
+
+    def _build_instance(self, newdata, newbools, newbits, **kwargs):
         all_kwargs = self.user_kwargs.copy()
         all_kwargs.update(**kwargs)
-        return self.__class__(newdata, **all_kwargs)
+        return self.__class__(newdata, newbools, newbits, **all_kwargs)
 
     def _combine_indices(self, index) -> pd.MultiIndex:
         """Combine indices of contents into a single MultiIndex."""
@@ -775,16 +774,16 @@ class DataSet:
             new_index = DataCube.parse_index(ntime=val)
             self._attr_override("index", new_index)
         else:
-            raise (AttributeError("Cannot set ntime when a non-empty index exists."))
+            raise AttributeError("Cannot set ntime when a non-empty index exists.")
 
     @property
     def contents(self) -> dict:
         """All contained lkdata objects"""
-        return self._contents
-
-    @contents.setter
-    def contents(self, val: dict):
-        self._contents = val
+        contents = {}
+        contents.update(self.data_products)
+        contents.update(self.bool_products)
+        contents.update(self.bitwise_products)
+        return contents
 
     @property
     def series(self) -> dict:
@@ -798,7 +797,7 @@ class DataSet:
         """
         series = {
             key: value
-            for key, value in self.products.items()
+            for key, value in self.contents.items()
             if issubclass(type(value), Series)
         }
         return series
