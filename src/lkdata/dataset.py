@@ -95,10 +95,7 @@ class DataProcessorMixin:
             working_attr = getattr(self, attr, None)
             check_attr = getattr(data_product, attr, None)
             if working_attr is not None:
-                if working_attr == check_attr:
-                    # attributes match
-                    pass
-                elif len(working_attr) != len(check_attr):
+                if len(working_attr) != len(check_attr):
                     # attributes don't match and are incompatible based on length
                     raise ValueError(
                         f"""
@@ -106,8 +103,11 @@ class DataProcessorMixin:
                         {working_attr.shape} != {check_attr.shape}
                         """
                     )
+                elif all(working_attr == check_attr):
+                    # attributes match
+                    pass
                 elif attr == "colunmns":
-                    # columns are indexed differently
+                    # columns are indexed differently, but the same shape
                     # TODO: resolve this
                     pass
                 elif attr == "index":
@@ -246,8 +246,9 @@ class ProductBundle(dict, DataProcessorMixin):
         index: pd.MultiIndex = None,
         **kwargs,
     ):
+        ntime = kwargs.pop("ntime", 0)
         time_indices = kwargs.pop("time_indices", None)
-        index = IndexProcessorMixin.parse_index(index, time_indices)
+        index = IndexProcessorMixin.parse_index(index, time_indices, ntime)
 
         self._data_types = dict()
         if input_data is not None:
@@ -255,7 +256,6 @@ class ProductBundle(dict, DataProcessorMixin):
             self.update(input_data)
             for v in self.values():
                 v.index = self.index
-                v.ntime = self.ntime
 
     def __deepcopy__(self, *args, **kwargs):
         return self.__class__({key: deepcopy(val) for key, val in self.items()})
@@ -441,21 +441,32 @@ class BitwiseProducts(ProductBundle):
 
 @dataclass
 class DataSet:
-    """Class to group related products for batch processing.
+    """A class for objects with common time indices for batch manipulation.
 
     Parameters
     ----------
-    products: Dict[str, lkDataTypes]
-        A dictionary of lkdata objects which share the same time and spatial indices.
+    data_products: Dict[str, LkDataTypes|Iterable]
+        A dictionary of 1, 2, and/or 3 dimensional data objects. LkDataTypes
+        support associated errors, whereas other Iterable types will be
+        converted to the appropriate LkDataType without errors.
+    bool_products: Dict[str, LkBoolTypes|Iterable[Bool]]
+        A dictionary 1, 2, or 3 dimensional boolean arrays.
+    bitwise_products: Dict[str, LkBitwiseTypes|Iterable[int|set|BitSet]]
+        A dictionary of lkbitwise objects
     index: pd.MultiIndex, optional
        A MultiIndex which is used to index the data. If none given, the DataSet
        constructor will attempt to infer the index from the given products.
+    time_indices: dict, optional
 
     Returns
     -------
     DataSet
         A dict-like object containing related data and error products which
         may be manipulated and analyzed simultaneously.
+
+    Note: 2-dimensional arrays here are assumed to be a collection of
+    time-series for a set of non-contiguous pixels rather than images.
+
     """
 
     _user_kwargs = None
@@ -528,7 +539,9 @@ class DataSet:
             new_bit, self.bitwise_products.index[np.atleast_1d(key)]
         )
 
-        return self._build_instance(newdata=new_data, bools=new_bool, bitwise=new_bit)
+        return self._build_instance(
+            newdata=new_data, newbools=new_bool, newbits=new_bit
+        )
 
     @__getitem__.register(slice)
     def _(self, key):
@@ -547,7 +560,9 @@ class DataSet:
             new_bit[bit_key] = bit_data[key]
         new_bit = BitwiseProducts(new_bit, self.bitwise_products.index[key])
 
-        return self._build_instance(newdata=new_data, bools=new_bool, bitwise=new_bit)
+        return self._build_instance(
+            newdata=new_data, newbools=new_bool, newbits=new_bit
+        )
 
     @__getitem__.register
     def _(self, key: tuple):
@@ -630,7 +645,7 @@ class DataSet:
         new_kwargs["columns"] = new_columns
 
         return self._build_instance(
-            new_data, bools=new_bool, bitwise=new_bit, **new_kwargs
+            new_data, newbools=new_bool, newbits=new_bit, **new_kwargs
         )
 
     def __len__(self):
@@ -652,8 +667,14 @@ class DataSet:
 
     def _attr_override(self, attr, val):
         setattr(self.data_products, attr, val)
+        for v in self.data_products.values():
+            setattr(v, attr, val)
         setattr(self.bool_products, attr, val)
+        for v in self.bool_products.values():
+            setattr(v, attr, val)
         setattr(self.bitwise_products, attr, val)
+        for v in self.bitwise_products.values():
+            setattr(v, attr, val)
 
     def _batch_wrapper(self, func):
         def batch_func(*args, **kwargs):

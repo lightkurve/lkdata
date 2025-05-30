@@ -53,7 +53,7 @@ def test_bad_setup():
     with pytest.raises(ValueError, match="Length of index"):
         _ = DataCube(data_mismatch, index=index, columns=columns)
     data_mismatch = np.random.normal(size=(ntime, nrow + 10, ncol))
-    with pytest.raises(ValueError, match="problems"):
+    with pytest.raises(ValueError, match="Number of columns"):
         _ = DataCube(data_mismatch, index=index, columns=columns)
 
 
@@ -504,7 +504,8 @@ def test_bit_cube():
     bitframe.values_display = "bitset"
     bitset_str = strip(bitframe.styler.to_string())
     assert bitset_str == (
-        "01234567891011121314150{}{1}{2}{1,2}{4}{1,4}{2,4}{1,2,4}{8}"
+        "series(0,)(1,)(2,)(3,)(4,)(5,)(6,)(7,)(8,)(9,)(10,)(11,)(12,)(13,)"
+        "(14,)(15,)time_index0{}{1}{2}{1,2}{4}{1,4}{2,4}{1,2,4}{8}"
         "{1,8}{2,8}{1,2,8}{4,8}{1,4,8}{2,4,8}{1,2,4,8}1{16}{1,16}{2,16}"
         "{1,2,16}{4,16}{1,4,16}{2,4,16}{1,2,4,16}{8,16}{1,8,16}{2,8,16}"
         "{1,2,8,16}{4,8,16}{1,4,8,16}{2,4,8,16}{1,2,4,8,16}"

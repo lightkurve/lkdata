@@ -30,7 +30,6 @@ class Cube(
 ):
     """Abstract dataclass for cube-like data with time, row, and column axes"""
 
-    ntime: Optional[int] = None
     nrow: Optional[int] = None
     ncol: Optional[int] = None
     row_names: Optional[List[str]] = None
@@ -57,9 +56,9 @@ class Cube(
                 self._user_kwargs.append(key)
                 self._metadata.append(key)
                 setattr(self, key, val)
-
+        ntime = np.array(data).shape[0]
         data = self._preprocess_data(data)
-        index = self.parse_index(index, time_indices, self.ntime)
+        index = self.parse_index(index, time_indices, ntime)
         columns, self.nrow, self.ncol = self.parse_columns(
             columns, row_indices, col_indices, self.nrow, self.ncol, continuous=True
         )
@@ -67,9 +66,9 @@ class Cube(
         if len(data) != len(index):
             raise ValueError("Length of index does not match shape of data.")
         if len(columns) != data.shape[1]:
-            raise ValueError("problems")
+            raise ValueError("Number of columns does not match shape of data.")
         super().__init__(data, index=index, columns=columns, dtype=dtype)
-        self._array = self.to_numpy().reshape(self.ntime, self.nrow, self.ncol)
+        self._array = self.to_numpy().reshape(ntime, self.nrow, self.ncol)
         self._include_convenience_index()
         self._include_convenience_columns()
 
@@ -189,14 +188,30 @@ class Cube(
         )
 
     def __repr__(self):
-        # TODO: add uncertainty
+        if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
+            return f"Cube + Uncertainty {self.ntime, self.nrow, self.ncol}"
         return f"Cube {self.ntime, self.nrow, self.ncol}"
 
     def __str__(self):
         return self.__repr__()
 
     def _convert_to_series_index(self, row, col):
-        # Convert row, col index to DataFrame column index
+        """Convert (row, col) input to DataFrame series indices
+
+        Where a Cube is subscripted with row and col inputs, either slices,
+        lists of integers, a single integer, or a mixture thereof, this method
+        converts such inputs into positional column indices and also returns
+        the new dimensions for nrow and ncol.
+
+        Args:
+            row: Union[int, slice, Iterable]
+            col: Union[int, slice, Iterable]
+
+        Returns:
+            nrow: int
+            ncol: int
+            series_index: np.array
+        """
         if isinstance(row, slice):
             row_indices = np.arange(self.nrow)[row]
         else:
@@ -219,7 +234,6 @@ class Cube(
 
     def _preprocess_data(self, data):
         data = np.array(data)
-        self._set_dim("ntime", data.shape[0])
         log.info("data.ndim = %s, data.shape= %s", data.ndim, data.shape)
         if data.ndim == 2:
             if (self.nrow is None) | (self.ncol is None):
@@ -229,6 +243,7 @@ class Cube(
                 """
                 )
         elif data.ndim == 3:
+            # Reshape for a 2D Pandas DataFrame
             self._set_dim("nrow", data.shape[1])
             self._set_dim("ncol", data.shape[2])
             data = np.hstack(data.transpose([1, 0, 2]))
@@ -272,11 +287,13 @@ class Cube(
 
     @property
     def array(self):
-        return self._array
+        """Numpy array representation with shape (ntime, nrow, ncol)
 
-    @array.setter
-    def array(self, val):
-        self._array = np.array(val)
+        Note: storing the data as an array is redundant, but uncertainties
+        are set up such that parent data are expected to be persistent numpy
+        arrays. The pandas data structure does not facilitate this easily.
+        """
+        return self._array
 
     def describe_cube(self, **printoptions):  # pragma: no cover
         """Print a description of the Cube instance.
@@ -360,6 +377,11 @@ class Cube(
     def nseries(self):
         """Total number of time series contained in the cube"""
         return self.ncol * self.nrow
+
+    @property
+    def ntime(self):
+        """Number of time steps contained in the cube"""
+        return len(self.index)
 
     def single_frame(self, cadence: int) -> pd.DataFrame:
         """Create a stylized single cadence frame of a datacube

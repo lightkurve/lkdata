@@ -281,6 +281,7 @@ class IndexProcessorMixin:
         nrow: int = 0,
         ncol: int = 0,
         continuous=False,
+        nseries: int = 0,
     ):
         """Parse row and column information from given information
 
@@ -319,7 +320,11 @@ class IndexProcessorMixin:
             and (nrow == 0)
             and (ncol == 0)
         ):
-            return pd.MultiIndex.from_arrays([[]], names=["series"]), None, None
+            return (
+                pd.MultiIndex.from_arrays([range(nseries)], names=["series"]),
+                None,
+                None,
+            )
 
         row_indices, col_indices = self.parse_pos_indices(
             row_indices, col_indices, nrow, ncol
@@ -398,7 +403,7 @@ class IndexProcessorMixin:
         ):
             dfarray = dfarray.reshape((self.ntime, self.nrow, self.ncol))
         if inplace:
-            self.array = dfarray
+            self._array = dfarray
 
         if hasattr(self, "uncertainty") and bool(self.uncertainty):
             uncertainty_array = self.uncertainty.array
@@ -1130,7 +1135,7 @@ class AggMixin:
 
         # We only accept cases where the number of points in a bin is the same
         # as the number of frames we downsample to
-        if hasattr(dfcopy, "columns"):
+        if hasattr(dfcopy, "columns") and getattr(dfcopy, "columns") is not None:
             count = gb[int(dfcopy.columns.get_level_values(0)[0])].count()
             bin_mask = np.asarray(count == nframes)[:, 0]
         else:
