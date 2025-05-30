@@ -31,47 +31,48 @@ class Frame(
     """Abstract dataclass for frame-like data with time and multiple series"""
 
     _pd_class = pd.DataFrame
+    nrow: int = None
+    ncol: int = None
     row_names = None
     col_names = None
     _user_kwargs = None
     _array = None
 
-    def __init__(self, *args, **kwargs):
+    def __init__(
+        self, data, time_indices=None, row_indices=None, col_indices=None, **kwargs
+    ):
+        # Pandas DataFrame kwargs
+        dtype = kwargs.pop("dtype", None)
+        copy = kwargs.pop("copy", None)
+
+        # Reserved names
+        kwargs.pop("ntime", None)
+        ntime = np.array(data).shape[0]
+        nrow = kwargs.pop("nrow", 0)
+        ncol = kwargs.pop("ncol", 0)
         index = kwargs.pop("index", None)
-        time_indices = kwargs.pop("time_indices", None)
-        index = self.parse_index(index, time_indices)
-        if index.empty:
-            index = None
         columns = kwargs.pop("columns", None)
-        row_indices = kwargs.pop("row_indices", None)
-        col_indices = kwargs.pop("col_indices", None)
-        columns, kwargs["nrow"], kwargs["ncol"] = self.parse_columns(
+        nseries = np.array(data).shape[1]
+
+        for key, val in kwargs.items():
+            self._user_kwargs.append(key)  # for building new products
+            self._metadata.append(key)  # for adding attrs to pandas DataFrame subclass
+            setattr(self, key, val)
+
+        index = self.parse_index(index, time_indices, ntime)
+
+        columns, self.nrow, self.ncol = self.parse_columns(
             columns,
             row_indices,
             col_indices,
-            kwargs.get("nrow", 0),
-            kwargs.get("ncol", 0),
+            nrow,
+            ncol,
+            nseries=nseries,
         )
-        if columns.empty:
-            columns = None
-        for key, val in kwargs.items():
-            if key not in (
-                "ntime",
-                "index",
-                "columns",
-                "time_indices",
-                "row_indices",
-                "col_indices",
-            ):
-                self._metadata.append(key)
-                setattr(self, key, val)
-                if key not in ("nrow", "ncol"):
-                    self._user_kwargs.append(key)
 
-        for key in self._metadata:
-            kwargs.pop(key, None)
-
-        pd.DataFrame.__init__(self, *args, index=index, columns=columns, **kwargs)
+        pd.DataFrame.__init__(
+            self, data, index=index, columns=columns, dtype=dtype, copy=copy
+        )
         self.__post_init__()
 
     def __post_init__(self):
@@ -202,12 +203,12 @@ class Frame(
     @property
     def nseries(self):
         """Number of series in the DataFrame"""
-        return self.shape[1]
+        return len(self.columns)
 
     @property
     def ntime(self):
         """Number of time frames"""
-        return self.shape[0]
+        return len(self.index)
 
     def stats_post_process(self, result, **kwargs):
         axis = kwargs.pop("axis")
@@ -225,7 +226,15 @@ class Frame(
 class DataFrame(MathMixin, StatsMixin, Frame):
     _series_class = DataSeries
 
-    def __init__(self, *args, **kwargs):
+    def __init__(
+        self,
+        data,
+        uncertainty=None,
+        time_indices=None,
+        row_indices=None,
+        col_indices=None,
+        **kwargs,
+    ):
         """
         Args:
             data: Union[List, np.ndarray],
@@ -237,10 +246,9 @@ class DataFrame(MathMixin, StatsMixin, Frame):
             col_indices: Union[Dict, List, None] = None,
             dtype: type = float
         """
-        uncertainty = kwargs.pop("uncertainty", None)
         self._metadata = []
         self._user_kwargs = []
-        super().__init__(*args, **kwargs)
+        super().__init__(data, time_indices, row_indices, col_indices, **kwargs)
         self.uncertainty = uncertainty
         self._set_stats_methods()
 
