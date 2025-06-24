@@ -733,6 +733,11 @@ class MathMixin(IndexProcessorMixin):
             raise TypeError(f"Can not perform math operations with type {type(val)}.")
 
     @property
+    def data(self):
+        """Alias for self.array"""
+        return self.array
+
+    @property
     def uncertainty(self):
         """An NDData.Uncertainty object"""
         return self._uncertainty
