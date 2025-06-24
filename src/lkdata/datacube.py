@@ -446,7 +446,7 @@ class Cube(
         out = Styler(df)
         if "label" in kwargs:
             out = out.set_caption(kwargs.pop("label"))
-        if self._stats_type == "error":
+        if self._stats_type == "error" or all(out.data.dtypes == float):
             out = out.format(precision=3)
         else:
             out = out.format(precision=0, thousands=",")
