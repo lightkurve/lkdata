@@ -62,6 +62,11 @@ sphinx-copybutton = ">= 0.5.2"
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
+[dependency-groups]
+dev = [
+    "ipykernel>=6.29.5",
+]
+
 
 [tool.coverage.run]
 relative_files = true

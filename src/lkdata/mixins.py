@@ -451,6 +451,7 @@ class MathMixin(IndexProcessorMixin):
     different arithmetic operations.
     """
 
+    _array = None
     _uncertainty = None
 
     def __add__(self, other):
@@ -731,6 +732,23 @@ class MathMixin(IndexProcessorMixin):
                 return val.to_numpy()
         else:
             raise TypeError(f"Can not perform math operations with type {type(val)}.")
+
+    @property
+    def array(self):
+        """Numpy array representation
+
+        Cubes have shape (ntime, nrow, ncol)
+        Frames have shape (ntime, nseries)
+        and Series have shape (ntime)
+
+        Note:
+        The property defined here is for Data classes and and stores the array
+        in memory. This overwrites the on-call form defined in the
+        ConvenienceMixin class.
+        Though storing the data as an array is redundant, uncertainties are set
+        up such that parent data are expected to be persistent and array-like.
+        """
+        return self._array
 
     @property
     def data(self):
@@ -1582,6 +1600,22 @@ class ConvenienceMixins:
         new_data_obj._metadata.append(label)
         setattr(new_data_obj, label, new_data_obj.index.get_level_values(level=label))
         return new_data_obj
+
+    @property
+    def array(self):
+        """Numpy array representation with shape (ntime, nrow, ncol)
+
+        Cubes have shape (ntime, nrow, ncol)
+        Frames have shape (ntime, nseries)
+        and Series have shape (ntime)
+        """
+
+        return self.to_numpy().reshape(self.ntime, self.nrow, self.ncol)
+
+    @property
+    def ntime(self):
+        """Number of cadences in the data."""
+        return self.shape[0]
 
     @property
     def user_kwargs(self):
