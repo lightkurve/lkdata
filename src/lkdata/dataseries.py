@@ -222,6 +222,8 @@ class DataSeries(MathMixin, StatsMixin, Series):
     """
 
     def __init__(self, data, uncertainty=None, index=None, dtype=None, **kwargs):
+        self._metadata: List[str] = ["uncertainty"]
+        self._user_kwargs: List[str] = []
         super().__init__(
             data,
             index=index,
@@ -230,11 +232,8 @@ class DataSeries(MathMixin, StatsMixin, Series):
             copy=kwargs.pop("copy", None),
             **kwargs,
         )
-        self._array = self.to_numpy.reshape(self.ntime)
-        self._metadata: List[str] = ["uncertainty"]
-        self._user_kwargs: List[str] = []
+        self._array = self.to_numpy()
         self.uncertainty = uncertainty
-        self.stats_post_process = lambda x: x  # required for StatsMixin
         self._set_stats_methods()
 
     def __repr__(self):
