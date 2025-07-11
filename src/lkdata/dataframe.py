@@ -139,6 +139,11 @@ class Frame(
     def _repr_html_(self):  # pragma: no cover
         return repr(self) + super()._repr_html_()
 
+    @property
+    def array(self):
+        """Numpy array representation with shape (ntime, nseries)"""
+        return self.to_numpy().reshape(self.ntime, self.nseries)
+
     def describe_frame(self, **printoptions):  # pragma: no cover
         """Print a description of the Frame instance.
 
@@ -155,7 +160,7 @@ class Frame(
             print()
             if hasattr(self, "uncertainty"):
                 print("Uncertainty:")
-                print(f"\tuncertainty\t:\{self.uncertainty})")
+                print(f"\tuncertainty\t:{self.uncertainty})")
 
             print()
             print("Time indices available: " + str(self.index.names))
@@ -234,7 +239,7 @@ class DataFrame(MathMixin, StatsMixin, Frame):
         self._metadata = []
         self._user_kwargs = []
         super().__init__(data, time_indices, row_indices, col_indices, **kwargs)
-        self._array = self.to_numpy()
+        self._array = self.to_numpy().reshape(self.ntime, self.nseries)
         self.uncertainty = uncertainty
         self._set_stats_methods()
 

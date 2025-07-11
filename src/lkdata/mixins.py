@@ -1602,17 +1602,6 @@ class ConvenienceMixins:
         return new_data_obj
 
     @property
-    def array(self):
-        """Numpy array representation with shape (ntime, nrow, ncol)
-
-        Cubes have shape (ntime, nrow, ncol)
-        Frames have shape (ntime, nseries)
-        and Series have shape (ntime)
-        """
-
-        return self.to_numpy().reshape(self.ntime, self.nrow, self.ncol)
-
-    @property
     def ntime(self):
         """Number of cadences in the data."""
         return self.shape[0]

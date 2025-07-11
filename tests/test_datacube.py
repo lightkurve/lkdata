@@ -519,16 +519,16 @@ def test_bit_cube():
     # Series
     assert isinstance(bitcube[:, 0, 0], BitwiseSeries)
     bitseries = BitwiseSeries(np.arange(0, 16), codes=code_dict)
-    bitwise_str = strip(repr(bitseries))[29:-12]
-    assert bitwise_str == "0011223344556677889910101111121213131414151"
+    bitwise_str = strip(bitseries._repr_html_())[34:-17]
+    assert bitwise_str == "00112233445566778899101011111212131314141515"
     bitseries.values_display = "bitset"
-    bitset_str = strip(repr(bitseries))[29:-12]
+    bitset_str = strip(bitseries._repr_html_())[34:-18]
     assert bitset_str == (
         "0{}1{1}2{2}3{1,2}4{4}5{1,4}6{2,4}7{1,2,4}8{8}9{1,8}"
         "10{2,8}11{1,2,8}12{4,8}13{1,4,8}14{2,4,8}15{1,2,4,8}"
     )
     bitseries.values_display = "detailed"
-    detailed_str = strip(repr(bitseries))[29:-12]
+    detailed_str = strip(bitseries._repr_html_())[34:-18]
     assert detailed_str == (
         "0{}1{1:'C1'}2{2:'C2'}3{1:'C1',2:'C2'}4{4:'C4'}"
         "5{1:'C1',4:'C4'}6{2:'C2',4:'C4'}7{1:'C1',2:'C2',4:'C4'}"

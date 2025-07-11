@@ -256,8 +256,6 @@ class Cube(
         return data
 
     def _repr_html_(self):
-        # TODO: Something is broken here with multiple time indices
-        # TODO: the name "row" is breaking
         if self.ntime == 0:
             return repr(self)
 
@@ -288,6 +286,12 @@ class Cube(
             setattr(self, attr, val)
         elif getattr(self, attr) != val:
             raise ValueError(f"Given {attr} does not match given data shape {val}")
+
+    @property
+    def array(self):
+        """Numpy array representation with shape (ntime, nrow, ncol)"""
+
+        return self.to_numpy().reshape(self.ntime, self.nrow, self.ncol)
 
     def describe_cube(self, **printoptions):  # pragma: no cover
         """Print a description of the Cube instance.

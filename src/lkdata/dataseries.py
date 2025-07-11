@@ -77,6 +77,11 @@ class Series(
         else:
             return self.__class__(result_data, index=result_index, **init_kwds)
 
+    @property
+    def array(self):
+        """Numpy array representation"""
+        return self.to_numpy()
+
     def describe_series(self, **printoptions):  # pragma: no cover
         """Print a description of the Series instance.
 
@@ -119,6 +124,14 @@ class Series(
     def from_pandas(cls, data, **kwargs):
         """Convert a pd.Series to a DataSeries"""
         return cls(data.to_numpy(), index=data.index, **kwargs)
+
+    def stats_post_process(self, result, **kwargs):
+        """Statistics post processer to format return data."""
+        uncertainty = kwargs.pop("uncertainty", None)
+        if uncertainty:
+            return result, uncertainty
+        else:
+            return result
 
 
 class DataSeries(MathMixin, StatsMixin, Series):
@@ -339,4 +352,4 @@ class BitwiseSeries(BitwiseMixin, Series):
             )
         else:
             display = repr(self.apply(int))
-        print(display)
+        return f"""<pre>{repr(self)}\n{display}</pre>"""
