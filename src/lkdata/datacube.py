@@ -30,12 +30,12 @@ class Cube(
 ):
     """Abstract dataclass for cube-like data with time, row, and column axes"""
 
+    _pd_class = pd.DataFrame
     nrow: Optional[int] = None
     ncol: Optional[int] = None
     row_names: Optional[List[str]] = None
     col_names: Optional[List[str]] = None
     _user_kwargs: Optional[List[str]] = None
-    _array = None
 
     def __init__(
         self,
@@ -45,18 +45,23 @@ class Cube(
         col_indices: Union[Dict, List, None] = None,
         **kwargs,
     ):
-        self.nrow = kwargs.get("nrow", None)
-        self.ncol = kwargs.get("ncol", None)
-        index = kwargs.get("index", None)
-        columns = kwargs.get("columns", None)
-        dtype = kwargs.pop("dtype", float)
+        # Pandas DataFrame kwargs
+        copy = kwargs.pop("copy", None)
+        dtype = kwargs.pop("dtype", None)
 
-        for key, val in kwargs.items():
-            if key not in ("ntime", "nrow", "ncol", "index", "columns"):
-                self._user_kwargs.append(key)
-                self._metadata.append(key)
-                setattr(self, key, val)
+        # Reserved names
+        kwargs.pop("ntime", None)
         ntime = np.array(data).shape[0]
+        self.nrow = kwargs.pop("nrow", None)
+        self.ncol = kwargs.pop("ncol", None)
+        columns = kwargs.pop("columns", None)
+        index = kwargs.pop("index", None)
+
+        # User defined properties, stored as custom attributes
+        for key, val in kwargs.items():
+            self._user_kwargs.append(key)  # for building new products
+            self._metadata.append(key)  # for adding attrs to pandas DataFrame subclass
+            setattr(self, key, val)
         data = self._preprocess_data(data)
         index = self.parse_index(index, time_indices, ntime)
         columns, self.nrow, self.ncol = self.parse_columns(
@@ -67,8 +72,7 @@ class Cube(
             raise ValueError("Length of index does not match shape of data.")
         if len(columns) != data.shape[1]:
             raise ValueError("Number of columns does not match shape of data.")
-        super().__init__(data, index=index, columns=columns, dtype=dtype)
-        self._array = self.to_numpy().reshape(ntime, self.nrow, self.ncol)
+        super().__init__(data, index=index, columns=columns, dtype=dtype, copy=copy)
         self._include_convenience_index()
         self._include_convenience_columns()
 
@@ -252,8 +256,6 @@ class Cube(
         return data
 
     def _repr_html_(self):
-        # TODO: Something is broken here with multiple time indices
-        # TODO: the name "row" is breaking
         if self.ntime == 0:
             return repr(self)
 
@@ -287,20 +289,16 @@ class Cube(
 
     @property
     def array(self):
-        """Numpy array representation with shape (ntime, nrow, ncol)
+        """Numpy array representation with shape (ntime, nrow, ncol)"""
 
-        Note: storing the data as an array is redundant, but uncertainties
-        are set up such that parent data are expected to be persistent numpy
-        arrays. The pandas data structure does not facilitate this easily.
-        """
-        return self._array
+        return self.to_numpy().reshape(self.ntime, self.nrow, self.ncol)
 
     def describe_cube(self, **printoptions):  # pragma: no cover
         """Print a description of the Cube instance.
 
         This description prints information about the temporal and spatial
         indices available in the Cube. It also prints out any additional
-        user-assigned properties given via the kwargs on initialization.
+        user-assigned properties given via keyword arguments on initialization.
         """
         printoptions["linewidth"] = printoptions.get("linewidth", 79)
         printoptions["edgeitems"] = printoptions.get("edgeitems", 2)
@@ -310,14 +308,12 @@ class Cube(
             print(repr(self) + " (ntime, nrow, ncol)")
             print(f"pd.DataFrame shape: {self.shape}")
             print()
-            if hasattr(self, "uncertainty"):
+            if hasattr(self, "uncertainty") and issubclass(self.__class__, DataCube):
                 print("Uncertainty:")
-                try:
-                    print(
-                        f"\tuncertainty\t:\tUncertainty(np.ndarray{self.uncertainty.shape})"
-                    )
-                except AttributeError:
-                    print("\tuncertainty\t:\tUncertainty(None)")
+                print(
+                    f"\tuncertainty\t:\t{type(self.uncertainty).__name__}(np.ndarray{self.uncertainty.shape})"
+                )
+
             print()
             print("Time indices available: " + str(self.index.names))
             for key in self.index.names:
@@ -356,6 +352,18 @@ class Cube(
         return cls(data.to_numpy(), index=data.index, columns=data.columns, **kwargs)
 
     def make_cadence_label(self, cadence: int):
+        """Create a formatted cadence label for the HTML repr
+
+        Parameters
+        ----------
+        cadence : int
+            Cadence for which a label should be created
+
+        Returns
+        -------
+        str
+            Cadence label for the HTML repr
+        """
         if isinstance(self.index, pd.MultiIndex):
             indices = []
             for i in zip(self.index.names, self.index[cadence]):
@@ -377,11 +385,6 @@ class Cube(
     def nseries(self):
         """Total number of time series contained in the cube"""
         return self.ncol * self.nrow
-
-    @property
-    def ntime(self):
-        """Number of time steps contained in the cube"""
-        return len(self.index)
 
     def single_frame(self, cadence: int) -> pd.DataFrame:
         """Create a stylized single cadence frame of a datacube
@@ -527,7 +530,6 @@ class DataCube(
 
     _frame_class = DataFrame
     _series_class = DataSeries
-    _pd_class = pd.DataFrame
 
     def __init__(
         self,
@@ -552,7 +554,7 @@ class DataCube(
             col_indices=col_indices,
             **kwargs,
         )
-
+        self._array = self.to_numpy().reshape(self.ntime, self.nrow, self.ncol)
         self.uncertainty = uncertainty
         if self.uncertainty.array is not None:
             self.uncertainty = uncertainty.reshape(self.array.shape)
@@ -570,7 +572,6 @@ class BoolCube(
 
     _frame_class = BoolFrame
     _series_class = BoolSeries
-    _pd_class = pd.DataFrame
 
     def __init__(
         self,
@@ -597,7 +598,6 @@ class BitwiseCube(BitwiseMixin, Cube):
 
     _frame_class = BitwiseFrame
     _series_class = BitwiseSeries
-    _pd_class = pd.DataFrame
 
     def __init__(
         self,
@@ -642,6 +642,7 @@ class BitwiseCube(BitwiseMixin, Cube):
         data = BitwiseMixin._set_data_type_to_bitset(data)
         self._metadata: List[str] = []
         self._user_kwargs: List[str] = []
+        kwargs.pop("dtype", None)
         if code_dict is None:
             code_dict = {}
         self.codes = code_dict
