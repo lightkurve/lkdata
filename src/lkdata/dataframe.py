@@ -158,9 +158,11 @@ class Frame(
             max_name_len = max(map(len, self._metadata))
             print(repr(self) + " (ntime, nseries)")
             print()
-            if hasattr(self, "uncertainty"):
+            if hasattr(self, "uncertainty") and issubclass(self.__class__, DataFrame):
                 print("Uncertainty:")
-                print(f"\tuncertainty\t:{self.uncertainty})")
+                print(
+                    f"\tuncertainty\t:\t{type(self.uncertainty).__name__}(np.ndarray{self.uncertainty.shape})"
+                )
 
             print()
             print("Time indices available: " + str(self.index.names))

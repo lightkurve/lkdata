@@ -308,9 +308,11 @@ class Cube(
             print(repr(self) + " (ntime, nrow, ncol)")
             print(f"pd.DataFrame shape: {self.shape}")
             print()
-            if hasattr(self, "uncertainty"):
+            if hasattr(self, "uncertainty") and issubclass(self.__class__, DataCube):
                 print("Uncertainty:")
-                print(f"\tuncertainty\t:\t{self.uncertainty.shape}")
+                print(
+                    f"\tuncertainty\t:\t{type(self.uncertainty).__name__}(np.ndarray{self.uncertainty.shape})"
+                )
 
             print()
             print("Time indices available: " + str(self.index.names))

@@ -96,11 +96,11 @@ class Series(
             max_name_len = max(map(len, self._metadata))
             print(f"{repr(self)} {self.shape} (ntime)")
             print()
-            if hasattr(self, "uncertainty"):
+            if hasattr(self, "uncertainty") and issubclass(self.__class__, DataSeries):
                 print("Uncertainty:")
                 try:
                     print(
-                        f"\tuncertainty\t:\tUncertainty(np.ndarray{self.uncertainty.shape})"
+                        f"\tuncertainty\t:\t{type(self.uncertainty).__name__}(np.ndarray{self.uncertainty.shape})"
                     )
                 except AttributeError:
                     print("\tuncertainty\t:\tUncertainty(None)")
