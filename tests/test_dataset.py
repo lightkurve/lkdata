@@ -8,7 +8,11 @@ from lkdata.dataset import (
     DataSet,
 )
 from lkdata.datacube import DataCube, BoolCube, BitwiseCube
-from lkdata.dataframe import DataFrame, BoolFrame, BitwiseFrame
+from lkdata.seriescollection import (
+    DataSeriesCollection,
+    BoolSeriesCollection,
+    BitwiseSeriesCollection,
+)
 from lkdata.dataseries import DataSeries, BoolSeries, BitwiseSeries
 
 
@@ -60,7 +64,7 @@ def datacube(ntime, nrow, ncol):
 @pytest.fixture
 def dataframe(ntime, nrow, ncol):
     """DataFrame"""
-    return DataFrame(
+    return DataSeriesCollection(
         np.random.rand(ntime, nrow * ncol), np.random.rand(ntime, nrow * ncol)
     )
 
@@ -80,7 +84,7 @@ def boolcube(ntime, nrow, ncol):
 @pytest.fixture
 def boolframe(ntime, nrow, ncol):
     """BoolFrame"""
-    return BoolFrame(np.random.choice((True, False), (ntime, nrow * ncol)))
+    return BoolSeriesCollection(np.random.choice((True, False), (ntime, nrow * ncol)))
 
 
 @pytest.fixture
@@ -98,7 +102,7 @@ def bitcube(ntime, nrow, ncol):
 @pytest.fixture
 def bitframe(ntime, nrow, ncol):
     """BitwiseFrame"""
-    return BitwiseFrame(np.random.choice(64, (ntime, nrow * ncol)))
+    return BitwiseSeriesCollection(np.random.choice(64, (ntime, nrow * ncol)))
 
 
 @pytest.fixture
@@ -176,7 +180,7 @@ def test_dataset_init(data_only, sample_dataset, ntime):
 def test_dataset_getitem_string(data_only):
     """Test keyword retreival"""
     assert isinstance(data_only["datacube"], DataCube)
-    assert isinstance(data_only["dataframe"], DataFrame)
+    assert isinstance(data_only["dataframe"], DataSeriesCollection)
     assert isinstance(data_only["dataseries"], DataSeries)
 
 
@@ -191,7 +195,7 @@ def test_dataset_getitem_tuple(data_only):
     """Time and space slice"""
     subset = data_only[1:5, :]
     assert all(
-        isinstance(val, (DataCube, DataFrame, DataSeries))
+        isinstance(val, (DataCube, DataSeriesCollection, DataSeries))
         for val in subset.data_products.values()
     )
 
@@ -213,7 +217,7 @@ def test_dataset_cubes_property(data_only):
 def test_dataset_frames_property(data_only):
     frames = data_only.frames
     assert "dataframe" in frames
-    assert isinstance(frames["dataframe"], DataFrame)
+    assert isinstance(frames["dataframe"], DataSeriesCollection)
 
 
 def test_dataset_series_property(data_only):

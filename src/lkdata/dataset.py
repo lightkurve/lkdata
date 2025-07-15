@@ -12,22 +12,27 @@ import numpy as np
 import pandas as pd
 
 from .datacube import Cube, DataCube, BoolCube, BitwiseCube
-from .dataframe import Frame, DataFrame, BoolFrame, BitwiseFrame
+from .seriescollection import (
+    SeriesCollection,
+    DataSeriesCollection,
+    BoolSeriesCollection,
+    BitwiseSeriesCollection,
+)
 from .dataseries import Series, DataSeries, BoolSeries, BitwiseSeries
 from .mixins import IndexProcessorMixin
 
-LkDataTypes = Union[DataCube, DataFrame, DataSeries]
-LkBoolTypes = Union[BoolCube, BoolFrame, BoolSeries]
-LkBitwiseTypes = Union[BitwiseCube, BitwiseFrame, BitwiseSeries]
+LkDataTypes = Union[DataCube, DataSeriesCollection, DataSeries]
+LkBoolTypes = Union[BoolCube, BoolSeriesCollection, BoolSeries]
+LkBitwiseTypes = Union[BitwiseCube, BitwiseSeriesCollection, BitwiseSeries]
 LkTypes = Union[LkDataTypes, LkBoolTypes, LkBitwiseTypes]
 
 CLS_STRINGS = {
     DataCube: "DataCube",
     BoolCube: "BoolCube",
     BitwiseCube: "BitwiseCube",
-    DataFrame: "DataFrame",
-    BoolFrame: "BoolFrame",
-    BitwiseFrame: "BitwiseFrame",
+    DataSeriesCollection: "DataFrame",
+    BoolSeriesCollection: "BoolFrame",
+    BitwiseSeriesCollection: "BitwiseFrame",
     DataSeries: "DataSeries",
     BoolSeries: "BoolSeries",
     BitwiseSeries: "BitwiseSeries",
@@ -182,13 +187,13 @@ class DataProcessorMixin:
         """
 
     @process_input.register(DataCube)
-    @process_input.register(DataFrame)
+    @process_input.register(DataSeriesCollection)
     @process_input.register(DataSeries)
     @process_input.register(BoolCube)
-    @process_input.register(BoolFrame)
+    @process_input.register(BoolSeriesCollection)
     @process_input.register(BoolSeries)
     @process_input.register(BitwiseCube)
-    @process_input.register(BitwiseFrame)
+    @process_input.register(BitwiseSeriesCollection)
     @process_input.register(BitwiseSeries)
     def _(self, input_data):
         self._check_attrs(input_data)
@@ -230,7 +235,7 @@ class ProductBundle(dict, DataProcessorMixin):
 
     _type: str = None
     _cube: Cube = Cube
-    _frame: Frame = Frame
+    _frame: SeriesCollection = SeriesCollection
     _series: Series = Series
 
     _index: pd.MultiIndex = None
@@ -318,13 +323,13 @@ class ProductBundle(dict, DataProcessorMixin):
         return input_data
 
     @_unpack_input.register(DataCube)
-    @_unpack_input.register(DataFrame)
+    @_unpack_input.register(DataSeriesCollection)
     @_unpack_input.register(DataSeries)
     @_unpack_input.register(BoolCube)
-    @_unpack_input.register(BoolFrame)
+    @_unpack_input.register(BoolSeriesCollection)
     @_unpack_input.register(BoolSeries)
     @_unpack_input.register(BitwiseCube)
-    @_unpack_input.register(BitwiseFrame)
+    @_unpack_input.register(BitwiseSeriesCollection)
     @_unpack_input.register(BitwiseSeries)
     def _(self, input_data):
         default_key = CLS_STRINGS.get(type(input_data))
@@ -388,7 +393,7 @@ class DataProducts(ProductBundle):
 
     _type = "data"
     _cube = DataCube
-    _frame = DataFrame
+    _frame = DataSeriesCollection
     _series = DataSeries
 
     def __init__(
@@ -406,7 +411,7 @@ class DataProducts(ProductBundle):
 class BoolProducts(ProductBundle):
     _type = "bool"
     _cube = BoolCube
-    _frame = BoolFrame
+    _frame = BoolSeriesCollection
     _series = BoolSeries
 
     def __init__(
@@ -424,7 +429,7 @@ class BoolProducts(ProductBundle):
 class BitwiseProducts(ProductBundle):
     _type = "bitwise"
     _cube = BitwiseCube
-    _frame = BitwiseFrame
+    _frame = BitwiseSeriesCollection
     _series = BitwiseSeries
 
     def __init__(
@@ -586,7 +591,7 @@ class DataSet:
             {
                 data_key: data[time_key]
                 for data_key, data in self.data_products.items()
-                if isinstance(data, (DataSeries, DataFrame))
+                if isinstance(data, (DataSeries, DataSeriesCollection))
             }
         )
 
@@ -611,7 +616,7 @@ class DataSet:
             {
                 data_key: data[time_key]
                 for data_key, data in self.bool_products.items()
-                if isinstance(data, (BoolSeries, BoolFrame))
+                if isinstance(data, (BoolSeries, BoolSeriesCollection))
             }
         )
 
@@ -631,7 +636,7 @@ class DataSet:
             {
                 data_key: data[time_key]
                 for data_key, data in self.bitwise_products.items()
-                if isinstance(data, (BitwiseSeries, BitwiseFrame))
+                if isinstance(data, (BitwiseSeries, BitwiseSeriesCollection))
             }
         )
 
@@ -769,7 +774,7 @@ class DataSet:
         frames = {
             key: value
             for key, value in self.contents.items()
-            if issubclass(type(value), Frame)
+            if issubclass(type(value), SeriesCollection)
         }
         return frames
 
