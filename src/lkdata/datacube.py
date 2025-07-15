@@ -8,7 +8,11 @@ from pandas.io.formats.style import Styler
 import numpy as np
 from typing import Union, List, Dict, Optional
 
-from .dataframe import DataFrame, BoolFrame, BitwiseFrame
+from .seriescollection import (
+    DataSeriesCollection,
+    BoolSeriesCollection,
+    BitwiseSeriesCollection,
+)
 from .dataseries import DataSeries, BoolSeries, BitwiseSeries
 from .mixins import (
     StatsMixin,
@@ -480,7 +484,7 @@ class Cube(
         row: Union[int, float, list, slice],
         col: Union[int, float, list, slice],
         **kwargs,
-    ) -> DataFrame:
+    ) -> DataSeriesCollection:
         """Convert lkdata.Cube to lkdata.Frame with the given row and column.
 
         Parameters
@@ -528,7 +532,7 @@ class DataCube(
 ):
     """A Cube object which contains data with time and 2 spatial dimensions."""
 
-    _frame_class = DataFrame
+    _frame_class = DataSeriesCollection
     _series_class = DataSeries
 
     def __init__(
@@ -570,7 +574,7 @@ class BoolCube(
 ):
     """A Cube object which contains boolean values with time and 2 spatial dimensions."""
 
-    _frame_class = BoolFrame
+    _frame_class = BoolSeriesCollection
     _series_class = BoolSeries
 
     def __init__(
@@ -596,7 +600,7 @@ class BoolCube(
 class BitwiseCube(BitwiseMixin, Cube):
     """A Cube object which contains bitwise values with time and 2 spatial dimensions."""
 
-    _frame_class = BitwiseFrame
+    _frame_class = BitwiseSeriesCollection
     _series_class = BitwiseSeries
 
     def __init__(

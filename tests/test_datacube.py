@@ -6,7 +6,7 @@ from astropy.io import fits
 from lkdata import (
     TESTDATA,
     DataCube,
-    DataFrame,
+    DataSeriesCollection,
     DataSeries,
     BoolCube,
 )
@@ -115,12 +115,12 @@ def test_slicing():
     assert df[:, :2, :2].ncol == 2
 
     # Mixed slice and indices
-    assert isinstance(df[:, [0, 1], :2], DataFrame)
+    assert isinstance(df[:, [0, 1], :2], DataSeriesCollection)
     assert df[:, [0, 1], :2].ntime == ntime
     assert df[:, [0, 1], :2].nseries == 4
 
     assert all(df[:, [0, 1], 0] == df[:, [0, 1], [0, 0]])
-    assert isinstance(df[:, [0, 1], 0], DataFrame)
+    assert isinstance(df[:, [0, 1], 0], DataSeriesCollection)
     assert df[:, [0, 1], 0].ntime == ntime
     assert df[:, [0, 1], 0].nseries == 2
 
@@ -130,27 +130,27 @@ def test_slicing():
 
     # Frames - timeseries for multiple pixels
     row, col = np.where(aperture)
-    assert isinstance(df[:, row, col], DataFrame)
+    assert isinstance(df[:, row, col], DataSeriesCollection)
     assert df[:, row, col].ntime == ntime
     assert df[:, row, col].shape == (ntime, 9)
 
-    assert isinstance(df[:, [1, 2, 3], [1, 2, 3]], DataFrame)
+    assert isinstance(df[:, [1, 2, 3], [1, 2, 3]], DataSeriesCollection)
     assert df[:, [1, 2, 3], [1, 2, 3]].ntime == ntime
     assert df[:, [1, 2, 3], [1, 2, 3]].shape == (ntime, 3)
 
-    assert isinstance(df[:, 0, :], DataFrame)
+    assert isinstance(df[:, 0, :], DataSeriesCollection)
     assert df[:, 0, :].ntime == ntime
     assert df[:, 0, :].shape == (ntime, ncol)
 
-    assert isinstance(df[:, :, 0], DataFrame)
+    assert isinstance(df[:, :, 0], DataSeriesCollection)
     assert df[:, :, 0].ntime == ntime
     assert df[:, :, 0].shape == (ntime, nrow)
 
-    assert isinstance(df[:, :1, [1, 2]], DataFrame)
+    assert isinstance(df[:, :1, [1, 2]], DataSeriesCollection)
     assert df[:, :1, [1, 2]].ntime == ntime
     assert df[:, :1, [1, 2]].shape == (ntime, 2)
 
-    assert isinstance(df[:, [0, 1], [1, 2]], DataFrame)
+    assert isinstance(df[:, [0, 1], [1, 2]], DataSeriesCollection)
     assert df[:, [0, 1], [1, 2]].ntime == ntime
     assert df[:, [0, 1], [1, 2]].shape == (ntime, 2)
 
@@ -359,7 +359,7 @@ def test_real_data():
     assert flux.downsample(5).array.shape == (8, 6, 6)
     assert flux.downsample(5).uncertainty.array.shape == (8, 6, 6)
 
-    assert isinstance(flux[:, aper], DataFrame)
+    assert isinstance(flux[:, aper], DataSeriesCollection)
     assert isinstance(flux[:, aper].uncertainty, Uncertainty)
 
     assert isinstance(flux[:, aper].sum(axis=1), DataSeries)
@@ -429,7 +429,7 @@ def test_bool_cube():
 
 def test_bit_cube():
     """Test BitwiseCube methods"""
-    from lkdata import BitwiseCube, BitwiseFrame, BitwiseSeries
+    from lkdata import BitwiseCube, BitwiseSeriesCollection, BitwiseSeries
 
     def strip(string):
         return string.replace(" ", "").replace("\n", "")
@@ -480,7 +480,7 @@ def test_bit_cube():
     ).all()
 
     # Frames
-    assert isinstance(bitcube[:, [0, 1, 2, 3], :], BitwiseFrame)
+    assert isinstance(bitcube[:, [0, 1, 2, 3], :], BitwiseSeriesCollection)
     bitframe = bitcube[:, [0, 1, 2, 3], :]
     assert bitframe.shape == (2, 16)
     # Ensure codes and values_display transferred to derivative product
@@ -499,7 +499,7 @@ def test_bit_cube():
         "8:'C8',16:'C16'}{1:'C1',2:'C2',4:'C4',8:'C8',16:'C16'}"
     )
 
-    bitframe = BitwiseFrame(np.arange(0, 32).reshape(2, 16))
+    bitframe = BitwiseSeriesCollection(np.arange(0, 32).reshape(2, 16))
     # New bitframe has no codes_dict, detailed display should be the same as bitset
     bitframe.values_display = "bitset"
     bitset_str = strip(bitframe.styler.to_string())

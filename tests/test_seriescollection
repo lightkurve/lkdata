@@ -3,11 +3,11 @@ import numpy as np
 import pytest
 
 from lkdata import (
-    DataFrame,
+    DataSeriesCollection,
     DataSeries,
-    BoolFrame,
+    BoolSeriesCollection,
     BoolSeries,
-    BitwiseFrame,
+    BitwiseSeriesCollection,
     BitwiseSeries,
 )
 
@@ -15,8 +15,8 @@ from lkdata import (
 def test_dataframe_init():
     """DataFrame initialization tests"""
     data = np.random.rand(10, 5)
-    df = DataFrame(data)
-    assert isinstance(df, DataFrame)
+    df = DataSeriesCollection(data)
+    assert isinstance(df, DataSeriesCollection)
     assert df.shape == (10, 5)
     assert np.all(df.values == data)
 
@@ -24,8 +24,8 @@ def test_dataframe_init():
 def test_boolframe_init():
     """BoolFrame initialization tests"""
     data = np.random.choice([True, False], size=(10, 5))
-    bf = BoolFrame(data)
-    assert isinstance(bf, BoolFrame)
+    bf = BoolSeriesCollection(data)
+    assert isinstance(bf, BoolSeriesCollection)
     assert bf.shape == (10, 5)
     assert np.all(bf.values == data)
 
@@ -33,19 +33,19 @@ def test_boolframe_init():
 def test_bitwiseframe_init():
     """BitwiseFrame initialization tests"""
     data = np.random.randint(0, 256, size=(10, 5))
-    bwf = BitwiseFrame(data)
-    assert isinstance(bwf, BitwiseFrame)
+    bwf = BitwiseSeriesCollection(data)
+    assert isinstance(bwf, BitwiseSeriesCollection)
     assert bwf.shape == (10, 5)
     assert np.all(bwf.values == data)
 
 
 def test_dataframe_getitem():
     """DataFrame getitem tests"""
-    df = DataFrame(np.random.rand(10, 5))
-    assert isinstance(df[0], DataFrame)
-    assert isinstance(df[:5], DataFrame)
-    assert isinstance(df[[0, 1]], DataFrame)
-    assert isinstance(df[0, 1:3], DataFrame)
+    df = DataSeriesCollection(np.random.rand(10, 5))
+    assert isinstance(df[0], DataSeriesCollection)
+    assert isinstance(df[:5], DataSeriesCollection)
+    assert isinstance(df[[0, 1]], DataSeriesCollection)
+    assert isinstance(df[0, 1:3], DataSeriesCollection)
     assert isinstance(df[:, 0], DataSeries)
     with pytest.raises(TypeError, match="non-integer key"):
         _ = df["one"]
@@ -54,11 +54,11 @@ def test_dataframe_getitem():
 
 
 def test_boolframe_getitem():
-    bool_df = BoolFrame(np.random.choice([True, False], size=(10, 5)))
-    assert isinstance(bool_df[0], BoolFrame)
-    assert isinstance(bool_df[:5], BoolFrame)
-    assert isinstance(bool_df[[0, 1]], BoolFrame)
-    assert isinstance(bool_df[0, 1:3], BoolFrame)
+    bool_df = BoolSeriesCollection(np.random.choice([True, False], size=(10, 5)))
+    assert isinstance(bool_df[0], BoolSeriesCollection)
+    assert isinstance(bool_df[:5], BoolSeriesCollection)
+    assert isinstance(bool_df[[0, 1]], BoolSeriesCollection)
+    assert isinstance(bool_df[0, 1:3], BoolSeriesCollection)
     assert isinstance(bool_df[:, 0], BoolSeries)
     with pytest.raises(TypeError, match="non-integer key"):
         _ = bool_df["one"]
@@ -67,11 +67,11 @@ def test_boolframe_getitem():
 
 
 def test_bitwiseframe_getitem():
-    bitwise_df = BitwiseFrame(np.random.randint(0, 256, size=(10, 5)))
-    assert isinstance(bitwise_df[0], BitwiseFrame)
-    assert isinstance(bitwise_df[:5], BitwiseFrame)
-    assert isinstance(bitwise_df[[0, 1]], BitwiseFrame)
-    assert isinstance(bitwise_df[0, 1:3], BitwiseFrame)
+    bitwise_df = BitwiseSeriesCollection(np.random.randint(0, 256, size=(10, 5)))
+    assert isinstance(bitwise_df[0], BitwiseSeriesCollection)
+    assert isinstance(bitwise_df[:5], BitwiseSeriesCollection)
+    assert isinstance(bitwise_df[[0, 1]], BitwiseSeriesCollection)
+    assert isinstance(bitwise_df[0, 1:3], BitwiseSeriesCollection)
     assert isinstance(bitwise_df[:, 0], BitwiseSeries)
     with pytest.raises(TypeError, match="non-integer key"):
         _ = bitwise_df["one"]
