@@ -2,7 +2,7 @@
 
 import logging
 from abc import ABC
-from typing import Iterable, Union
+from typing import Dict, Iterable, List, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -28,21 +28,31 @@ class Series(
     """Abstract pd.Series-like dataclass with additional methods."""
 
     _pd_class = pd.Series
-    _user_kwargs = None
-    _array = None
+    _user_kwargs: Optional[List[str]] = None
 
-    def __init__(self, data, index=None, dtype=None, name=None, copy=None, **kwargs):
-        self._user_kwargs = []
-        time_indices = kwargs.pop("time_indices", None)
-        index = self.parse_index(index, time_indices, data.shape[0])
+    def __init__(
+        self,
+        data: Union[List, np.ndarray, Dict],
+        time_indices: Union[Dict, List, None] = None,
+        **kwargs,
+    ):
+        time_indices = time_indices or {}
 
+        # Pandas Series kwargs
+        kwargs.pop("ntime", None)
+        copy = kwargs.pop("copy", None)
+        dtype = kwargs.pop("dtype", None)
+        name = kwargs.pop("name", None)
+        pdseries = pd.Series(data)
+
+        index = kwargs.pop("index", None)
+        index = self.parse_index(index, time_indices, pdseries.shape[0])
+
+        # User defined properties, stored as custom attributes
         for key, val in kwargs.items():
-            if key not in ("ntime", "index", "dtype", "name", "copy"):
-                self._user_kwargs.append(key)
-                self._metadata.append(key)
-                setattr(self, key, val)
-        for key in self._user_kwargs:
-            kwargs.pop(key)
+            self._user_kwargs.append(key)
+            self._metadata.append(key)
+            setattr(self, key, val)
 
         super().__init__(data, index=index, dtype=dtype, name=name, copy=copy)
         self.__post_init__()
@@ -69,27 +79,28 @@ class Series(
 
     @property
     def array(self):
-        return self._array
+        """Numpy array representation"""
+        return self.to_numpy()
 
     def describe_series(self, **printoptions):  # pragma: no cover
         """Print a description of the Series instance.
 
         This description prints information about the temporal indices
         available in the Series. It also prints out any additional
-        user-assigned properties given via the kwargs on initialization.
+        user-assigned properties given via keyword arguments on initialization.
         """
         printoptions["linewidth"] = printoptions.get("linewidth", 79)
         printoptions["edgeitems"] = printoptions.get("edgeitems", 2)
         printoptions["threshold"] = printoptions.get("threshold", 20)
         with np.printoptions(**printoptions):
             max_name_len = max(map(len, self._metadata))
-            print(f"📉 DataSeries {self.shape} (ntime)")
+            print(f"{repr(self)} {self.shape} (ntime)")
             print()
-            if hasattr(self, "uncertainty"):
+            if hasattr(self, "uncertainty") and issubclass(self.__class__, DataSeries):
                 print("Uncertainty:")
                 try:
                     print(
-                        f"\tuncertainty\t:\tUncertainty(np.ndarray{self.uncertainty.shape})"
+                        f"\tuncertainty\t:\t{type(self.uncertainty).__name__}(np.ndarray{self.uncertainty.shape})"
                     )
                 except AttributeError:
                     print("\tuncertainty\t:\tUncertainty(None)")
@@ -99,6 +110,8 @@ class Series(
                 print(
                     f"\t{key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not Defined')}"
                 )
+            if len(self._user_kwargs) == 0:
+                return
             print()
             print("User defined attributes accessible via `object.key`")
             print("(displaying only unique values)")
@@ -107,15 +120,18 @@ class Series(
                     f"\t{key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not defined')}"
                 )
 
-    @property
-    def ntime(self):
-        """Number of cadences in the data."""
-        return self.shape[0]
-
     @classmethod
     def from_pandas(cls, data, **kwargs):
         """Convert a pd.Series to a DataSeries"""
         return cls(data.to_numpy(), index=data.index, **kwargs)
+
+    def stats_post_process(self, result, **kwargs):
+        """Statistics post processer to format return data."""
+        uncertainty = kwargs.pop("uncertainty", None)
+        if uncertainty:
+            return result, uncertainty
+        else:
+            return result
 
 
 class DataSeries(MathMixin, StatsMixin, Series):
@@ -137,7 +153,7 @@ class DataSeries(MathMixin, StatsMixin, Series):
 
     Parameters
     ----------
-    data : array-like, Iterable, dict, or scalar value
+    data : array-like, Iterable
         Contains data stored in Series. If data is a dict, argument order is
         maintained.
     uncertainty : any type, optional
@@ -219,6 +235,8 @@ class DataSeries(MathMixin, StatsMixin, Series):
     """
 
     def __init__(self, data, uncertainty=None, index=None, dtype=None, **kwargs):
+        self._metadata: List[str] = ["uncertainty"]
+        self._user_kwargs: List[str] = []
         super().__init__(
             data,
             index=index,
@@ -227,12 +245,15 @@ class DataSeries(MathMixin, StatsMixin, Series):
             copy=kwargs.pop("copy", None),
             **kwargs,
         )
+        self._array = self.to_numpy()
         self.uncertainty = uncertainty
-        self.stats_post_process = lambda x: x  # required for StatsMixin
         self._set_stats_methods()
 
     def __repr__(self):
-        return f"📉 DataSeries {self.shape}\n" + super().__repr__()
+        return f"📉 DataSeries {self.shape}"
+
+    def _repr_html_(self):
+        print(super().__repr__())
 
 
 class BoolSeries(
@@ -244,6 +265,8 @@ class BoolSeries(
     """
 
     def __init__(self, data, index=None, **kwargs):
+        self._metadata: List[str] = []
+        self._user_kwargs: List[str] = []
         kwargs.pop("dtype", None)
         super().__init__(
             data,
@@ -255,7 +278,10 @@ class BoolSeries(
         )
 
     def __repr__(self):
-        return f"⚫️⚪️ BoolSeries {self.shape}\n" + super().__repr__()
+        return f"⚫️⚪️ BoolSeries {self.shape}"
+
+    def _repr_html_(self):
+        print(super().__repr__())
 
 
 class BitwiseSeries(BitwiseMixin, Series):
@@ -286,6 +312,7 @@ class BitwiseSeries(BitwiseMixin, Series):
     def __init__(
         self,
         data: Iterable[Union[Iterable[int], int]],
+        code_dict: Dict = None,
         display_as: str = "int",
         index=None,
         **kwargs,
@@ -293,11 +320,12 @@ class BitwiseSeries(BitwiseMixin, Series):
         # For pandas DataFrames subclasses, new properties must
         # be included in the _metadata list
         data = BitwiseMixin._set_data_type_to_bitset(data)
-        self._metadata = []
-        self._user_kwargs = []
+        self._metadata: List[str] = []
+        self._user_kwargs: List[str] = []
         kwargs.pop("dtype", None)
-        kwargs["codes"] = kwargs.get("codes", {})
-        self.codes = kwargs["codes"]
+        if code_dict is None:
+            code_dict = {}
+        self.codes = code_dict
         display_as = kwargs.pop("values_display", None) or display_as
         super().__init__(
             data,
@@ -311,12 +339,17 @@ class BitwiseSeries(BitwiseMixin, Series):
         self._user_kwargs.append("values_display")
 
     def __repr__(self):
+        return f"📗 BitwiseSeries {self.shape}"
+
+    def _repr_html_(self):
         if self._values_display == "detailed":
-            display = self.apply(lambda x: self.parse_code(x)).__repr__()
+            display = repr(self.apply(lambda x: self.parse_code(x)))
         elif self._values_display == "bitset":
-            display = self.apply(
-                lambda x: str(self.breakdown(x)).replace("[", "{").replace("]", "}")
-            ).__repr__()
+            display = repr(
+                self.apply(
+                    lambda x: str(self.breakdown(x)).replace("[", "{").replace("]", "}")
+                )
+            )
         else:
-            display = self.apply(int).__repr__()
-        return f"📗 BitwiseSeries {self.shape}\n" + display
+            display = repr(self.apply(int))
+        return f"""<pre>{repr(self)}\n{display}</pre>"""

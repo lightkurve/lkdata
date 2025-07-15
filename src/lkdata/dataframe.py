@@ -36,14 +36,13 @@ class Frame(
     row_names = None
     col_names = None
     _user_kwargs = None
-    _array = None
 
     def __init__(
         self, data, time_indices=None, row_indices=None, col_indices=None, **kwargs
     ):
         # Pandas DataFrame kwargs
-        dtype = kwargs.pop("dtype", None)
         copy = kwargs.pop("copy", None)
+        dtype = kwargs.pop("dtype", None)
 
         # Reserved names
         kwargs.pop("ntime", None)
@@ -76,7 +75,6 @@ class Frame(
         self.__post_init__()
 
     def __post_init__(self):
-        self._array = self.to_numpy()
         self._include_convenience_index()
         self._include_convenience_columns()
 
@@ -143,14 +141,15 @@ class Frame(
 
     @property
     def array(self):
-        return self._array
+        """Numpy array representation with shape (ntime, nseries)"""
+        return self.to_numpy().reshape(self.ntime, self.nseries)
 
     def describe_frame(self, **printoptions):  # pragma: no cover
         """Print a description of the Frame instance.
 
         This description prints information about the temporal and spatial
         indices available in the Frame. It also prints out any additional
-        user-assigned properties given via the kwargs on initialization.
+        user-assigned properties given via keyword arguments on initialization.
         """
         printoptions["linewidth"] = printoptions.get("linewidth", 79)
         printoptions["edgeitems"] = printoptions.get("edgeitems", 2)
@@ -159,14 +158,12 @@ class Frame(
             max_name_len = max(map(len, self._metadata))
             print(repr(self) + " (ntime, nseries)")
             print()
-            if hasattr(self, "uncertainty"):
+            if hasattr(self, "uncertainty") and issubclass(self.__class__, DataFrame):
                 print("Uncertainty:")
-                try:
-                    print(
-                        f"\tuncertainty\t:\tUncertainty(np.ndarray{self.uncertainty.shape})"
-                    )
-                except AttributeError:
-                    print("\tuncertainty\t:\tUncertainty(None)")
+                print(
+                    f"\tuncertainty\t:\t{type(self.uncertainty).__name__}(np.ndarray{self.uncertainty.shape})"
+                )
+
             print()
             print("Time indices available: " + str(self.index.names))
             for key in self.index.names:
@@ -204,11 +201,6 @@ class Frame(
     def nseries(self):
         """Number of series in the DataFrame"""
         return len(self.columns)
-
-    @property
-    def ntime(self):
-        """Number of time frames"""
-        return len(self.index)
 
     def stats_post_process(self, result, **kwargs):
         axis = kwargs.pop("axis")
@@ -249,6 +241,7 @@ class DataFrame(MathMixin, StatsMixin, Frame):
         self._metadata = []
         self._user_kwargs = []
         super().__init__(data, time_indices, row_indices, col_indices, **kwargs)
+        self._array = self.to_numpy().reshape(self.ntime, self.nseries)
         self.uncertainty = uncertainty
         self._set_stats_methods()
 
