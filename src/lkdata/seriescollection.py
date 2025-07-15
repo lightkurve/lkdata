@@ -22,7 +22,7 @@ from .mixins import (
 log = logging.getLogger()
 
 
-class Frame(
+class SeriesCollection(
     ABC,
     AggMixin,
     ConvenienceMixins,
@@ -158,7 +158,9 @@ class Frame(
             max_name_len = max(map(len, self._metadata))
             print(repr(self) + " (ntime, nseries)")
             print()
-            if hasattr(self, "uncertainty") and issubclass(self.__class__, DataFrame):
+            if hasattr(self, "uncertainty") and issubclass(
+                self.__class__, DataSeriesCollection
+            ):
                 print("Uncertainty:")
                 print(
                     f"\tuncertainty\t:\t{type(self.uncertainty).__name__}(np.ndarray{self.uncertainty.shape})"
@@ -215,7 +217,7 @@ class Frame(
             return result
 
 
-class DataFrame(MathMixin, StatsMixin, Frame):
+class DataSeriesCollection(MathMixin, StatsMixin, SeriesCollection):
     _series_class = DataSeries
 
     def __init__(
@@ -249,9 +251,9 @@ class DataFrame(MathMixin, StatsMixin, Frame):
         return f"🟦 DataFrame {self.shape}"
 
 
-class BoolFrame(
+class BoolSeriesCollection(
     BoolMixin,
-    Frame,
+    SeriesCollection,
 ):
     """A Cube object which contains boolean values with time and 2 spatial dimensions."""
 
@@ -278,7 +280,7 @@ class BoolFrame(
         return f"⚫️⚪️ BoolFrame {self.shape}"
 
 
-class BitwiseFrame(BitwiseMixin, Frame):
+class BitwiseSeriesCollection(BitwiseMixin, SeriesCollection):
     """A Cube object which contains bitwise values with time and 2 spatial dimensions."""
 
     _series_class = BitwiseSeries
