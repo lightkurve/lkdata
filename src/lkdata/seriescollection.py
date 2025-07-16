@@ -196,12 +196,12 @@ class SeriesCollection(
 
     @classmethod
     def from_pandas(cls, data: pd.DataFrame, **kwargs):
-        """Convert a pd.DataFrame to a DataFrame"""
+        """Convert a pd.DataFrame to a SeriesCollection"""
         return cls(data.to_numpy(), index=data.index, columns=data.columns, **kwargs)
 
     @property
     def nseries(self):
-        """Number of series in the DataFrame"""
+        """Number of series in the SeriesCollection"""
         return len(self.columns)
 
     def stats_post_process(self, result, **kwargs):
@@ -248,7 +248,7 @@ class DataSeriesCollection(MathMixin, StatsMixin, SeriesCollection):
         self._set_stats_methods()
 
     def __repr__(self):  # pragma: no cover
-        return f"🟦 DataFrame {self.shape}"
+        return f"🟦 SeriesCollection {self.shape}"
 
 
 class BoolSeriesCollection(

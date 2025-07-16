@@ -214,10 +214,10 @@ def test_dataset_cubes_property(data_only):
     assert isinstance(cubes["datacube"], DataCube)
 
 
-def test_dataset_frames_property(data_only):
-    frames = data_only.frames
-    assert "dataframe" in frames
-    assert isinstance(frames["dataframe"], DataSeriesCollection)
+def test_dataset_series_collections_property(data_only):
+    series_collections = data_only.series_collections
+    assert "dataframe" in series_collections
+    assert isinstance(series_collections["dataframe"], DataSeriesCollection)
 
 
 def test_dataset_series_property(data_only):
@@ -236,6 +236,14 @@ def test_dataset_contents_property(data_only):
 def test_dataset_downsample(data_only):
     downsampled = data_only.downsample(nframes=5)
     assert all(val.shape[0] == 20 for val in downsampled.data_products.values())
+
+
+def test_dataset_spatial_downsample(data_only):
+    downsampled = data_only.spatial_downsample(factor=2)
+    assert all(val.array.shape == (100, 5, 6) for val in downsampled.cubes.values())
+    assert all(
+        val.array.shape == (100, 120) for val in downsampled.series_collections.values()
+    )
 
 
 def test_dataset_fold(data_only):

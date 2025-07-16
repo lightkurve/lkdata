@@ -681,7 +681,7 @@ class DataSet:
         for v in self.bitwise_products.values():
             setattr(v, attr, val)
 
-    def _batch_wrapper(self, func):
+    def _batch_wrapper(self, func: str, cubes_only: bool = False):
         def batch_func(*args, **kwargs):
             def do_batch_func(bundle):
                 for key, val in bundle.items():
@@ -689,9 +689,53 @@ class DataSet:
                     bundle[key] = obj_func(*args, **kwargs)
                 return bundle
 
-            newdata = do_batch_func(dict(deepcopy(self.data_products)))
-            newbools = do_batch_func(dict(deepcopy(self.bool_products)))
-            newbits = do_batch_func(dict(deepcopy(self.bitwise_products)))
+            if cubes_only:
+                datacubes = {
+                    key: deepcopy(val)
+                    for key, val in self.data_products.items()
+                    if issubclass(val.__class__, Cube)
+                }
+                newdata = do_batch_func(datacubes)
+                newdata.update(
+                    {
+                        key: deepcopy(val)
+                        for key, val in self.data_products.items()
+                        if not issubclass(val.__class__, Cube)
+                    }
+                )
+
+                boolcubes = {
+                    key: deepcopy(val)
+                    for key, val in self.bool_products.items()
+                    if issubclass(val.__class__, Cube)
+                }
+                newbools = do_batch_func(boolcubes)
+                newbools.update(
+                    {
+                        key: deepcopy(val)
+                        for key, val in self.bool_products.items()
+                        if not issubclass(val.__class__, Cube)
+                    }
+                )
+
+                bitcubes = {
+                    key: deepcopy(val)
+                    for key, val in self.bitwise_products.items()
+                    if issubclass(val.__class__, Cube)
+                }
+                newbits = do_batch_func(bitcubes)
+                newbits.update(
+                    {
+                        key: deepcopy(val)
+                        for key, val in self.bitwise_products.items()
+                        if not issubclass(val.__class__, Cube)
+                    }
+                )
+
+            else:
+                newdata = do_batch_func(dict(deepcopy(self.data_products)))
+                newbools = do_batch_func(dict(deepcopy(self.bool_products)))
+                newbits = do_batch_func(dict(deepcopy(self.bitwise_products)))
 
             return self._build_instance(newdata, newbools, newbits)
 
@@ -762,8 +806,8 @@ class DataSet:
         return cubes
 
     @property
-    def frames(self) -> dict:
-        """Retrieve all Frame objects.
+    def series_collections(self) -> dict:
+        """Retrieve all SeriesCollection objects.
 
         Returns
         -------
@@ -885,3 +929,7 @@ class DataSet:
 
         if not inplace:
             return newbatch
+
+    def spatial_downsample(self, *args, **kwargs):
+        s_downsample = self._batch_wrapper("spatial_downsample", cubes_only=True)
+        return s_downsample(*args, **kwargs)
