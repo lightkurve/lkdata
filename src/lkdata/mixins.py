@@ -37,6 +37,8 @@ STATS_METHOD_NAMES = [
     "sum",
     "std",
     "var",
+    "argmin",
+    "argmax",
     "min",
     "max",
     "prod",
@@ -777,7 +779,7 @@ class MathMixin(IndexProcessorMixin):
         self._uncertainty = uncertainty
 
 
-class StatsMixin:
+class StatsMixin(MathMixin):
     """Defines a mixin class which will let us postprocess all our pandas stats"""
 
     _stats_type = "data"
@@ -795,6 +797,11 @@ class StatsMixin:
         def _method(*args, **kwargs):
             axis = kwargs.pop("axis", None)
             np_method = getattr(np, method_name)
+            if np_method in (np.argmin, np.argmax):
+                if axis is None:
+                    # returning unravelled index instead of flattened index
+                    return np.unravel_index(np_method(self.array), self.array.shape)
+                return np_method(self.to_numpy(), axis=axis)
             result, init_kwds = self._arithmetic(
                 np_method, operand=None, data_axis=axis, uncertainty_axis=axis, **kwargs
             )
