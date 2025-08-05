@@ -13,7 +13,6 @@ from .dataseries import DataSeries, BoolSeries, BitwiseSeries
 from .mixins import (
     AggMixin,
     ConvenienceMixins,
-    MathMixin,
     StatsMixin,
     BoolMixin,
     BitwiseMixin,
@@ -217,7 +216,7 @@ class SeriesCollection(
             return result
 
 
-class DataSeriesCollection(MathMixin, StatsMixin, SeriesCollection):
+class DataSeriesCollection(StatsMixin, SeriesCollection):
     _series_class = DataSeries
 
     def __init__(

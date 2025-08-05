@@ -16,7 +16,6 @@ from .seriescollection import (
 from .dataseries import DataSeries, BoolSeries, BitwiseSeries
 from .mixins import (
     StatsMixin,
-    MathMixin,
     BoolMixin,
     BitwiseMixin,
     AggMixin,
@@ -526,7 +525,6 @@ class Cube(
 
 
 class DataCube(
-    MathMixin,
     StatsMixin,
     Cube,
 ):
