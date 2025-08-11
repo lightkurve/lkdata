@@ -10,7 +10,6 @@ import pandas as pd
 from .mixins import (
     AggMixin,
     ConvenienceMixins,
-    MathMixin,
     StatsMixin,
     BoolMixin,
     BitwiseMixin,
@@ -134,7 +133,7 @@ class Series(
             return result
 
 
-class DataSeries(MathMixin, StatsMixin, Series):
+class DataSeries(StatsMixin, Series):
     """
     pandas.Series-like object with uncertainty and lightkurve functionality.
 

@@ -3,7 +3,7 @@
 import re
 from copy import deepcopy
 from textwrap import dedent
-from typing import Iterable, Union
+from typing import Iterable, Union, Tuple
 from warnings import warn
 from .uncertainty import NDUncertainty, Uncertainty
 from .dtypes import BitSet
@@ -37,6 +37,8 @@ STATS_METHOD_NAMES = [
     "sum",
     "std",
     "var",
+    "argmin",
+    "argmax",
     "min",
     "max",
     "prod",
@@ -777,7 +779,7 @@ class MathMixin(IndexProcessorMixin):
         self._uncertainty = uncertainty
 
 
-class StatsMixin:
+class StatsMixin(MathMixin):
     """Defines a mixin class which will let us postprocess all our pandas stats"""
 
     _stats_type = "data"
@@ -795,6 +797,11 @@ class StatsMixin:
         def _method(*args, **kwargs):
             axis = kwargs.pop("axis", None)
             np_method = getattr(np, method_name)
+            if np_method in (np.argmin, np.argmax):
+                if axis is None:
+                    # returning unravelled index instead of flattened index
+                    return np.unravel_index(np_method(self.array), self.array.shape)
+                return np_method(self.to_numpy(), axis=axis)
             result, init_kwds = self._arithmetic(
                 np_method, operand=None, data_axis=axis, uncertainty_axis=axis, **kwargs
             )
@@ -1257,22 +1264,27 @@ class AggMixin:
         return new_obj
 
     def spatial_downsample(
-        self, factor=None, col_factor=None, row_name=None, col_name=None, **kwargs
+        self,
+        factor: Union[int, Tuple[int, int]] = 2,
+        col_factor=None,
+        row_name=None,
+        col_name=None,
+        **kwargs,
     ):
         """Spatially downsamples a DataCube by a given factor.
 
         Parameters
         ----------
-        factor : int or tuple
+        factor : int or tuple of int, default 2
             If a tuple is given, the first value will be used as the factor by
-            which to reduce the size of the row axis, and the second as the
+            which to reduce the size of the row axis and the second as the
             column factor.
             If factor is an integer and col_factor is also given, this is the
             factor by which to decrease the spatial resolution of the row axis.
-            If col_factor is not given, this is the row and column factor.
+            If col_factor is not given, this is the both the row and column factor.
         col_factor : int, optional
             Factor by which to decrease the spatial resolution of the column
-            axis. If `factor` is a tuple, this argument is ignored.
+            axis.
         row_name : str, optional
             Name of the axis corresponding to the row to be downsampled. By
             default the primary row axis is used.
@@ -1289,13 +1301,9 @@ class AggMixin:
         with an application to a non-timeseries DataFrame and isn't meaningful
         for Series at all.
         """
-        factor = kwargs.get("row_factor", factor)
         if isinstance(factor, int):
-            row_factor = factor
-            if col_factor is None:
-                col_factor = factor
-            elif not isinstance(col_factor, int):
-                raise ValueError("`col_factor` must be an integer.")
+            row_factor = kwargs.get("row_factor", factor)
+            col_factor = col_factor or factor
         elif isinstance(factor, tuple):
             row_factor = factor[0]
             col_factor = factor[1]

@@ -38,11 +38,27 @@ def test_setup():
 
     # Test overridden pandas methods return correct shapes
     # Data products return tuples for and uncertainty
-    for method_name in STATS_METHOD_NAMES:
+    methods = [
+        method for method in STATS_METHOD_NAMES if method not in ["argmin", "argmax"]
+    ]
+    for method_name in methods:
         assert getattr(df, method_name)(axis=0)[0].shape == (nrow, ncol)
         assert (
             getattr(df[:, aperture], method_name)(axis=0)[0].shape[0] == aperture.sum()
         )
+
+    # argmin and argmax should return a single 3D index for axis=None
+    assert len(df.argmin()) == 3
+    assert len(df.argmax()) == 3
+
+    # argmin and argmax operate on axis=0 or 1 only
+    assert df.argmin(axis=0).shape[0] == nrow * ncol
+    assert df.argmax(axis=0).shape[0] == nrow * ncol
+    assert df.argmin(axis=1).shape[0] == ntime
+    assert df.argmax(axis=1).shape[0] == ntime
+
+    with pytest.raises(np.AxisError, match="axis 2 is out of bounds"):
+        _ = df.argmin(axis=2)
 
 
 def test_bad_setup():
