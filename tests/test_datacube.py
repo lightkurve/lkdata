@@ -57,7 +57,7 @@ def test_setup():
     assert df.argmin(axis=1).shape[0] == ntime
     assert df.argmax(axis=1).shape[0] == ntime
 
-    with pytest.raises(np.AxisError, match="axis 2 is out of bounds"):
+    with pytest.raises(np.exceptions.AxisError, match="axis 2 is out of bounds"):
         _ = df.argmin(axis=2)
 
 
