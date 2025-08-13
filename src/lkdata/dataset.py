@@ -20,19 +20,16 @@ from .seriescollection import (
 )
 from .dataseries import Series, DataSeries, BoolSeries, BitwiseSeries
 from .mixins import IndexProcessorMixin
+from . import LkDataTypes, LkBoolTypes, LkBitwiseTypes, LkTypes
 
-LkDataTypes = Union[DataCube, DataSeriesCollection, DataSeries]
-LkBoolTypes = Union[BoolCube, BoolSeriesCollection, BoolSeries]
-LkBitwiseTypes = Union[BitwiseCube, BitwiseSeriesCollection, BitwiseSeries]
-LkTypes = Union[LkDataTypes, LkBoolTypes, LkBitwiseTypes]
 
 CLS_STRINGS = {
     DataCube: "DataCube",
     BoolCube: "BoolCube",
     BitwiseCube: "BitwiseCube",
-    DataSeriesCollection: "DataFrame",
-    BoolSeriesCollection: "BoolFrame",
-    BitwiseSeriesCollection: "BitwiseFrame",
+    DataSeriesCollection: "DataSeriesCollection",
+    BoolSeriesCollection: "BoolSeriesCollection",
+    BitwiseSeriesCollection: "BitwiseSeriesCollection",
     DataSeries: "DataSeries",
     BoolSeries: "BoolSeries",
     BitwiseSeries: "BitwiseSeries",
@@ -45,23 +42,17 @@ class DataProcessorMixin:
 
     This class provides methods to process and validate input data, ensuring consistency
     with expected attributes and shapes. It supports various data types including
-    DataCube, DataFrame, DataSeries.
+    DataCube, DataSeriesCollection, DataSeries.
 
     Attributes:
     -----------
     CLASS_CHECKS : dict
         A dictionary mapping data classes to sets of attributes to be checked.
-    _data : dict
-        Storage for processed data products.
     kwargs : dict or None
         Additional keyword arguments for data product construction.
 
     Methods:
     --------
-    _check_attrs(data_product)
-        Checks if the attributes of the data product match the expected values.
-    _build_data_product(data_arr)
-        Constructs the appropriate data product from the input array.
     process_input(data_input)
         Processes the input data and converts it to the appropriate data product.
 
@@ -74,15 +65,29 @@ class DataProcessorMixin:
 
     CLASS_CHECKS = {
         "cubes": {"ntime", "nrow", "ncol", "index", "columns"},
-        "frames_series": {"ntime", "index"},
+        "seriescollections_series": {"ntime", "index"},
     }
     kwargs: dict = None
 
-    def _check_attrs(self, data_product, name=""):
+    def _check_attrs(self, data_product: LkTypes, name=""):
+        """Checks if the attributes of the data product match the expected values.
+
+        Parameters
+        ----------
+        data_product : LkTypes
+            The data product to check attributes for.
+        name : str, optional
+            Name of the data product, used for error messages.
+
+        Raises
+        ------
+        ValueError
+            If there's a mismatch between the dataset attributes and the data product attributes.
+        """
         if issubclass(type(data_product), Cube):
             attrs = self.CLASS_CHECKS["cubes"]
         else:
-            attrs = self.CLASS_CHECKS["frames_series"]
+            attrs = self.CLASS_CHECKS["seriescollections_series"]
 
         for attr in attrs.intersection({"ntime", "nrow", "ncol"}):
             if hasattr(self, attr) and (getattr(self, attr) is not None):
@@ -132,15 +137,16 @@ class DataProcessorMixin:
                 setattr(self, attr, check_attr)
 
     def _build_data_product(self, data_arr: Iterable):
+        """Constructs the appropriate data product from the input array."""
         data_arr = np.asarray(data_arr)
-        data_classes = {3: self._cube, 2: self._frame, 1: self._series}
+        data_classes = {3: self._cube, 2: self._seriescollection, 1: self._series}
         try:
             obj_class = data_classes.get(data_arr.ndim)
         except KeyError as err:
             raise ValueError(
                 f"""
             The dimensions of given data ({data_arr.ndim=}) are not
-            interpretable as a Cube, Frame, or Series.
+            interpretable as a Cube, SeriesCollection, or Series.
             If giving multiple data products, provide input as a
             dictionary and use the `update` method.
                              """
@@ -170,11 +176,11 @@ class DataProcessorMixin:
 
         Parameters
         ----------
-        data_input : Union[list, np.ndarray, DataCube, DataFrame, DataSeries]
+        data_input : Union[list, np.ndarray, DataCube, DataSeriesCollection, DataSeries]
             The input data to be processed.
         Returns
         -------
-        Union[DataCube, DataFrame, DataSeries]
+        Union[DataCube, DataSeriesCollection, DataSeries]
             The processed data product.
 
         Raises
@@ -225,7 +231,7 @@ class ProductBundle(dict, DataProcessorMixin):
     Returns
     -------
     ProductBundle
-        This class collects data and error products (cubes, frames, and/or series)
+        This class collects data and error products (cubes, seriescollections, and/or series)
         as well as relevant metadata. Data products of the same type must have the
         same axes, i.e. time and pixel positions. Data aggregation methods
         managed by this DataSet are applied to all contained data products,
@@ -235,7 +241,7 @@ class ProductBundle(dict, DataProcessorMixin):
 
     _type: str = None
     _cube: Cube = Cube
-    _frame: SeriesCollection = SeriesCollection
+    _seriescollection: SeriesCollection = SeriesCollection
     _series: Series = Series
 
     _index: pd.MultiIndex = None
@@ -338,7 +344,9 @@ class ProductBundle(dict, DataProcessorMixin):
     @_unpack_input.register
     def _(self, input_data: Iterable):
         data_as_array = np.asarray(input_data)
-        product_type = {3: "Cube", 2: "Frame"}.get(data_as_array.ndim, "Series")
+        product_type = {3: "Cube", 2: "SeriesCollection"}.get(
+            data_as_array.ndim, "Series"
+        )
         return {self.type.capitalize() + product_type: data_as_array}
 
     def apply(self, func):
@@ -393,7 +401,7 @@ class DataProducts(ProductBundle):
 
     _type = "data"
     _cube = DataCube
-    _frame = DataSeriesCollection
+    _seriescollection = DataSeriesCollection
     _series = DataSeries
 
     def __init__(
@@ -411,7 +419,7 @@ class DataProducts(ProductBundle):
 class BoolProducts(ProductBundle):
     _type = "bool"
     _cube = BoolCube
-    _frame = BoolSeriesCollection
+    _seriescollection = BoolSeriesCollection
     _series = BoolSeries
 
     def __init__(
@@ -429,7 +437,7 @@ class BoolProducts(ProductBundle):
 class BitwiseProducts(ProductBundle):
     _type = "bitwise"
     _cube = BitwiseCube
-    _frame = BitwiseSeriesCollection
+    _seriescollection = BitwiseSeriesCollection
     _series = BitwiseSeries
 
     def __init__(
@@ -448,20 +456,7 @@ class BitwiseProducts(ProductBundle):
 class DataSet:
     """A class for objects with common time indices for batch manipulation.
 
-    Parameters
-    ----------
-    data_products: Dict[str, LkDataTypes|Iterable]
-        A dictionary of 1, 2, and/or 3 dimensional data objects. LkDataTypes
-        support associated errors, whereas other Iterable types will be
-        converted to the appropriate LkDataType without errors.
-    bool_products: Dict[str, LkBoolTypes|Iterable[Bool]]
-        A dictionary 1, 2, or 3 dimensional boolean arrays.
-    bitwise_products: Dict[str, LkBitwiseTypes|Iterable[int|set|BitSet]]
-        A dictionary of lkbitwise objects
-    index: pd.MultiIndex, optional
-       A MultiIndex which is used to index the data. If none given, the DataSet
-       constructor will attempt to infer the index from the given products.
-    time_indices: dict, optional
+
 
     Returns
     -------
@@ -487,6 +482,22 @@ class DataSet:
         time_indices: Dict[str, Iterable] = None,
         **kwargs,
     ):
+        """
+        Parameters
+        ----------
+        data_products: Dict[str, LkDataTypes|Iterable]
+            A dictionary of 1, 2, and/or 3 dimensional data objects. LkDataTypes
+            support associated errors, whereas other Iterable types will be
+            converted to the appropriate LkDataType without errors.
+        bool_products: Dict[str, LkBoolTypes|Iterable[Bool]]
+            A dictionary 1, 2, or 3 dimensional boolean arrays.
+        bitwise_products: Dict[str, LkBitwiseTypes|Iterable[int|set|BitSet]]
+            A dictionary of lkbitwise objects
+        index: pd.MultiIndex, optional
+        A MultiIndex which is used to index the data. If none given, the DataSet
+        constructor will attempt to infer the index from the given products.
+        time_indices: dict, optional
+        """
         self._user_kwargs = []
         self.kwargs = kwargs
         # Custom keyword arguments given by the user.
@@ -586,7 +597,7 @@ class DataSet:
         else:
             new_columns = pd.MultiIndex.from_arrays([[]], names=["series"])
 
-        # Just slicing/selecting on time for Series and Frames
+        # Just slicing/selecting on time for Series and SeriesCollections
         new_data.update(
             {
                 data_key: data[time_key]
@@ -611,7 +622,7 @@ class DataSet:
         else:
             new_columns = pd.MultiIndex.from_arrays([[]], names=["series"])
 
-        # Just slicing/selecting on time for Series and Frames
+        # Just slicing/selecting on time for Series and SeriesCollections
         new_bool.update(
             {
                 data_key: data[time_key]
@@ -631,7 +642,7 @@ class DataSet:
         else:
             new_columns = pd.MultiIndex.from_arrays([[]], names=["series"])
 
-        # Just slicing/selecting on time for Series and Frames
+        # Just slicing/selecting on time for Series and SeriesCollections
         new_bit.update(
             {
                 data_key: data[time_key]
@@ -812,15 +823,15 @@ class DataSet:
         Returns
         -------
         dict
-            A dictionary containing all Frame objects from the DataSet.
+            A dictionary containing all SeriesCollection objects from the DataSet.
             The keys are the original keys, given or generated.
         """
-        frames = {
+        seriescollections = {
             key: value
             for key, value in self.contents.items()
             if issubclass(type(value), SeriesCollection)
         }
-        return frames
+        return seriescollections
 
     @property
     def index(self) -> pd.MultiIndex:

@@ -24,7 +24,7 @@ class Series(
     ConvenienceMixins,
     pd.Series,
 ):
-    """Abstract pd.Series-like dataclass with additional methods."""
+    """Abstract pd.Series-like extension class."""
 
     _pd_class = pd.Series
     _user_kwargs: Optional[List[str]] = None
@@ -37,7 +37,7 @@ class Series(
     ):
         time_indices = time_indices or {}
 
-        # Pandas Series kwargs
+        # Pandas Series kwargs``
         kwargs.pop("ntime", None)
         copy = kwargs.pop("copy", None)
         dtype = kwargs.pop("dtype", None)
@@ -74,7 +74,7 @@ class Series(
                 return result_data, init_kwds["uncertainty"]
             return result_data
         else:
-            return self.__class__(result_data, index=result_index, **init_kwds)
+            return self._build_instance(result_data, index=result_index, **init_kwds)
 
     @property
     def array(self):
@@ -124,7 +124,7 @@ class Series(
         """Convert a pd.Series to a DataSeries"""
         return cls(data.to_numpy(), index=data.index, **kwargs)
 
-    def stats_post_process(self, result, **kwargs):
+    def _stats_post_process(self, result, **kwargs):
         """Statistics post processer to format return data."""
         uncertainty = kwargs.pop("uncertainty", None)
         if uncertainty:

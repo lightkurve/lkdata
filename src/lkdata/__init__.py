@@ -11,6 +11,7 @@ from .seriescollection import (
 from .dataseries import DataSeries, BoolSeries, BitwiseSeries  # noqa: F403, E402
 from .dataset import DataSet  # noqa: E402
 import os
+from typing import Union
 
 __all__ = [
     "DataCube",
@@ -24,6 +25,11 @@ __all__ = [
     "BitwiseSeriesCollection",
     "BitwiseSeries",
 ]
+
+LkDataTypes = Union[DataCube, DataSeriesCollection, DataSeries]
+LkBoolTypes = Union[BoolCube, BoolSeriesCollection, BoolSeries]
+LkBitwiseTypes = Union[BitwiseCube, BitwiseSeriesCollection, BitwiseSeries]
+LkTypes = Union[LkDataTypes, LkBoolTypes, LkBitwiseTypes]
 
 PACKAGEDIR = os.path.abspath(os.path.dirname(__file__))
 MPLSTYLE = f"{PACKAGEDIR}/data/lightkurve.mplstyle"

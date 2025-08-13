@@ -3,10 +3,11 @@
 import logging
 from abc import ABC
 from functools import singledispatchmethod
+from typing import Union, List, Dict, Optional
 import pandas as pd
 from pandas.io.formats.style import Styler
 import numpy as np
-from typing import Union, List, Dict, Optional
+from numpy.typing import ArrayLike
 
 from .seriescollection import (
     DataSeriesCollection,
@@ -31,7 +32,54 @@ class Cube(
     ConvenienceMixins,
     pd.DataFrame,
 ):
-    """Abstract dataclass for cube-like data with time, row, and column axes"""
+    """
+    A three-dimensional data structure representing time series of two-dimensional spatial data.
+
+    This class extends pandas.DataFrame to handle 3D data with time and spatial dimensions.
+    It provides methods for data manipulation, indexing, and statistical operations.
+
+    Parameters
+    ----------
+    data : Union[List, np.ndarray]
+        The input data for the Cube. Should be 2D or 3D array-like.
+    time_indices : Union[Dict, List, None], optional
+        Indices for the time dimension.
+    row_indices : Union[Dict, List, None], optional
+        Indices for the row dimension.
+    col_indices : Union[Dict, List, None], optional
+        Indices for the column dimension.
+    **kwargs
+        Additional keyword arguments to be stored as attributes.
+
+    Attributes
+    ----------
+    array
+    nseries
+    styler
+    units
+    values
+    nrow : int, optional
+        Number of rows in the spatial dimensions.
+    ncol : int, optional
+        Number of columns in the spatial dimensions.
+    row_names : list of strings, optional
+        Names of the row indices.
+    col_names : list of strings, optional
+        Names of the column indices.
+
+    Methods
+    -------
+    describe_cube(**printoptions)
+        Prints a description of the Cube instance.
+    from_pandas(data: pd.DataFrame, **kwargs)
+        Converts a pd.DataFrame to a Cube.
+    make_cadence_label(cadence: int)
+        Creates a formatted cadence label for the HTML representation.
+    single_frame(cadence: int)
+        Creates a stylized single cadence frame of the cube.
+    to_dataframe(row, col, **kwargs)
+        Converts the Cube to a DataSeriesCollection with given row and column indices.
+    """
 
     _pd_class = pd.DataFrame
     nrow: Optional[int] = None
@@ -42,7 +90,7 @@ class Cube(
 
     def __init__(
         self,
-        data: Union[List, np.ndarray],
+        data: ArrayLike,
         time_indices: Union[Dict, List, None] = None,
         row_indices: Union[Dict, List, None] = None,
         col_indices: Union[Dict, List, None] = None,
@@ -91,25 +139,13 @@ class Cube(
         """
         raise KeyError("Unsupported type given for key.")
 
+    @__getitem__.register(int)
     @__getitem__.register(slice)
     @__getitem__.register(np.ndarray)
     @__getitem__.register(list)
     @__getitem__.register(range)
     def _(self, key):
-        # Simple slice in time, results in DataCube
-        init_kwds = self.user_kwargs.copy()
-        if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
-            init_kwds["uncertainty"] = self.uncertainty[key]
-        return self.__class__.from_pandas(
-            self.iloc[key],
-            nrow=self.nrow,
-            ncol=self.ncol,
-            **init_kwds,
-        )
-
-    @__getitem__.register
-    def _(self, key: int):
-        # Integer time, currently results in DataCube
+        """Simple slice only on time, results in Cube"""
         init_kwds = self.user_kwargs.copy()
         if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
             init_kwds["uncertainty"] = self.uncertainty[key]
@@ -120,8 +156,9 @@ class Cube(
             **init_kwds,
         )
 
-    @__getitem__.register
-    def _(self, key: tuple):
+    @__getitem__.register(tuple)
+    def _(self, key):
+        """Slice on multiple axes."""
         time = key[0]
         init_kwds = self.user_kwargs.copy()
         if len(key) == 1:
@@ -210,14 +247,14 @@ class Cube(
         converts such inputs into positional column indices and also returns
         the new dimensions for nrow and ncol.
 
-        Args:
-            row: Union[int, slice, Iterable]
-            col: Union[int, slice, Iterable]
+        Parameters:
+            row : int, slice, or array-like of int
+            col : int, slice, or array-like of int
 
         Returns:
             nrow: int
             ncol: int
-            series_index: np.array
+            series_index: ndarray
         """
         if isinstance(row, slice):
             row_indices = np.arange(self.nrow)[row]
@@ -414,7 +451,7 @@ class Cube(
         )
         return df
 
-    def stats_post_process(self, result, **kwargs):
+    def _stats_post_process(self, result, **kwargs):
         """Statistics post processer to format return data."""
         axis = kwargs.pop("axis")
         uncertainty = kwargs.pop("uncertainty", None)
@@ -449,6 +486,25 @@ class Cube(
         self._styler = val
 
     def stylize_frame(self, df, **kwargs):
+        """Stylize a DataFrame for display.
+
+        Parameters
+        ----------
+        df : pandas.DataFrame
+            The DataFrame to be stylized.
+        **kwargs : dict
+            Additional keyword arguments for styling.
+
+        Returns
+        -------
+        pandas.io.formats.style.Styler
+            The stylized DataFrame.
+
+        Notes
+        -----
+        This method applies various styling options to the DataFrame,
+        including background gradient, precision formatting, and table styles.
+        """
         out = Styler(df)
         if "label" in kwargs:
             out = out.set_caption(kwargs.pop("label"))
