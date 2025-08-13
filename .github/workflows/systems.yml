@@ -1,0 +1,102 @@
+# GitHub Actions workflow for lkdata's continuous integration.
+#
+# This file configures nine different jobs:
+# 1) pytest on Linux, Python 3.9.
+# 2) pytest on Linux, Python 3.10.
+# 3) pytest on Linux, Python 3.11.
+# 4) pytest on Linux, Python 3.12.
+# 5) pytest on Linux, Python 3.13.
+# 6) pytest on Windows, Python 3.9.
+# 7) pytest on OSX, Python 3.9.
+
+name: lkdata-tests
+
+on:
+  # We always want to run tests on main
+  push:
+    branches:
+      - main
+  # And we'll also run tests on pull requests
+  pull_request:
+
+jobs:
+
+  # Run unit tests on Linux
+  pytest-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        name: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        include:
+          - name: "3.9"
+            python-version: "3.9"
+            pytest-command: poetry run pytest
+          - name: "3.10"
+            python-version: "3.10"
+            pytest-command: poetry run pytest
+          - name: "3.11"
+            python-version: "3.11"
+            pytest-command: poetry run pytest
+          - name: "3.12-remote-data"
+            python-version: "3.12"
+            pytest-command: poetry run pytest
+          - name: "3.13"
+            python-version: "3.13"
+            pytest-command: poetry run pytest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install poetry
+        poetry install --with dev
+    - name: Test with ${{ matrix.pytest-command }}
+      run: |
+        ${{ matrix.pytest-command }}
+
+  # Run unit tests on Windows
+  pytest-windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        name: [3.9]
+        python-version: [3.9]
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install poetry
+        poetry install --with dev
+    - name: Test with pytest
+      run: |
+        poetry run pytest
+
+  # Run unit tests on Mac OSX
+  pytest-osx:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        python-version: [3.9]
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install poetry
+        poetry install --with dev
+    - name: Test with pytest
+      run: |
+        poetry run pytest
