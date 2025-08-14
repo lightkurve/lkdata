@@ -146,11 +146,13 @@ class Cube(
     @__getitem__.register(range)
     def _(self, key):
         """Simple slice only on time, results in Cube"""
+        if isinstance(key, int):
+            key = [key]
         init_kwds = self.user_kwargs.copy()
         if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
             init_kwds["uncertainty"] = self.uncertainty[key]
         return self.__class__.from_pandas(
-            self.iloc[np.atleast_1d(key)],
+            self.iloc[key],
             nrow=self.nrow,
             ncol=self.ncol,
             **init_kwds,

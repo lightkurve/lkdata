@@ -1,3 +1,5 @@
+"""A set-like class for bitwise data with support for integer representation"""
+
 from collections.abc import MutableSet, Hashable
 from typing import Iterable, Union
 

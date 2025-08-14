@@ -20,8 +20,11 @@ from .seriescollection import (
 )
 from .dataseries import Series, DataSeries, BoolSeries, BitwiseSeries
 from .mixins import IndexProcessorMixin
-from . import LkDataTypes, LkBoolTypes, LkBitwiseTypes, LkTypes
 
+LkDataTypes = Union[DataCube, DataSeriesCollection, DataSeries]
+LkBoolTypes = Union[BoolCube, BoolSeriesCollection, BoolSeries]
+LkBitwiseTypes = Union[BitwiseCube, BitwiseSeriesCollection, BitwiseSeries]
+LkTypes = Union[LkDataTypes, LkBoolTypes, LkBitwiseTypes]
 
 CLS_STRINGS = {
     DataCube: "DataCube",

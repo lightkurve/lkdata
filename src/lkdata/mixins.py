@@ -6,7 +6,7 @@ from textwrap import dedent
 from typing import Iterable, Union, Tuple
 from warnings import warn
 from .uncertainty import NDUncertainty, Uncertainty
-from .dtypes import BitSet
+from .bitset import BitSet
 
 import numpy as np
 import pandas as pd
@@ -992,13 +992,6 @@ class StatsMixin(MathMixin):
             # return self._stats_post_process(pandas_method(*args, **kwargs), axis=axis)
 
         return _method
-
-    def _stats_post_process(self, result, **kwargs):
-        """Default post processor"""
-        uncertainty = kwargs.pop("uncertainty", None)
-        if uncertainty:
-            return result, uncertainty
-        return result
 
     def median(self, axis: Union[int, None] = None, **kwargs):
         """
