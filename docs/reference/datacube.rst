@@ -1,7 +1,7 @@
-datacube Module
-==================
+Cube
+====
 
-.. automodule:: lightkurve.datacube
+.. automodule:: lkdata.datacube
    :members:
    :undoc-members:
    :show-inheritance:

@@ -4,17 +4,17 @@
 Reporting issues and proposing changes
 ======================================
 
-Lightkurve is actively developed on its `GitHub repository <https://github.com/lightkurve/lightkurve>`_.
+The lkdata module is developed on its own `GitHub repository <https://github.com/lightkurve/lkdata>`
 
-If you encounter a problem with Lightkurve, we encourage you to
-`open an issue on the GitHub repository <https://github.com/lightkurve/lightkurve/issues>`_.
+If you encounter a problem with lkdata, we encourage you to
+`open an issue on the GitHub repository <https://github.com/lightkurve/lkdata/issues>`_.
 
-If you would like to propose a change or bug fix to Lightkurve, please go ahead and open a pull request
+If you would like to propose a change or bug fix to lkdata, please go ahead and open a pull request
 using the steps explained below.
 
 
-Proposing changes to Lightkurve using GitHub Pull Requests
-----------------------------------------------------------
+Proposing changes to Lightkurve modules using GitHub Pull Requests
+------------------------------------------------------------------
 
 We welcome suggestions for enhancements or new features to Lightkurve via GitHub.
 
@@ -25,7 +25,7 @@ Once you are ready to propose the changes, please go ahead and open a pull reque
 If in doubt on how to open a pull request, we recommend Astropy's
 "`How to make a code contribution <http://docs.astropy.org/en/stable/development/workflow/development_workflow.html>`_" tutorial.
 
-After you follow steps 1 through 4 from our `install instructions <development>`_, you can take the following steps to open a pull request to `Lightkurve`.
+After you follow steps 1 through 4 from our `install instructions <development>`_, you can take the following steps to open a pull request to any `Lightkurve` module.
 
 
 5. Create a new branch
@@ -65,12 +65,12 @@ to your local version of the repository as follows:
 7. Push your changes to GitHub and open a Pull Request
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Finally, send the changes to the fork of Lightkurve that resides in your GitHub account:
+Finally, send the changes to the fork of the Lightkurve module that resides in your GitHub account:
 
 .. code-block:: bash
 
     $ git push origin name-of-your-branch
 
-Head to https://github.com/lightkurve/lightkurve after issuing the `git push`
+Head to https://github.com/lightkurve/lkdata after issuing the `git push`
 command above. You should automatically see a button that says "Compare and open a pull request".
 Click the button and submit your pull request!

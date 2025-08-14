@@ -488,7 +488,7 @@ class Cube(
         self._styler = val
 
     def stylize_frame(self, df, **kwargs):
-        """Stylize a DataFrame for display.
+        """Stylize a pandas.DataFrame for display.
 
         Parameters
         ----------
@@ -542,7 +542,7 @@ class Cube(
         col: Union[int, float, list, slice],
         **kwargs,
     ) -> DataSeriesCollection:
-        """Convert lkdata.Cube to lkdata.Frame with the given row and column.
+        """Convert lkdata.Cube to lkdata.SeriesCollection with the given row and column.
 
         Parameters
         ----------
@@ -553,8 +553,8 @@ class Cube(
 
         Returns
         -------
-        Frame
-            A Frame object of the same type as the input data.
+        SeriesCollection
+            A SeriesCollection object of the same type as the input data.
         """
         nrow, ncol, series_index = self._convert_to_series_index(row, col)
 
