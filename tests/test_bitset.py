@@ -1,6 +1,6 @@
-"""Tests for lk datatypes"""
+"""Tests for lk bitset"""
 import pytest
-from lkdata.dtypes import BitSet
+from lkdata.bitset import BitSet
 
 
 def test_bitset_breakdown():

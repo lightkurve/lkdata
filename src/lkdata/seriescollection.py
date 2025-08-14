@@ -143,11 +143,11 @@ class SeriesCollection(
         """Numpy array representation with shape (ntime, nseries)"""
         return self.to_numpy().reshape(self.ntime, self.nseries)
 
-    def describe_frame(self, **printoptions):  # pragma: no cover
-        """Print a description of the Frame instance.
+    def describe_collection(self, **printoptions):  # pragma: no cover
+        """Print a description of the SeriesCollection instance.
 
         This description prints information about the temporal and spatial
-        indices available in the Frame. It also prints out any additional
+        indices available in the SeriesCollection. It also prints out any additional
         user-assigned properties given via keyword arguments on initialization.
         """
         printoptions["linewidth"] = printoptions.get("linewidth", 79)
@@ -203,7 +203,7 @@ class SeriesCollection(
         """Number of series in the SeriesCollection"""
         return len(self.columns)
 
-    def stats_post_process(self, result, **kwargs):
+    def _stats_post_process(self, result, **kwargs):
         axis = kwargs.pop("axis")
         uncertainty = kwargs.pop("uncertainty", None)
         if axis in [0, "time"]:
@@ -326,6 +326,16 @@ class BitwiseSeriesCollection(BitwiseMixin, SeriesCollection):
 
     @property
     def styler(self):
+        """pd.Styler object associated with this BitwiseSeriesCollection.
+
+        The Styler allows for customized display of the data in HTML format.
+
+        Returns
+        -------
+        pd.Styler
+            The associated Styler object, or None if not set.
+        """
+
         if hasattr(self, "_styler"):
             return self._styler
         return None

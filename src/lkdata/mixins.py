@@ -6,7 +6,7 @@ from textwrap import dedent
 from typing import Iterable, Union, Tuple
 from warnings import warn
 from .uncertainty import NDUncertainty, Uncertainty
-from .dtypes import BitSet
+from .bitset import BitSet
 
 import numpy as np
 import pandas as pd
@@ -52,7 +52,45 @@ CUM_METHOD_NAMES = ["cumsum", "cummin", "cummax", "cumprod"]
 
 
 class IndexProcessorMixin:
-    """Mixins to handle index processing"""
+    """A mixin class that provides methods for processing and manipulating index-related operations.
+
+    This mixin is designed to be used with pandas-based data structures and provides
+    utilities for folding time series, parsing indices, and handling various index
+    operations specific to astronomical time series data.
+
+    Methods
+    -------
+    droplevel(level, axis=0)
+        Drop a level from the index while preserving the data structure.
+
+    parse_index(index=None, time_indices=None, ntime=0)
+        Parse given indices and return a single pandas MultiIndex.
+
+    parse_pos_indices(row_indices, col_indices, nrow, ncol)
+        Parse positional indices and reshape arrays to the appropriate shape
+        for pandas columns.
+
+    parse_columns(columns=None, row_indices=None, col_indices=None, nrow=0, ncol=0, continuous=False, nseries=0)
+        Parse row and column information from given inputs.
+
+    sort_index(*args, **kwargs)
+        Sort the index of the data structure, wraps pandas sort_index methods.
+
+    See Also
+    --------
+        pandas.Index : The basic object storing axis labels for all pandas objects.
+
+    Notes
+    -----
+    This mixin is particularly useful for handling complex index structures in
+    astronomical time series data, such as those found in Kepler and TESS observations.
+    It provides methods for parsing and manipulating indices, which is crucial for
+    operations like folding light curves and handling spatial information in image data.
+
+    The methods in this mixin assume that the class it's mixed into has certain
+    attributes and methods typical of pandas-based data structures, such as `index`,
+    `columns`, and pandas-style indexing operations.
+    """
 
     def _fold_index(self, period, t0, level, label):
         index = deepcopy(self.index)
@@ -87,8 +125,35 @@ class IndexProcessorMixin:
 
     def droplevel(self, level, axis=0):
         # pylint: disable:overridden-final-method
+        """Drop a level from the index, dropping columns this way is disabled
+
+        Parameters
+        ----------
+        level : int or str
+            The level to be dropped, cannot be the 0th level
+        axis : {0 or 'index'}, default 0
+            axis must be 0, dropping columns is not supported. Included for
+            consistency with pandas.
+
+        Returns
+        -------
+        self.__class__
+            Returns a new instance of the calling class with the index dropped
+
+        Raises
+        ------
+        ValueError
+            0-level indices cannot be dropped by this method.
+        NotImplementedError
+            _description_
+
+        See Also
+        --------
+        pandas.DataFrame.droplevel : method to drop levels from DataFrames
+        pandas.Series.droplevel : method to drop levels from Series
+        """
         if level in [0, "time_index", "series"]:
-            raise ValueError("0-index levels cannot be dropped from Cubes.")
+            raise ValueError("0-index levels cannot be dropped from lk classes.")
         if axis == 1:
             raise NotImplementedError(
                 "Dropping column indices is not currently supported."
@@ -112,7 +177,42 @@ class IndexProcessorMixin:
     def parse_index(
         index: pd.MultiIndex = None, time_indices: dict = None, ntime: int = 0
     ):
-        """Parse given indices and return a single pandas MultiIndex"""
+        """Parse given indices and return a single pandas MultiIndex
+        Parameters
+        ----------
+        index : pd.MultiIndex, optional
+            An existing pandas MultiIndex to be parsed. If provided, its levels
+            will be incorporated into the resulting index.
+        time_indices : dict or array-like, optional
+            A dictionary of time-related indices or an array of time values.
+            If a dictionary, keys represent index names and values are the
+            corresponding arrays. Special keys 'row' and 'col' are reserved
+            and will raise an error if used.
+        ntime : int, optional
+            The number of time points. Used to create a default time index if
+            no other time information is provided. Default is 0, overwritten by
+            the shape of any other given  parameter.
+        Returns
+        -------
+        pd.MultiIndex
+            A pandas MultiIndex constructed from the input parameters.
+
+        Raises
+        ------
+        ValueError
+            If 'row' or 'col' keys are present in time_indices.
+            If 'index' is provided but is not a pd.MultiIndex.
+
+        Notes
+        -----
+        - If neither 'time_index' nor 'mid_index' are present in the input,
+        a default 'time_index' will be created using numpy.arange.
+        - For downsampled data, 'mid_index' is used in place of 'time_index',
+        and an additional 'indices' level is included, containing a string of
+        all indices aggregated for the row.
+        - The method prioritizes existing index information, falling back to
+        provided time_indices, and finally to a default range index if necessary.
+        """
         if time_indices:
             if isinstance(time_indices, dict):
                 # If time_indices is given properly as a dictionary:
@@ -181,13 +281,17 @@ class IndexProcessorMixin:
 
     @staticmethod
     def parse_pos_indices(row_indices, col_indices, nrow, ncol):
-        """Reshape arrays to the appropriate shape for pd.columns
+        """Parse and process row and column indices for data representation.
 
         TPF data are typically stored in an intuitive 3D structure, with
         time as the 1st dimension, row (or column) as the 2nd, and the
         column (or row) as the 3rd. In using pandas as the backend for our
         data, we store time as the index of the DataFrame and need rows and
         columns to be in the DataFrame.columns.
+
+        This method processes the given row and column indices, ensuring they are in the
+        correct format and shape for the data representation. It handles various input
+        types and converts them into a standardized dictionary format.
 
         The standard for row and column arrays is to provide an array of
         size nrow and ncol respectively, definining the row and column
@@ -203,6 +307,41 @@ class IndexProcessorMixin:
         and col = [1, 2, 3, 4, 1, 2, ..., 3, 4]
         so that series[0] is [1, 1], series[2] is [1, 2], ...,
         and series[11] is [3, 4]
+
+        Parameters
+        ----------
+        row_indices : int, array-like, or dict
+            The row indices. Can be an integer (starting index), an array-like object,
+            or a dictionary of named row indices.
+        col_indices : int, array-like, or dict
+            The column indices. Can be an integer (starting index), an array-like object,
+            or a dictionary of named column indices.
+        nrow : int
+            The number of rows in the data.
+        ncol : int
+            The number of columns in the data.
+
+        Returns
+        -------
+        tuple of dicts
+            A tuple containing two dictionaries:
+            - The first dictionary contains the processed row indices.
+            - The second dictionary contains the processed column indices.
+
+        Raises
+        ------
+        ValueError
+            If the shape of the provided indices doesn't match the shape of the data,
+            or if 'time_index' is used as a key in row_indices or col_indices.
+
+        Notes
+        -----
+        - If row_indices or col_indices is an integer, it's interpreted as the starting
+        index, and a range is created.
+        - If row_indices or col_indices is an array-like object, it's processed to ensure
+        compatibility with the data shape.
+        - If row_indices or col_indices is a dictionary, each value is processed to ensure
+        compatibility with the data shape.
         """
 
         def process_listlike(indices, dim_self, dim_other, label, expand_method):
@@ -295,19 +434,21 @@ class IndexProcessorMixin:
             A dictionary of row arrays, by default None
         col_indices : dict, optional
             A dictionary of column arrays, by default None
-        nrow : int, optional
+        nrow : int, default 0
             The number of rows, by default 0. Must be defined if row_indices is
             not None.
-        ncol : int, optional
+        ncol : int, default 0
             The number of columns, by default 0. Must be defined if col_indices
             is not None.
-        continuous : bool, optional
+        continuous : bool, default False
             Whether the rows and columns in row and col indices should be
             interpreted as continuous.
             If not continuous, the arrays given in row and col indices should
             correspond to coordinates by pixel.
             For DataCubes, the region must be continous. For DataFrames, it is
             assumed that the region is non-contiguous, by default False.
+        nseries : int, default 0
+           The number of series, by default 0.
 
         Returns
         -------
@@ -387,6 +528,39 @@ class IndexProcessorMixin:
         return columns, nrow, ncol
 
     def sort_index(self, *args, **kwargs):
+        """Sort the index of the data structure.
+
+        This method wraps pandas' sort_index method and extends it to handle
+        the uncertainty array and maintain the internal array structure.
+
+        Parameters
+        ----------
+        *args : tuple
+            Positional arguments to pass to pandas' sort_index method.
+        **kwargs : dict
+            Keyword arguments to pass to pandas' sort_index method.
+            Notable kwargs include:
+            - inplace : bool, optional
+                If True, perform operation in-place.
+            - level : int or str, optional
+                If index is a MultiIndex, sort on the given level.
+
+        Returns
+        -------
+        self.__class__ or None
+            If inplace=False, returns a new sorted object.
+            If inplace=True, sorts in-place and returns None.
+
+        Notes
+        -----
+        This method maintains the structure of the data and uncertainty arrays
+        when sorting. It also ensures that convenience attributes are updated
+        after sorting.
+
+        See Also
+        --------
+        pandas.DataFrame.sort_index : The pandas method this wraps.
+        """
         init_kwds = self.user_kwargs.copy()
 
         inplace = kwargs.pop("inplace", False)
@@ -430,27 +604,12 @@ class IndexProcessorMixin:
 
 
 class MathMixin(IndexProcessorMixin):
-    """
-    Mixin class to add arithmetic to an lightkurve data objects.
+    """Mixin class to add arithmetic to lightkurve data classes with uncertainty.
 
-    Notes
-    -----
-    This class only aims at covering the most common cases so there are certain
-    restrictions on the saved attributes::
-
-        - ``uncertainty`` : has to be something that has a `NDUncertainty`-like
-          interface for uncertainty propagation
-
-    But there is a workaround that allows to disable handling a specific
-    attribute and to simply set the results attribute to ``None`` or to
-    copy the existing attribute (and neglecting the other).
-    For example for uncertainties not representing an `NDUncertainty`-like
-    interface you can alter the ``propagate_uncertainties`` parameter in
-    :meth:`NDArithmeticMixin.add`. ``None`` means that the result will have no
-    uncertainty, ``False`` means it takes the uncertainty of the first operand
-    (if this does not exist from the second operand) as the result's
-    uncertainty. This behavior is also explained in the docstring for the
-    different arithmetic operations.
+    See Also
+    --------
+    astropy.nddata.nduncertainty : astropy module from which uncertainty classes
+        and operations have been derived.
     """
 
     _array = None
@@ -740,15 +899,19 @@ class MathMixin(IndexProcessorMixin):
         """Numpy array representation
 
         Cubes have shape (ntime, nrow, ncol)
-        Frames have shape (ntime, nseries)
+        SeriesCollections have shape (ntime, nseries)
         and Series have shape (ntime)
 
-        Note:
-        The property defined here is for Data classes and and stores the array
-        in memory. This overwrites the on-call form defined in the
-        ConvenienceMixin class.
-        Though storing the data as an array is redundant, uncertainties are set
-        up such that parent data are expected to be persistent and array-like.
+        Returns
+        -------
+        np.ndarray
+            An array representation of the data.
+
+        Notes
+        -----
+        Uncertainties rely on parent data that are persistent and array-like.
+        For Data classes, therefore, `array` must be stored in memory.
+        This overwrites the on-call form defined in the ConvenienceMixin class.
         """
         return self._array
 
@@ -780,7 +943,24 @@ class MathMixin(IndexProcessorMixin):
 
 
 class StatsMixin(MathMixin):
-    """Defines a mixin class which will let us postprocess all our pandas stats"""
+
+    """Generic mixin class for statistical methods in lightkurve data objects.
+
+
+    This mixin provides common statistical methods such as mean, sum, std, var,
+    min, max, and prod for lightkurve data objects. It also includes cumulative
+    methods like cumsum, cummin, cummax, and cumprod.
+
+    Attributes
+    ----------
+    ds_agg_func : str
+        The aggregation function to use for downsampling, default is "sum".
+
+    Methods
+    -------
+    median(**kwargs)
+        Calculates the median of the data along a given axis.
+    """
 
     _stats_type = "data"
     ds_agg_func = "sum"
@@ -806,18 +986,53 @@ class StatsMixin(MathMixin):
                 np_method, operand=None, data_axis=axis, uncertainty_axis=axis, **kwargs
             )
             init_kwds.update(self._get_math_kwargs())
-            result = self.stats_post_process(result, axis=axis, **init_kwds)
+            result = self._stats_post_process(result, axis=axis, **init_kwds)
             return result
             # pandas_method = getattr(super(self._pd_class, self), method_name)
-            # return self.stats_post_process(pandas_method(*args, **kwargs), axis=axis)
+            # return self._stats_post_process(pandas_method(*args, **kwargs), axis=axis)
 
         return _method
 
-    def median(self, **kwargs):
-        """Get the median of the data along the given axis.
+    def median(self, axis: Union[int, None] = None, **kwargs):
+        """
+        Get the median of the data along the given axis.
 
-        See np.ndarray.median for more details.
+        This method calculates the median of the data and also estimates the
+        uncertainty of the median based on the uncertainty of the mean.
 
+        Parameters
+        ----------
+        axis : {0, 1, None}, default None
+            Axis along which to calculate the median. If None, then calculate
+            along each axis. If 0, then calculates the median for each pixel
+            over all time steps and returns a DataFrame. If 1, then calculates
+            the median of all pixels for each time step and returns a Series.
+        **kwargs : dict, optional
+            Additional keyword arguments to be passed to numpy's median function.
+            See np.ndarray.median for more details.
+
+        Returns
+        -------
+        result : pd.DataFrame, lkData.Series, or float
+            The median of the data along the specified axis.
+
+        Raises
+        ------
+        ValueError
+            If axis=2 is specified for Cubes, as it is not supported.
+
+        Notes
+        -----
+        The uncertainty of the median is calculated based on the uncertainty of
+        the mean, adjusted by a factor related to the number of data points.
+
+        The efficiency of the variance of the median to the variance of the mean
+        is calculated as (π * N) / (2 * (N - 1)), where N is the number of data
+        points along the specified axis.
+
+        See Also
+        --------
+        numpy.median : NumPy's median function used internally.
         """
         axis = kwargs.pop("axis", None)
         if axis == 2:
@@ -836,7 +1051,7 @@ class StatsMixin(MathMixin):
         var_ratio = (np.pi * N) / (2 * (N - 1))
         init_kwds["uncertainty"].array = uncertainty_mean.array * var_ratio**0.5
         init_kwds.update(self._get_math_kwargs())
-        result = self.stats_post_process(result, axis=axis, **init_kwds)
+        result = self._stats_post_process(result, axis=axis, **init_kwds)
         return result
 
     def _set_stats_methods(self):
@@ -1521,6 +1736,18 @@ class ConvenienceMixins:
     """Convenience mixins which add properties to lightkurve data objects as attributes."""
 
     def _build_instance(self, new, **kwargs):
+        """Build a new instance of the class
+
+        Parameters
+        ----------
+        new : Union[List, np.ndarray, Dict[str, Iterable]]
+            New data with which to build  the new instance of the class.
+
+        Returns
+        -------
+        type(self)
+            New instance of the class with updated data and kwargs.
+        """
         all_kwargs = self.user_kwargs.copy()
         all_kwargs.update(**kwargs)
         return self.__class__(new, **all_kwargs)

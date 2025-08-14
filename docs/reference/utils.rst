@@ -6,7 +6,7 @@ This sub-package contains helpful utilities for `Lightkurve`.
 Exceptions
 ----------
 
-.. automodule:: lightkurve.utils.exceptions
+.. automodule:: lkdata.utils.exceptions
    :members:
    :undoc-members:
    :show-inheritance:
@@ -15,7 +15,7 @@ Exceptions
 Notebooks
 ---------
 
-.. automodule:: lightkurve.utils.notebook
+.. automodule:: lkdata.utils.notebook
    :members:
    :undoc-members:
    :show-inheritance:
