@@ -175,14 +175,6 @@ class IndexProcessorMixin:
             )
 
     @staticmethod
-    def matches_existing_level(index, newlevel):
-        """Check whether a level's values match any in the index."""
-        for level in index.levels:
-            if all(newlevel == level):
-                return True
-        return False
-
-    @staticmethod
     def parse_index(
         index: pd.MultiIndex = None,
         time_indices: dict = None,
