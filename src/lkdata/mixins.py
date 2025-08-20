@@ -2,6 +2,7 @@
 
 import re
 from copy import deepcopy
+from itertools import combinations
 from textwrap import dedent
 from typing import Iterable, Union, Tuple
 from warnings import warn
@@ -174,8 +175,19 @@ class IndexProcessorMixin:
             )
 
     @staticmethod
+    def matches_existing_level(index, newlevel):
+        """Check whether a level's values match any in the index."""
+        for level in index.levels:
+            if all(newlevel == level):
+                return True
+        return False
+
+    @staticmethod
     def parse_index(
-        index: pd.MultiIndex = None, time_indices: dict = None, ntime: int = 0
+        index: pd.MultiIndex = None,
+        time_indices: dict = None,
+        ntime: int = 0,
+        default: bool = True,
     ):
         """Parse given indices and return a single pandas MultiIndex
         Parameters
@@ -233,8 +245,10 @@ class IndexProcessorMixin:
                     ).replace("\n", " ")
                     raise ValueError(msg)
                 ntime_inds = len(list(time_indices.values())[0])
-                if ("time_index" not in time_indices.keys()) and (
-                    "mid_index" not in time_indices.keys()
+                if (
+                    ("time_index" not in time_indices.keys())
+                    and ("mid_index" not in time_indices.keys())
+                    and default
                 ):
                     # Create a standard index which orders the data.
                     # This is particularly useful when phase-folding, etc.
@@ -252,8 +266,10 @@ class IndexProcessorMixin:
             )
 
             ntime_index = len(index)
-            if ("time_index" not in time_indices.keys()) and (
-                "mid_index" not in time_indices.keys()
+            if (
+                ("time_index" not in time_indices.keys())
+                and ("mid_index" not in time_indices.keys())
+                and default
             ):
                 time_indices.update({"time_index": np.arange(ntime_index)})
         elif index is not None:
@@ -275,6 +291,15 @@ class IndexProcessorMixin:
         else:
             arrays = [*list(time_indices.values())]
             names = [*list(time_indices.keys())]
+
+        # Check for and drop any duplicates
+        combos = list(combinations(range(len(arrays)), 2))
+        dupes = []
+        for combo in combos:
+            if all(arrays[combo[0]] == arrays[combo[1]]):
+                dupes.append(combo[1])
+        for dupe in dupes:
+            del (arrays[dupe], names[dupe])
 
         index = pd.MultiIndex.from_arrays(arrays, names=names)
         return index

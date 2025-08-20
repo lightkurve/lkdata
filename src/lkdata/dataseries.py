@@ -37,15 +37,47 @@ class Series(
     ):
         time_indices = time_indices or {}
 
-        # Pandas Series kwargs``
+        # Pandas Series kwargs
         kwargs.pop("ntime", None)
         copy = kwargs.pop("copy", None)
         dtype = kwargs.pop("dtype", None)
         name = kwargs.pop("name", None)
         pdseries = pd.Series(data)
-
         index = kwargs.pop("index", None)
+        index_given = True if index is not None else False
         index = self.parse_index(index, time_indices, pdseries.shape[0])
+
+        """
+        - data given as a dictionary will be allowed
+        - a singular key with an array-like value will be treated as `name: data`, per intuition and akin to DataFrame objects
+        - a longer dictionary will be treated like pandas Series
+        - the index keyword argument will overwrite if the shapes don't match, otherwise it'll aggregate
+        - I'll implement some cross matching  in the case of MultiIndex entries
+        """
+        if isinstance(data, dict):
+            if len(data) == 1:
+                name = name or next(
+                    iter(data.keys())
+                )  # name given as kwarg or inferred
+                data = next(iter(data.values()))  # must be array-like
+            elif index_given and (len(index) != len(data)):
+                # More than one key given, treating as comparison index
+                check_index = list(data.keys())
+                n_match = 0
+                for level in index.levels:
+                    common = set(level).intersection(check_index)
+                    if len(common) > n_match:
+                        inds_dict = np.where(np.in1d(check_index, list(common)))
+                        inds_index = np.where(np.in1d(level, list(common)))
+                        n_match = len(common)
+                if n_match > 0:
+                    data = np.array([*data.values()])[inds_dict]
+                    index = index[inds_index]
+            else:
+                # Either index is given and shapes match, or no index was given
+                # So use keys as a new index
+                index = self.parse_index(index, {"key_index": list(data.keys())})
+                data = [*data.values()]
 
         # User defined properties, stored as custom attributes
         for key, val in kwargs.items():
