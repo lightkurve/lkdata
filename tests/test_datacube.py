@@ -61,6 +61,11 @@ def test_setup():
         _ = df.argmin(axis=2)
 
 
+def test_setup_index():
+    df = DataCube(test_data, index=range(ntime, 2 * ntime))
+    assert "given_index" in df.index.names
+
+
 def test_bad_setup():
     # Actual data values should be irrelevant for these tests
     data_mismatch = np.random.normal(size=(ntime + 10, nrow, ncol))

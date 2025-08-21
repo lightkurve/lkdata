@@ -44,9 +44,8 @@ class Series(
         name = kwargs.pop("name", None)
         pdseries = pd.Series(data)
         index = kwargs.pop("index", None)
-        index_given = True if index is not None else False
-        if index_given and not isinstance(index, pd.Index):
-            index = pd.Index(index)
+        if index is not None and not isinstance(index, pd.Index):
+            index = pd.Index(index, name="given_index")
         index = self.parse_index(index, time_indices, pdseries.shape[0])
 
         """
@@ -62,7 +61,7 @@ class Series(
                     iter(data.keys())
                 )  # name given as kwarg or inferred
                 data = next(iter(data.values()))  # must be array-like
-            elif index_given and (len(index) != len(data)):
+            elif index is not None and (len(index) != len(data)):
                 # More than one key given, treating as comparison index
                 check_index = list(data.keys())
                 n_match = 0

@@ -30,6 +30,9 @@ def test_init(data, time, ds):
     assert all(ds.values == data)
     assert "time_index" in ds.index.names
 
+    ds = DataSeries(data, index=time)
+    assert "given_index" in ds.index.names
+
 
 def test_init_w_dict(data, time, ds):
     data_dict = dict(zip(time, data))

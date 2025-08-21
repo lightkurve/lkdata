@@ -10,6 +10,7 @@ from .uncertainty import NDUncertainty, Uncertainty
 from .bitset import BitSet
 
 import numpy as np
+from numpy.typing import ArrayLike
 import pandas as pd
 from pandas.io.formats.style import Styler
 
@@ -1347,15 +1348,22 @@ class AggMixin:
         bin_edges = pd.cut(np.sort(index), bins, right=right)
         return bin_edges
 
-    def downsample(self, nframes: int = 5, level: Union[int, str] = -1):
+    def downsample(
+        self,
+        nframes: int = 5,
+        level: Union[int, str] = -1,
+        bins: Union[None, int, ArrayLike] = None,
+    ):
         """Downsample the data by averaging over `nframes` consecutive rows.
 
         Parameters
         ----------
-        nframes : int, optional
+        nframes : int, default=5
             Number of frames to average over. Default is 5.
-        level : Union[int, str], optional
+        level : Union[int, str], default=-1
             Index level to use for downsampling. Default is -1 (last level).
+        bins : Union[int, ArrayLike], optional
+            User provided bin edges, overrides `nframes`.
 
         Returns
         -------
@@ -1392,17 +1400,30 @@ class AggMixin:
             index = np.array(index)
 
         # groupby these bin edges
-        bin_edges_left = AggMixin.get_bins(index, nframes, right=False)
+        if bins is not None:
+            bin_edges_left = bins
+        else:
+            bin_edges_left = AggMixin.get_bins(index, nframes, right=False)
         gb = dfcopy.groupby(bin_edges_left, observed=False)
 
         # We only accept cases where the number of points in a bin is the same
         # as the number of frames we downsample to
         if hasattr(dfcopy, "columns") and getattr(dfcopy, "columns") is not None:
             count = gb[int(dfcopy.columns.get_level_values(0)[0])].count()
+            if bins is not None:
+                # get most common count from given bins
+                vals, counts = np.unique(count, return_counts=True)
+                idx = np.argmax(counts)
+                nframes = vals[idx]
             bin_mask = np.asarray(count == nframes)[:, 0]
         else:
             # for DataSeries
             count = gb.count()
+            if bins is not None:
+                # get most common count from given bins
+                vals, counts = np.unique(count, return_counts=True)
+                idx = np.argmax(counts)
+                nframes = vals[idx]
             bin_mask = np.asarray(count == nframes)
 
         # Downsampling aggregation depends on data type.

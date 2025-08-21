@@ -49,6 +49,8 @@ class SeriesCollection(
         nrow = kwargs.pop("nrow", 0)
         ncol = kwargs.pop("ncol", 0)
         index = kwargs.pop("index", None)
+        if index is not None and not isinstance(index, pd.Index):
+            index = pd.Index(index, name="given_index")
         columns = kwargs.pop("columns", None)
         nseries = np.array(data).shape[1]
 
