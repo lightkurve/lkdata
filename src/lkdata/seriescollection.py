@@ -174,26 +174,27 @@ class SeriesCollection(
                     f"\t{key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not Defined')}"
                 )
             print()
-            if hasattr(self, "row_names"):
+            if hasattr(self, "row_names") and getattr(self, "row_names") is not None:
                 print("Row names: " + str(self.row_names))
                 for key in self.row_names:
                     print(
                         f"\t{key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not Defined')}"
                     )
                 print()
-            if hasattr(self, "col_names"):
+            if hasattr(self, "col_names") and getattr(self, "col_names") is not None:
                 print("Column names: " + str(self.col_names))
                 for key in self.col_names:
                     print(
                         f"\t{key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not Defined')}"
                     )
                 print()
-            print("User defined attributes accessible via `object.key`")
-            print("(displaying only unique values)")
-            for key in self._user_kwargs:
-                print(
-                    f"\t{key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not defined')}"
-                )
+            if self._user_kwargs is not None and len(self._user_kwargs) > 0:
+                print("User defined attributes accessible via `object.key`")
+                print("(displaying only unique values)")
+                for key in self._user_kwargs:
+                    print(
+                        f"\t{key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not defined')}"
+                    )
 
     @classmethod
     def from_pandas(cls, data: pd.DataFrame, **kwargs):
@@ -249,7 +250,9 @@ class DataSeriesCollection(StatsMixin, SeriesCollection):
         self._set_stats_methods()
 
     def __repr__(self):  # pragma: no cover
-        return f"🟦 SeriesCollection {self.shape}"
+        return (
+            f"🟦 SeriesCollection {self.shape}, Uncertainty: {bool(self.uncertainty)}"
+        )
 
 
 class BoolSeriesCollection(
