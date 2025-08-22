@@ -107,6 +107,8 @@ class Cube(
         self.ncol = kwargs.pop("ncol", None)
         columns = kwargs.pop("columns", None)
         index = kwargs.pop("index", None)
+        if index is not None and not isinstance(index, pd.Index):
+            index = pd.Index(index, name="given_index")
 
         # User defined properties, stored as custom attributes
         for key, val in kwargs.items():

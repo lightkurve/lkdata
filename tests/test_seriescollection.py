@@ -20,6 +20,9 @@ def test_dataframe_init():
     assert df.shape == (10, 5)
     assert np.all(df.values == data)
 
+    df = DataSeriesCollection(data, index=range(10, 20))
+    assert "given_index" in df.index.names
+
 
 def test_boolframe_init():
     """BoolFrame initialization tests"""
