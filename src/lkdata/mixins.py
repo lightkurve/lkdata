@@ -127,6 +127,20 @@ class IndexProcessorMixin:
 
     @staticmethod
     def agg_index(index_names, new_index_gb):
+        """_summary_
+
+        Parameters
+        ----------
+        index_names : list[str]
+            List of index names
+        new_index_gb : pd.groupby
+            Groupby object used to aggregate the index
+
+        Returns
+        -------
+        pd.MultiIndex
+            An aggregated index
+        """
         if "indices" in index_names:
             # If previously downsampled, "indices" will contain strings that
             # look like lists. This combines those "lists".
