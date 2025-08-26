@@ -3,8 +3,9 @@
 import re
 from copy import deepcopy
 from itertools import combinations
+from numpy.typing import ArrayLike
 from textwrap import dedent
-from typing import Iterable, Union, Tuple
+from typing import Iterable, Union, Tuple, Callable
 from warnings import warn
 from .uncertainty import NDUncertainty, Uncertainty
 from .bitset import BitSet
@@ -1379,8 +1380,38 @@ class AggMixin:
         return bins
 
     def bin(
-        self, bins, level, agg_func=None, uncertainty_agg_func=None, return_gb=False
+        self,
+        bins: ArrayLike,
+        level: Union[int, str],
+        agg_func: Union[str, Callable, None] = None,
+        uncertainty_agg_func: Union[str, Callable, None] = None,
+        return_gb: bool = False,
     ):
+        """Perform user-defined binning.
+
+        Parameters
+        ----------
+        bins : ArrayLike
+            An array of the left edge values for the bins
+        level : int or str
+            Level of the index on which to apply bins
+        agg_func : str or function, optional
+            The aggregation method by which to combine data. If None, the
+            class' ds_agg_func will be used which is summation for data and
+            bitwise classes, and np.logical_or for boolean classes.
+        uncertainty_agg_func : str or function, optional
+            For data classes, define how uncertainty should be aggregated.
+            If None is given for a class with uncertainty, the root mean square
+            is used. If the class has no associated uncertainty, this is ignored.
+        return_gb : bool, default = False
+            Whether to return the groupby object created by the bins. Useful in
+            generating conditional masks.
+
+        Returns
+        -------
+        self.__class__
+            Returns an aggregated object of the same type given.
+        """
         round_arr = AggMixin._set_precision(np.array)
         index = self.index.get_level_values(level=level)
         index_names = list(index.names)
