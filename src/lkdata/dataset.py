@@ -665,6 +665,18 @@ class DataSet:
             new_data, newbools=new_bool, newbits=new_bit, **new_kwargs
         )
 
+    def __setitem__(self, key, val):
+        if isinstance(val, LkDataTypes.__args__):
+            self.data_prodcuts[key] = val
+        elif isinstance(val, LkBoolTypes.__args__):
+            self.bool_products[key] = val
+        elif isinstance(val, LkBitwiseTypes.__args__):
+            self.bitwise_products[key] = val
+        else:
+            raise TypeError(
+                f"Type must be one of {LkTypes} when assigning " "directly by key."
+            )
+
     def __len__(self):
         return self.ntime
 
