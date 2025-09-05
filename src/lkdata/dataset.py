@@ -5,7 +5,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from functools import singledispatchmethod
 from textwrap import dedent
-from typing import Dict, Union
+from typing import Dict, Union, Type
 from warnings import warn
 
 import numpy as np
@@ -243,12 +243,12 @@ class ProductBundle(dict, DataProcessorMixin):
     """
 
     _type: str = None
-    _cube: Cube = Cube
-    _seriescollection: SeriesCollection = SeriesCollection
-    _series: Series = Series
+    _cube: Type[Cube] = Cube
+    _seriescollection: Type[SeriesCollection] = SeriesCollection
+    _series: Type[Series] = Series
 
-    _index: pd.MultiIndex = None
-    _ntime: int = None
+    _index: Union[pd.MultiIndex, None] = None
+    _ntime: Union[int, None] = None
 
     def __init__(
         self,
@@ -459,13 +459,11 @@ class BitwiseProducts(ProductBundle):
 class DataSet:
     """A class for objects with common time indices for batch manipulation.
 
-
-
-    Returns
-    -------
-    DataSet
-        A dict-like object containing related data and error products which
-        may be manipulated and analyzed simultaneously.
+    This is a container for products related by time and space. Every contained
+    product shares the same time indices and all Cubes share spatial indices.
+    The contained products may fall into three categories: data (plus errors),
+    boolean, and bitwise. An example of data would be flux, boolean may contain
+    aperture masks, and bitwise could contain error codes.
 
     Note: 2-dimensional arrays here are assumed to be a collection of
     time-series for a set of non-contiguous pixels rather than images.
