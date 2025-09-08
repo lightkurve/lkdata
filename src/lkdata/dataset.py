@@ -4,7 +4,6 @@ from collections.abc import Iterable
 from copy import deepcopy
 from dataclasses import dataclass
 from functools import singledispatchmethod
-from textwrap import dedent
 from typing import Dict, Union, Type
 from warnings import warn
 
@@ -473,6 +472,9 @@ class DataSet:
     _user_kwargs = None
     _index = None
     _ntime = None
+    _data_products = None
+    _bool_products = None
+    _bitwise_products = None
 
     def __init__(
         self,
@@ -508,7 +510,6 @@ class DataSet:
             if k not in ("ntime", "nrow", "ncol", "columns"):
                 self._user_kwargs.append(k)
 
-        # WIP
         self.data_products = DataProducts(
             data_products, index=index, time_indices=time_indices, **kwargs
         )
@@ -527,6 +528,7 @@ class DataSet:
 
     @__getitem__.register
     def _(self, key: str):
+        """Like a dictionary retreival."""
         if key in self.contents:
             return self.contents[key]
         else:
@@ -536,6 +538,10 @@ class DataSet:
     @__getitem__.register(list)
     @__getitem__.register(np.ndarray)
     def _(self, key):
+        """Time index subselection
+
+        returns a new DataSet with the indices given
+        """
         new_data = {}
         # new_data = dict(self.data)
         for data_key, data in self.data_products.items():
@@ -562,6 +568,10 @@ class DataSet:
 
     @__getitem__.register(slice)
     def _(self, key):
+        """Time index subselection
+
+        returns a new DataSet with the time slice
+        """
         new_data = {}
         for data_key, data in self.data_products.items():
             new_data[data_key] = data[key]
@@ -583,6 +593,10 @@ class DataSet:
 
     @__getitem__.register
     def _(self, key: tuple):
+        """Time and space slice/selection. Spatial cut only applies to Cubes.
+
+        returns a new DataSet with the cut applied.
+        """
         time_key = key[0]
         if len(key) not in [1, 2, 3]:
             raise KeyError(f"Cannot parse key with {len(key)} elements.")
@@ -667,7 +681,7 @@ class DataSet:
 
     def __setitem__(self, key, val):
         if isinstance(val, LkDataTypes.__args__):
-            self.data_prodcuts[key] = val
+            self.data_products[key] = val
         elif isinstance(val, LkBoolTypes.__args__):
             self.bool_products[key] = val
         elif isinstance(val, LkBitwiseTypes.__args__):
@@ -681,17 +695,15 @@ class DataSet:
         return self.ntime
 
     def __repr__(self):
-        msg = f"""
-        Data Products:
-        {self.data_products}
-        Bool Products:
-        {self.bool_products}
-        Bitwise Products:
-        {self.bitwise_products}
-        Properties:
-        {list(self.kwargs.keys())}
-        """
-        msg = dedent(msg)
+        msg = f"🗂️ DataSet: {len(self.contents)} product(s)."
+        if len(self.data_products) > 0:
+            msg += f"\nData Products:\n  {self.data_products}"
+        if len(self.bool_products) > 0:
+            msg += f"\nBool Products:\n  {self.bool_products}"
+        if len(self.bitwise_products) > 0:
+            msg += f"\nBitwise Products:\n  {self.bitwise_products}"
+        if len(self.kwargs) > 0:
+            msg += f"\nProperties:\n  {list(self.kwargs.keys())}"
         return msg
 
     def _attr_override(self, attr, val):
@@ -828,6 +840,30 @@ class DataSet:
         }
 
         return cubes
+
+    @property
+    def data_products(self):
+        return self._data_products
+
+    @data_products.setter
+    def data_products(self, val: DataProducts):
+        self._data_products = val
+
+    @property
+    def bool_products(self):
+        return self._bool_products
+
+    @bool_products.setter
+    def bool_products(self, val: BoolProducts):
+        self._bool_products = val
+
+    @property
+    def bitwise_products(self):
+        return self._bitwise_products
+
+    @bitwise_products.setter
+    def bitwise_products(self, val: BitwiseProducts):
+        self._bitwise_products = val
 
     @property
     def series_collections(self) -> dict:

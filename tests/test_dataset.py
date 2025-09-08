@@ -204,8 +204,8 @@ def test_dataset_repr(data_only):
     """repr"""
     repr_str = repr(data_only)
     assert "Data Products:" in repr_str
-    assert "Bool Products:" in repr_str
-    assert "Bitwise Products:" in repr_str
+    assert "Bool Products:" not in repr_str
+    assert "Bitwise Products:" not in repr_str
 
 
 def test_dataset_cubes_property(data_only):
@@ -263,3 +263,12 @@ def test_dataset_droplevel(data_only, ntime):
 def test_dataset_user_kwargs(datacube):
     ds = DataSet(data_products={"data": datacube}, custom_param="test")
     assert ds.user_kwargs == {"custom_param": "test"}
+
+
+def test_setitem(sample_dataset, ntime, nrow, ncol):
+    diff_data = DataCube(np.ones((ntime, nrow, ncol)), np.ones((ntime, nrow, ncol)))
+    sample_dataset["datacube"] = diff_data
+    assert (sample_dataset["datacube"] == 1).all(axis=None)
+
+    with pytest.raises(TypeError):
+        sample_dataset["datacube"] = "cat"
