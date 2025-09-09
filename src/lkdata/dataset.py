@@ -120,8 +120,19 @@ class DataProcessorMixin:
                     pass
                 elif attr == "colunmns":
                     # columns are indexed differently, but the same shape
-                    # TODO: resolve this
-                    pass
+                    working_column = working_attr.to_frame().reset_index(drop=True)
+                    working_column["merge"] = working_column.index
+                    check_column = check_attr.to_frame().reset_index(drop=True)
+                    check_column["merge"] = working_column.index
+                    new_columns = pd.merge(
+                        working_column,
+                        check_column,
+                        on="merge",
+                        how="inner",
+                        suffixes=(None, f"_{name}"),
+                    )
+                    new_columns = pd.MultiIndex.from_frame(new_columns)
+                    setattr(self, "columns", new_columns)
                 elif attr == "index":
                     # attributes don't match, but indices are the same length and can be combined
                     new_index = pd.merge(
@@ -469,7 +480,6 @@ class DataSet:
 
     """
 
-    _user_kwargs = None
     _index = None
     _ntime = None
     _data_products = None
@@ -501,14 +511,15 @@ class DataSet:
         constructor will attempt to infer the index from the given products.
         time_indices: dict, optional
         """
-        self._user_kwargs = []
+        self._attrs = dict()
         self.kwargs = kwargs
         # Custom keyword arguments given by the user.
         # They propagate to derivative products, but aren't used otherwise.
+
         for k, v in kwargs.items():
             setattr(self, k, v)
             if k not in ("ntime", "nrow", "ncol", "columns"):
-                self._user_kwargs.append(k)
+                self._attrs[k] = v
 
         self.data_products = DataProducts(
             data_products, index=index, time_indices=time_indices, **kwargs
@@ -688,7 +699,7 @@ class DataSet:
             self.bitwise_products[key] = val
         else:
             raise TypeError(
-                f"Type must be one of {LkTypes} when assigning " "directly by key."
+                f"Type must be one of {LkTypes} when assigning directly by key."
             )
 
     def __len__(self):
@@ -778,7 +789,7 @@ class DataSet:
         return batch_func
 
     def _build_instance(self, newdata, newbools, newbits, **kwargs):
-        all_kwargs = self.user_kwargs.copy()
+        all_kwargs = self.attrs.copy()
         all_kwargs.update(**kwargs)
         return self.__class__(newdata, newbools, newbits, **all_kwargs)
 
@@ -933,9 +944,9 @@ class DataSet:
         return series
 
     @property
-    def user_kwargs(self) -> dict:
+    def attrs(self) -> dict:
         """Keywords passed by the user"""
-        return {key: getattr(self, key, None) for key in self._user_kwargs}
+        return self._attrs
 
     def downsample(self, nframes: int = 5, level: Union[str, int] = -1):
         """Downsample all contained products."""

@@ -262,7 +262,7 @@ def test_dataset_droplevel(data_only, ntime):
 
 def test_dataset_user_kwargs(datacube):
     ds = DataSet(data_products={"data": datacube}, custom_param="test")
-    assert ds.user_kwargs == {"custom_param": "test"}
+    assert ds.attrs == {"custom_param": "test"}
 
 
 def test_setitem(sample_dataset, ntime, nrow, ncol):
