@@ -1,5 +1,6 @@
 """Classes and tools for creating data bundles and batches"""
 
+from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from copy import deepcopy
 from dataclasses import dataclass
@@ -38,7 +39,7 @@ CLS_STRINGS = {
 }
 
 
-class DataProcessorMixin:
+class DataProcessorMixin(ABC):
     """
     A mixin for processing and validating various types of lk data inputs.
 
@@ -69,7 +70,21 @@ class DataProcessorMixin:
         "cubes": {"ntime", "nrow", "ncol", "index", "columns"},
         "seriescollections_series": {"ntime", "index"},
     }
-    kwargs: dict = None
+
+    @property
+    @abstractmethod
+    def _cube(self):
+        pass
+
+    @property
+    @abstractmethod
+    def _seriescollection(self):
+        pass
+
+    @property
+    @abstractmethod
+    def _series(self):
+        pass
 
     def _check_attrs(self, data_product: LkTypes, name=""):
         """Checks if the attributes of the data product match the expected values.
@@ -106,7 +121,7 @@ class DataProcessorMixin:
         for attr in attrs.intersection({"index", "columns"}):
             working_attr = getattr(self, attr, None)
             check_attr = getattr(data_product, attr, None)
-            if working_attr is not None:
+            if working_attr is not None and check_attr is not None:
                 if len(working_attr) != len(check_attr):
                     # attributes don't match and are incompatible based on length
                     raise ValueError(
@@ -145,7 +160,7 @@ class DataProcessorMixin:
                     new_index = pd.MultiIndex.from_frame(new_index)
 
                     setattr(self, "index", new_index)
-            else:
+            elif working_attr is None and check_attr is not None:
                 # bundle does not have this property yet, assign it
                 setattr(self, attr, check_attr)
 
@@ -318,6 +333,11 @@ class ProductBundle(dict, DataProcessorMixin):
         if not self.ntime:
             setattr(self, "ntime", val.ntime)
 
+    def set_attr(self, attr, val):
+        setattr(self, attr, val)
+        for v in self.values():
+            setattr(v, attr, val)
+
     @singledispatchmethod
     def _unpack_input(self, input_data) -> dict:
         """Take given data and create a dictionary of products.
@@ -371,18 +391,18 @@ class ProductBundle(dict, DataProcessorMixin):
         return self._index
 
     @index.setter
-    def index(self, value):
-        assert isinstance(value, pd.MultiIndex)
-        self._index = value
+    def index(self, val):
+        assert isinstance(val, pd.MultiIndex)
+        self._index = val
 
     @property
     def ntime(self):
         return self._ntime
 
     @ntime.setter
-    def ntime(self, value):
-        assert isinstance(value, int)
-        self._ntime = value
+    def ntime(self, val):
+        assert isinstance(val, int)
+        self._ntime = val
 
     @property
     def type(self):
@@ -465,6 +485,19 @@ class BitwiseProducts(ProductBundle):
         super().__init__(bitwise, index)
 
 
+class AttrsHolder(dict):
+    _parent = None
+
+    def __init__(self, input, parent):
+        self._parent = parent
+        super().__init__(input)
+
+    def __setitem__(self, key, val):
+        super().__setitem__(key, val)
+        setattr(self._parent, key, val)
+        self._parent._attr_override(key, val)
+
+
 @dataclass
 class DataSet:
     """A class for objects with common time indices for batch manipulation.
@@ -481,45 +514,52 @@ class DataSet:
     """
 
     _index = None
-    _ntime = None
+    _ntime = 0
     _data_products = None
     _bool_products = None
     _bitwise_products = None
 
     def __init__(
         self,
-        data_products: Dict[str, Union[LkDataTypes, Iterable]] = None,
-        bool_products: Dict[str, Union[LkBoolTypes, Iterable]] = None,
-        bitwise_products: Dict[str, Union[LkBitwiseTypes, Iterable]] = None,
-        index: pd.MultiIndex = None,
-        time_indices: Dict[str, Iterable] = None,
+        data_products: Union[None, Dict[str, Union[LkDataTypes, Iterable]]] = None,
+        bool_products: Union[None, Dict[str, Union[LkBoolTypes, Iterable]]] = None,
+        bitwise_products: Union[
+            None, Dict[str, Union[LkBitwiseTypes, Iterable]]
+        ] = None,
+        index: Union[None, pd.MultiIndex] = None,
+        time_indices: Union[None, Dict[str, Iterable]] = None,
         **kwargs,
     ):
         """
         Parameters
         ----------
-        data_products: Dict[str, LkDataTypes|Iterable]
+        data_products: Dict[str, LkDataTypes|Iterable], optional
             A dictionary of 1, 2, and/or 3 dimensional data objects. LkDataTypes
             support associated errors, whereas other Iterable types will be
             converted to the appropriate LkDataType without errors.
-        bool_products: Dict[str, LkBoolTypes|Iterable[Bool]]
+        bool_products: Dict[str, LkBoolTypes|Iterable[Bool]], optional
             A dictionary 1, 2, or 3 dimensional boolean arrays.
-        bitwise_products: Dict[str, LkBitwiseTypes|Iterable[int|set|BitSet]]
+        bitwise_products: Dict[str, LkBitwiseTypes|Iterable[int|set|BitSet]], optional
             A dictionary of lkbitwise objects
         index: pd.MultiIndex, optional
+            A pandas MultiIndex object containing the times for all contained
+            products. Combined with `time_indices` if both are given.
+        time_indices: Dict[str, Iterable], optional
+            A dictionary of time indices which will be converted into or combined
+            with the `index`.
+
         A MultiIndex which is used to index the data. If none given, the DataSet
         constructor will attempt to infer the index from the given products.
         time_indices: dict, optional
+
         """
-        self._attrs = dict()
+        self._attrs = AttrsHolder({}, self)
         self.kwargs = kwargs
         # Custom keyword arguments given by the user.
         # They propagate to derivative products, but aren't used otherwise.
 
         for k, v in kwargs.items():
-            setattr(self, k, v)
-            if k not in ("ntime", "nrow", "ncol", "columns"):
-                self._attrs[k] = v
+            self._attrs[k] = v
 
         self.data_products = DataProducts(
             data_products, index=index, time_indices=time_indices, **kwargs
@@ -718,15 +758,12 @@ class DataSet:
         return msg
 
     def _attr_override(self, attr, val):
-        setattr(self.data_products, attr, val)
-        for v in self.data_products.values():
-            setattr(v, attr, val)
-        setattr(self.bool_products, attr, val)
-        for v in self.bool_products.values():
-            setattr(v, attr, val)
-        setattr(self.bitwise_products, attr, val)
-        for v in self.bitwise_products.values():
-            setattr(v, attr, val)
+        if self.data_products is not None:
+            self.data_products.set_attr(attr, val)
+        if self.bool_products is not None:
+            self.bool_products.set_attr(attr, val)
+        if self.bitwise_products is not None:
+            self.bitwise_products.set_attr(attr, val)
 
     def _batch_wrapper(self, func: str, cubes_only: bool = False):
         def batch_func(*args, **kwargs):
@@ -845,9 +882,9 @@ class DataSet:
             The keys are the original keys, given or generated.
         """
         cubes = {
-            key: value
-            for key, value in self.contents.items()
-            if issubclass(type(value), Cube)
+            key: val
+            for key, val in self.contents.items()
+            if issubclass(type(val), Cube)
         }
 
         return cubes
@@ -887,9 +924,9 @@ class DataSet:
             The keys are the original keys, given or generated.
         """
         seriescollections = {
-            key: value
-            for key, value in self.contents.items()
-            if issubclass(type(value), SeriesCollection)
+            key: val
+            for key, val in self.contents.items()
+            if issubclass(type(val), SeriesCollection)
         }
         return seriescollections
 
@@ -937,9 +974,9 @@ class DataSet:
             The keys are the original keys, given or generated.
         """
         series = {
-            key: value
-            for key, value in self.contents.items()
-            if issubclass(type(value), Series)
+            key: val
+            for key, val in self.contents.items()
+            if issubclass(type(val), Series)
         }
         return series
 

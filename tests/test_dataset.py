@@ -272,3 +272,17 @@ def test_setitem(sample_dataset, ntime, nrow, ncol):
 
     with pytest.raises(TypeError):
         sample_dataset["datacube"] = "cat"
+
+
+def test_setattr(sample_dataset):
+    # Make sure it doesn't start with the new attribute
+    assert not hasattr(sample_dataset, "cat")
+    # Add it and make sure it's there
+    sample_dataset.attrs["cat"] = "fluffy"
+    assert sample_dataset.cat == "fluffy"
+    assert "cat" in sample_dataset.attrs
+    # Make sure it propagates to the contained products
+    assert sample_dataset.data_products.cat == "fluffy"
+
+    # Make sure it carries to derivative products
+    assert sample_dataset[:10].cat == "fluffy"
