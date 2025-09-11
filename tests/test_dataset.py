@@ -204,8 +204,8 @@ def test_dataset_repr(data_only):
     """repr"""
     repr_str = repr(data_only)
     assert "Data Products:" in repr_str
-    assert "Bool Products:" in repr_str
-    assert "Bitwise Products:" in repr_str
+    assert "Bool Products:" not in repr_str
+    assert "Bitwise Products:" not in repr_str
 
 
 def test_dataset_cubes_property(data_only):
@@ -262,4 +262,27 @@ def test_dataset_droplevel(data_only, ntime):
 
 def test_dataset_user_kwargs(datacube):
     ds = DataSet(data_products={"data": datacube}, custom_param="test")
-    assert ds.user_kwargs == {"custom_param": "test"}
+    assert ds.attrs == {"custom_param": "test"}
+
+
+def test_setitem(sample_dataset, ntime, nrow, ncol):
+    diff_data = DataCube(np.ones((ntime, nrow, ncol)), np.ones((ntime, nrow, ncol)))
+    sample_dataset["datacube"] = diff_data
+    assert (sample_dataset["datacube"] == 1).all(axis=None)
+
+    with pytest.raises(TypeError):
+        sample_dataset["datacube"] = "cat"
+
+
+def test_setattr(sample_dataset):
+    # Make sure it doesn't start with the new attribute
+    assert not hasattr(sample_dataset, "cat")
+    # Add it and make sure it's there
+    sample_dataset.attrs["cat"] = "fluffy"
+    assert sample_dataset.cat == "fluffy"
+    assert "cat" in sample_dataset.attrs
+    # Make sure it propagates to the contained products
+    assert sample_dataset.data_products.cat == "fluffy"
+
+    # Make sure it carries to derivative products
+    assert sample_dataset[:10].cat == "fluffy"
