@@ -5,7 +5,7 @@ from copy import deepcopy
 from itertools import combinations
 from numpy.typing import ArrayLike
 from textwrap import dedent
-from typing import Iterable, Union, Tuple, Callable
+from typing import Iterable, Union, Tuple, Callable, Optional
 from warnings import warn
 from .uncertainty import NDUncertainty, Uncertainty
 from .bitset import BitSet
@@ -127,7 +127,7 @@ class IndexProcessorMixin:
 
     @staticmethod
     def agg_index(index_names, new_index_gb):
-        """_summary_
+        """Apply an aggregation to the indices based on a groupby object
 
         Parameters
         ----------
@@ -197,7 +197,7 @@ class IndexProcessorMixin:
         ValueError
             0-level indices cannot be dropped by this method.
         NotImplementedError
-            _description_
+            Dropping columns this way is not currently supported.
 
         See Also
         --------
@@ -227,10 +227,10 @@ class IndexProcessorMixin:
 
     @staticmethod
     def parse_index(
-        index: pd.MultiIndex = None,
-        time_indices: dict = None,
-        ntime: int = 0,
-        default: bool = True,
+        index: Optional[pd.MultiIndex] = None,
+        time_indices: Optional[dict] = None,
+        ntime: Optional[int] = 0,
+        default_index: bool = True,
     ):
         """Parse given indices and return a single pandas MultiIndex
         Parameters
@@ -291,7 +291,7 @@ class IndexProcessorMixin:
                 if (
                     ("time_index" not in time_indices.keys())
                     and ("mid_index" not in time_indices.keys())
-                    and default
+                    and default_index
                 ):
                     # Create a standard index which orders the data.
                     # This is particularly useful when phase-folding, etc.
@@ -312,7 +312,7 @@ class IndexProcessorMixin:
             if (
                 ("time_index" not in time_indices.keys())
                 and ("mid_index" not in time_indices.keys())
-                and default
+                and default_index
             ):
                 time_indices.update({"time_index": np.arange(ntime_index)})
         elif index is not None:
@@ -1439,7 +1439,7 @@ class AggMixin:
         sorted_inds = np.argsort(index)
         dfcopy = self.iloc[sorted_inds]
         bin_edges_left = pd.cut(index[sorted_inds], bins, right=False)
-        gb = dfcopy.groupby(bin_edges_left, observed=False)
+        gb = dfcopy.groupby(bin_edges_left, dropna=False, observed=False)
 
         agg_func = (
             agg_func or self.ds_agg_func if hasattr(self, "ds_agg_func") else "mean"
