@@ -146,7 +146,6 @@ class Series(
                 return
             print()
             print("User defined attributes accessible via `object.key`")
-            print("(displaying only unique values)")
             for key in self._user_kwargs:
                 print(
                     f"\t{key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not defined')}"
@@ -201,7 +200,7 @@ class DataSeries(StatsMixin, Series):
         self._set_stats_methods()
 
     def __repr__(self):
-        return f"📉 DataSeries {self.shape}"
+        return f"📉 DataSeries {self.shape}, Uncertainty: {bool(self.uncertainty)}"
 
     def _repr_html_(self):
         print(super().__repr__())

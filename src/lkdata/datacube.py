@@ -102,7 +102,7 @@ class Cube(
         Creates a formatted cadence label for the HTML representation.
     single_frame(cadence: int)
         Creates a stylized single cadence frame of the cube.
-    to_dataframe(row, col, **kwargs)
+    to_seriescollection(row, col, **kwargs)
         Converts the Cube to a DataSeriesCollection with given row and column indices.
     """
 
@@ -245,11 +245,11 @@ class Cube(
                 self.iloc[time, int(series[0])], **init_kwds
             )
         elif (not isinstance(row, (slice))) | (not isinstance(col, (slice))):
-            return self[time].to_dataframe(row, col, **init_kwds)
+            return self[time].to_seriescollection(row, col, **init_kwds)
         elif (isinstance(row, slice) & (row.step not in [None, 1])) | (
             isinstance(col, slice) & (col.step not in [None, 1])
         ):
-            return self[time].to_dataframe(row, col, **init_kwds)
+            return self[time].to_seriescollection(row, col, **init_kwds)
 
         nrow, ncol, series_index = self._convert_to_series_index(row, col)
 
@@ -520,7 +520,7 @@ class Cube(
     def single_frame(self, cadence: int) -> pd.DataFrame:
         """Create a stylized single cadence frame of a datacube
 
-        This is distinct from to_dataframe() and from retreiving a single
+        This is distinct from to_seriescollection() and from retreiving a single
         cadence of a DataCube. The former returns a pandas DataFrame with all
         pixels along the column axis and all cadences along the index axis.
         The latter returns a DataCube with a single cadence, time information
@@ -721,7 +721,7 @@ class DataCube(
         Creates a formatted cadence label for the HTML representation.
     single_frame(cadence: int)
         Creates a stylized single cadence frame of the cube.
-    to_dataframe(row, col, **kwargs)
+    to_seriescollection(row, col, **kwargs)
         Converts the Cube to a DataSeriesCollection with given row and column indices.
 
     """
@@ -809,7 +809,7 @@ class BoolCube(
         Creates a formatted cadence label for the HTML representation.
     single_frame(cadence: int)
         Creates a stylized single cadence frame of the cube.
-    to_dataframe(row, col, **kwargs)
+    to_seriescollection(row, col, **kwargs)
         Converts the Cube to a DataSeriesCollection with given row and column indices.
 
     """
@@ -888,7 +888,7 @@ class BitwiseCube(BitwiseMixin, Cube):
         Creates a formatted cadence label for the HTML representation.
     single_frame(cadence: int)
         Creates a stylized single cadence frame of the cube.
-    to_dataframe(row, col, **kwargs)
+    to_seriescollection(row, col, **kwargs)
         Converts the Cube to a DataSeriesCollection with given row and column indices.
 
     """

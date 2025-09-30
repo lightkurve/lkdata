@@ -5,7 +5,7 @@ from copy import deepcopy
 from itertools import combinations
 from numpy.typing import ArrayLike
 from textwrap import dedent
-from typing import Iterable, Union, Tuple, Callable, Optional
+from typing import Iterable, Union, Tuple, Callable
 from warnings import warn
 from .uncertainty import NDUncertainty, Uncertainty
 from .bitset import BitSet
@@ -127,7 +127,7 @@ class IndexProcessorMixin:
 
     @staticmethod
     def agg_index(index_names, new_index_gb):
-        """Apply an aggregation to the indices based on a groupby object
+        """_summary_
 
         Parameters
         ----------
@@ -197,7 +197,7 @@ class IndexProcessorMixin:
         ValueError
             0-level indices cannot be dropped by this method.
         NotImplementedError
-            Dropping columns this way is not currently supported.
+            _description_
 
         See Also
         --------
@@ -227,10 +227,10 @@ class IndexProcessorMixin:
 
     @staticmethod
     def parse_index(
-        index: Optional[pd.MultiIndex] = None,
-        time_indices: Optional[dict] = None,
-        ntime: Optional[int] = 0,
-        default_index: bool = True,
+        index: pd.MultiIndex = None,
+        time_indices: dict = None,
+        ntime: int = 0,
+        default: bool = True,
     ):
         """Parse given indices and return a single pandas MultiIndex
         Parameters
@@ -291,7 +291,7 @@ class IndexProcessorMixin:
                 if (
                     ("time_index" not in time_indices.keys())
                     and ("mid_index" not in time_indices.keys())
-                    and default_index
+                    and default
                 ):
                     # Create a standard index which orders the data.
                     # This is particularly useful when phase-folding, etc.
@@ -312,7 +312,7 @@ class IndexProcessorMixin:
             if (
                 ("time_index" not in time_indices.keys())
                 and ("mid_index" not in time_indices.keys())
-                and default_index
+                and default
             ):
                 time_indices.update({"time_index": np.arange(ntime_index)})
         elif index is not None:
@@ -1016,7 +1016,7 @@ class StatsMixin(MathMixin):
 
     Attributes
     ----------
-    ds_agg_func : str
+    ds_agg_func : func
         The aggregation function to use for downsampling, default is "sum".
 
     Methods
@@ -1026,7 +1026,20 @@ class StatsMixin(MathMixin):
     """
 
     _stats_type = "data"
-    ds_agg_func = "sum"
+
+    @property
+    def ds_agg_func(self):
+        """Numpy sum aggregation wrapper for pandas groupby
+
+        pandas.groupby objects treat NaN values as 0 when applying the default
+        sum aggregation.
+
+        Returns
+        -------
+        func
+            Aggregation function to sum a given array
+        """
+        return lambda arr: np.sum(np.array(arr))
 
     def _create_cum_method(self, method_name):
         def _method(*args, **kwargs):
@@ -1399,7 +1412,7 @@ class AggMixin:
         level: Union[int, str],
         agg_func: Union[str, Callable, None] = None,
         uncertainty_agg_func: Union[str, Callable, None] = None,
-        return_gb: bool = False,
+        counts: bool = False,
     ):
         """Perform user-defined binning.
 
@@ -1417,9 +1430,8 @@ class AggMixin:
             For data classes, define how uncertainty should be aggregated.
             If None is given for a class with uncertainty, the root mean square
             is used. If the class has no associated uncertainty, this is ignored.
-        return_gb : bool, default = False
-            Whether to return the groupby object created by the bins. Useful in
-            generating conditional masks.
+        counts : bool, default = False
+            Whether to return the counts for each bin including NaNs.
 
         Returns
         -------
@@ -1428,7 +1440,7 @@ class AggMixin:
         """
         round_arr = AggMixin._set_precision(np.array)
         index = self.index.get_level_values(level=level)
-        index_names = list(index.names)
+        index_names = list(self.index.names)
 
         try:
             index = round_arr(index)
@@ -1439,7 +1451,7 @@ class AggMixin:
         sorted_inds = np.argsort(index)
         dfcopy = self.iloc[sorted_inds]
         bin_edges_left = pd.cut(index[sorted_inds], bins, right=False)
-        gb = dfcopy.groupby(bin_edges_left, dropna=False, observed=False)
+        gb = dfcopy.groupby(bin_edges_left, observed=False)
 
         agg_func = (
             agg_func or self.ds_agg_func if hasattr(self, "ds_agg_func") else "mean"
@@ -1486,8 +1498,10 @@ class AggMixin:
 
         if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
             new_obj.uncertainty = new_error.reshape(new_obj.array.shape)
-        if return_gb:
-            return new_obj, gb
+        if counts:
+            gb = dfcopy.fillna(0).groupby(bin_edges_left, observed=False)
+            counts = gb.count().values
+            return new_obj, counts
         return new_obj
 
     def downsample(
@@ -1542,23 +1556,19 @@ class AggMixin:
         # groupby these bin edges
         bins = AggMixin.get_bins(index, nframes, right=False)
 
-        binned, gb = self.bin(
+        binned, count = self.bin(
             bins=bins,
             level=level,
             agg_func=self.ds_agg_func,
             uncertainty_agg_func=lambda x: np.sqrt(np.sum(x**2)),
-            return_gb=True,
+            counts=True,
         )
 
         # We only accept cases where the number of points in a bin is the same
         # as the number of frames we downsample to
         if hasattr(dfcopy, "columns") and getattr(dfcopy, "columns") is not None:
-            count = gb.count().iloc[:, 0]
-            bin_mask = np.asarray(count == nframes)
-        else:
-            # for DataSeries
-            count = gb.count()
-            bin_mask = np.asarray(count == nframes)
+            count = count[:, 0]
+        bin_mask = np.asarray(count == nframes)
 
         return binned[bin_mask]
 
