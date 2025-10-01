@@ -37,34 +37,30 @@ dev = [
 [tool.poetry.group.dev]
 optional = true
 
-[tool.poetry.group.dev.dependencies]
-astropy = "*"
-bump2version = ">= 1.0.1"
-coverage = { version = ">=7.4.0", extras = ["toml"] }
-ipykernel = ">= 6.29.5"
-IPython = ">= 8.18.1"
-jupyter = " >= 1.0.0"
-line-profiler = ">= 4.1.2"
-mypy = ">= 1.8.0"
-nbsphinx = ">= 0.9.3"
-pre-commit = ">= 3.6.0"
-pydata-sphinx-theme = ">= 0.15.1"
-pytest = ">= 7.4.4"
-ruff = "^0.1.13"
-sphinx = ">= 7.2.6"
-sphinx-astropy = ">= 1.9.1"
-sphinx-autobuild = ">= 2021.3.14"
-sphinx-autodoc-typehints = ">= 1.25.2"
-sphinx-copybutton = ">= 0.5.2"
-
-
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [dependency-groups]
 dev = [
+    "astropy",
+    "bump2version (>=1.0.1,<2.0.0)",
+    "coverage[toml] (>=7.10.7,<8.0.0)",
     "ipykernel>=6.29.5",
+    "IPython>=8.18.1",
+    "jupyter>=1.0.0",
+    "line-profiler>=4.1.2",
+    "mypy>=1.8.0",
+    "nbsphinx>=0.9.3",
+    "pre-commit>=3.6.0",
+    "pydata-sphinx-theme>=0.15.1",
+    "pytest (>=8.4.2,<9.0.0)",
+    "ruff (>=0.13.2,<0.14.0)",
+    "sphinx-astropy>=1.9.1",
+    "sphinx-autobuild>=2021.3.14",
+    "sphinx-autodoc-typehints>=1.25.2",
+    "sphinx-copybutton>=0.5.2",
+    "sphinx>=7.2.6",
 ]
 
 
