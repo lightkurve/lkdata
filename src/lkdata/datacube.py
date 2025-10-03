@@ -25,6 +25,8 @@ from .mixins import (
 
 log = logging.getLogger()
 
+# __all__ = ["DataCube", "BoolCube", "BitwiseCube"]
+
 
 class Cube(
     ABC,
@@ -40,16 +42,42 @@ class Cube(
 
     Parameters
     ----------
-    data : Union[List, np.ndarray]
+    data : array-like
         The input data for the Cube. Should be 2D or 3D array-like.
-    time_indices : Union[Dict, List, None], optional
+    uncertainty : array-like
+    time_indices : array-like or dictionary of array-like, optional
         Indices for the time dimension.
-    row_indices : Union[Dict, List, None], optional
+        If an array-like, the default name "time_index" will be assigned.
+        If a dictionary, each entry will be added to the MultiIndex with the
+        corresponding key. A default RangeIndex from 0 to the length of the
+        given index (or data, when this argument is not provided) with the key
+        "time_index" is added if the "time_index" key is not specified.
+        If this argument and no keyword argument "index" or "ntime" are given,
+        a RangeIndex from 0 to the size of the first dimension of the data is
+        added as "time_index".
+    row_indices : array-like or dictionary of array-like, optional
         Indices for the row dimension.
-    col_indices : Union[Dict, List, None], optional
+        If an array-like, the default name "row" will be assigned.
+        If a dictionary, each entry will be added to the MultiIndex with the
+        corresponding key.
+        If this argument and "nrow" are not given, a default RangeIndex from 0
+        to the size of the second dimension of the given data is added as "row".
+    col_indices : array-like or dictionary of array-like, optional
         Indices for the column dimension.
+        If an array-like, the default name "col" will be assigned.
+        If a dictionary, each entry will be added to the MultiIndex with the
+        corresponding key.
+        If this argument and "ncol" are not given, a default RangeIndex from 0
+        to the size of the third dimension of the given data is added as "col".
     **kwargs
-        Additional keyword arguments to be stored as attributes.
+        Any keyword arguments for constructing a pandas DataFrame, like `index` and
+        `columns`, will be treated appropriately. Any unrecognized keys
+        are stored as class attributes.
+        If the given data is flattened `nrow` and `ncol` must be specified.
+        The class will use data.reshape((ntime, nrow, ncol)) to store the data
+        and generate automatic indices based on nrow and ncol, unless otherwise
+        specified.
+
 
     Attributes
     ----------
@@ -77,7 +105,7 @@ class Cube(
         Creates a formatted cadence label for the HTML representation.
     single_frame(cadence: int)
         Creates a stylized single cadence frame of the cube.
-    to_dataframe(row, col, **kwargs)
+    to_seriescollection(row, col, **kwargs)
         Converts the Cube to a DataSeriesCollection with given row and column indices.
     """
 
@@ -91,9 +119,9 @@ class Cube(
     def __init__(
         self,
         data: ArrayLike,
-        time_indices: Union[Dict, List, None] = None,
-        row_indices: Union[Dict, List, None] = None,
-        col_indices: Union[Dict, List, None] = None,
+        time_indices: Optional[Union[Dict, List]] = None,
+        row_indices: Optional[Union[Dict, List]] = None,
+        col_indices: Optional[Union[Dict, List]] = None,
         **kwargs,
     ):
         # Pandas DataFrame kwargs
@@ -220,11 +248,11 @@ class Cube(
                 self.iloc[time, int(series[0])], **init_kwds
             )
         elif (not isinstance(row, (slice))) | (not isinstance(col, (slice))):
-            return self[time].to_dataframe(row, col, **init_kwds)
+            return self[time].to_seriescollection(row, col, **init_kwds)
         elif (isinstance(row, slice) & (row.step not in [None, 1])) | (
             isinstance(col, slice) & (col.step not in [None, 1])
         ):
-            return self[time].to_dataframe(row, col, **init_kwds)
+            return self[time].to_seriescollection(row, col, **init_kwds)
 
         nrow, ncol, series_index = self._convert_to_series_index(row, col)
 
@@ -352,17 +380,21 @@ class Cube(
             print(repr(self) + " (ntime, nrow, ncol)")
             print(f"pd.DataFrame shape: {self.shape}")
             print()
-            if hasattr(self, "uncertainty") and issubclass(self.__class__, DataCube):
+            if (
+                hasattr(self, "uncertainty")
+                and issubclass(self.__class__, DataCube)
+                and bool(self.uncertainty)
+            ):
                 print("Uncertainty:")
                 print(
-                    f"\tuncertainty\t:\t{type(self.uncertainty).__name__}(np.ndarray{self.uncertainty.shape})"
+                    f"  uncertainty\t:\t{type(self.uncertainty).__name__}(np.ndarray{self.uncertainty.shape})"
                 )
 
             print()
             print("Time indices available: " + str(self.index.names))
             for key in self.index.names:
                 print(
-                    f"\t{key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not Defined')}"
+                    f"  {key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not Defined')}"
                 )
             print()
             print(f"Number of unique 'series': {len(self.series)}")
@@ -370,29 +402,93 @@ class Cube(
             print("Row names: " + str(self.row_names))
             for key in self.row_names:
                 print(
-                    f"\t{key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not Defined')}"
+                    f"  {key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not Defined')}"
                 )
             print()
             print("Column names: " + str(self.col_names))
             for key in self.col_names:
                 print(
-                    f"\t{key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not Defined')}"
+                    f"  {key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not Defined')}"
                 )
+            if len(self._user_kwargs) == 0:
+                return
             print()
             print("User defined attributes accessible via `object.key`")
             print("(displaying only unique values)")
             for key in self._user_kwargs:
                 print(
-                    f"\t{key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not defined')}"
+                    f"  {key.ljust(max_name_len + 1)} {type(getattr(self, key, None))}\t:\t{getattr(self, key, 'Not defined')}"
                 )
 
     @classmethod
-    def from_pandas(cls, data: pd.DataFrame, **kwargs):
+    def from_pandas(
+        cls,
+        data: pd.DataFrame,
+        row_names: Optional[Union[str, list]] = None,
+        col_names: Optional[Union[str, list]] = None,
+        nrow: Optional[int] = None,
+        ncol: Optional[int] = None,
+        **kwargs,
+    ):
         """Convert a pd.DataFrame to a DataCube
+        Parameters
+        ----------
+        data : pandas DataFrame
+        row_name : str or list of strings, optional
+            Name of "row" index in DataFrame.columns if columns is a MultiIndex.
+        col_name : str or list of strings, optional
+            Name of "col" index in Dataframe.columns if columns is a MultiIndex.
+        nrow : int, optional
+            number of rows to be inferred from the DataFrame.columns. Ignored
+            if row_name is given.
+        ncol : int, optional
+            number of columns to be inferred from the DataFrame.columns. Ignored
+            if col_name is given.
 
-        Notes:
-        This assumes no multi-indexing in the pandas dataframe.
+        Note:
+        Keywords `index` and `columns` may not  be specified, they are inferred
+        from the pandas DataFrame.
         """
+        if row_names:
+            if isinstance(row_names, str):
+                row_indices = {
+                    row_names: data.columns.get_level_values(row_names).values
+                }
+            elif isinstance(row_names, list):
+                row_indices = {
+                    n: data.columns.get_level_values(n).values for n in row_names
+                }
+            else:
+                raise ValueError(
+                    f"`row_names` must be int or list, got {type(row_names)}"
+                )
+            kwargs["row_indices"] = row_indices
+            kwargs["nrow"] = len(np.unique(list(row_indices.values())[0]))
+        elif nrow:
+            kwargs["nrow"] = nrow
+        else:
+            raise KeyError("One of `row_names` or `nrow` must be specified.")
+
+        if col_names:
+            if isinstance(col_names, str):
+                col_indices = {
+                    col_names: data.columns.get_level_values(col_names).values
+                }
+            elif isinstance(col_names, list):
+                col_indices = {
+                    n: data.columns.get_level_values(n).values for n in col_names
+                }
+            else:
+                raise ValueError(
+                    f"`col_names` must be int or list, got {type(col_names)}"
+                )
+            kwargs["col_indices"] = col_indices
+            kwargs["ncol"] = len(np.unique(list(col_indices.values())[0]))
+        elif ncol:
+            kwargs["ncol"] = ncol
+        else:
+            raise KeyError("One of `col_names` or `ncol` must be specified.")
+
         return cls(data.to_numpy(), index=data.index, columns=data.columns, **kwargs)
 
     def make_cadence_label(self, cadence: int):
@@ -433,7 +529,7 @@ class Cube(
     def single_frame(self, cadence: int) -> pd.DataFrame:
         """Create a stylized single cadence frame of a datacube
 
-        This is distinct from to_dataframe() and from retreiving a single
+        This is distinct from to_seriescollection() and from retreiving a single
         cadence of a DataCube. The former returns a pandas DataFrame with all
         pixels along the column axis and all cadences along the index axis.
         The latter returns a DataCube with a single cadence, time information
@@ -538,12 +634,12 @@ class Cube(
         )
         return out
 
-    def to_dataframe(
+    def to_seriescollection(
         self,
         row: Union[int, float, list, slice],
         col: Union[int, float, list, slice],
         **kwargs,
-    ) -> DataSeriesCollection:
+    ):
         """Convert lkdata.Cube to lkdata.SeriesCollection with the given row and column.
 
         Parameters
@@ -560,7 +656,7 @@ class Cube(
         """
         nrow, ncol, series_index = self._convert_to_series_index(row, col)
 
-        return self._frame_class(
+        return self._collection_class(
             self.iloc[:, series_index],
             index=self.index,
             columns=self.columns[series_index],
@@ -588,20 +684,67 @@ class DataCube(
     StatsMixin,
     Cube,
 ):
-    """A Cube object which contains data with time and 2 spatial dimensions."""
+    """A Cube object which contains data with time and 2 spatial dimensions.
 
-    _frame_class = DataSeriesCollection
+
+    Parameters
+    ----------
+    data : ArrayLike
+        The input data for the Cube. Should be 2D or 3D array-like.
+    uncertainty : Union[List, ArrayLike]
+    time_indices : Union[Dict, List, None], optional
+        Indices for the time dimension.
+    row_indices : Union[Dict, List, None], optional
+        Indices for the row dimension.
+    col_indices : Union[Dict, List, None], optional
+        Indices for the column dimension.
+    **kwargs
+        Any keyword arguments for constructing a pandas DataFrame, like `index` and
+        `columns`, will be treated appropriately. Any unrecognized keys
+        are stored as class attributes.
+
+
+    Attributes
+    ----------
+    array
+    nseries
+    styler
+    units
+    values
+    nrow : int, optional
+        Number of rows in the spatial dimensions.
+    ncol : int, optional
+        Number of columns in the spatial dimensions.
+    row_names : list of strings, optional
+        Names of the row indices.
+    col_names : list of strings, optional
+        Names of the column indices.
+
+    Methods
+    -------
+    describe_cube(**printoptions)
+        Prints a description of the Cube instance.
+    from_pandas(data: pd.DataFrame, **kwargs)
+        Converts a pd.DataFrame to a Cube.
+    make_cadence_label(cadence: int)
+        Creates a formatted cadence label for the HTML representation.
+    single_frame(cadence: int)
+        Creates a stylized single cadence frame of the cube.
+    to_seriescollection(row, col, **kwargs)
+        Converts the Cube to a DataSeriesCollection with given row and column indices.
+
+    """
+
+    _collection_class = DataSeriesCollection
     _series_class = DataSeries
 
     def __init__(
         self,
-        data: Union[List, np.ndarray],
-        uncertainty: Union[List, np.ndarray] = None,
-        time_indices: Union[Dict, List, None] = None,
-        row_indices: Union[
-            Dict, List, None
-        ] = None,  # TODO: make this accept arrays/lists
-        col_indices: Union[Dict, List, None] = None,
+        data: ArrayLike,
+        uncertainty: Optional[Union[List, np.ndarray]] = None,
+        time_indices: Optional[Union[Dict, List, None]] = None,
+        row_indices: Optional[Union[Dict, List]] = None,
+        col_indices: Optional[Union[Dict, List]] = None,
         **kwargs,
     ):
         # For pandas DataFrames subclasses, new properties must
@@ -630,9 +773,57 @@ class BoolCube(
     BoolMixin,
     Cube,
 ):
-    """A Cube object which contains boolean values with time and 2 spatial dimensions."""
+    """A Cube object which contains boolean entries.
 
-    _frame_class = BoolSeriesCollection
+
+    Parameters
+    ----------
+    data : ArrayLike[bool]
+        The input data for the Cube. Should be 2D or 3D array-like.
+    time_indices : Union[Dict, List], optional
+        Indices for the time dimension.
+    row_indices : Union[Dict, List], optional
+        Indices for the row dimension.
+    col_indices : Union[Dict, List], optional
+        Indices for the column dimension.
+    **kwargs
+        Any keyword arguments for constructing a pandas DataFrame, like `index` and
+        `columns`, will be treated appropriately. Any unrecognized keys
+        are stored as class attributes.
+
+
+    Attributes
+    ----------
+    array
+    nseries
+    styler
+    units
+    values
+    nrow : int, optional
+        Number of rows in the spatial dimensions.
+    ncol : int, optional
+        Number of columns in the spatial dimensions.
+    row_names : list of strings, optional
+        Names of the row indices.
+    col_names : list of strings, optional
+        Names of the column indices.
+
+    Methods
+    -------
+    describe_cube(**printoptions)
+        Prints a description of the Cube instance.
+    from_pandas(data: pd.DataFrame, **kwargs)
+        Converts a pd.DataFrame to a Cube.
+    make_cadence_label(cadence: int)
+        Creates a formatted cadence label for the HTML representation.
+    single_frame(cadence: int)
+        Creates a stylized single cadence frame of the cube.
+    to_seriescollection(row, col, **kwargs)
+        Converts the Cube to a DataSeriesCollection with given row and column indices.
+
+    """
+
+    _collection_class = BoolSeriesCollection
     _series_class = BoolSeries
 
     def __init__(
@@ -656,18 +847,71 @@ class BoolCube(
 
 
 class BitwiseCube(BitwiseMixin, Cube):
-    """A Cube object which contains bitwise values with time and 2 spatial dimensions."""
+    """A Cube object which contains bitwise entries.
 
-    _frame_class = BitwiseSeriesCollection
+
+    Parameters
+    ----------
+    data : ArrayLike
+        The input data for the Cube. Should be 2D or 3D array-like.
+    time_indices : Union[Dict, List], optional
+        Indices for the time dimension.
+    row_indices : Union[Dict, List], optional
+        Indices for the row dimension.
+    col_indices : Union[Dict, List], optional
+        Indices for the column dimension.
+    code_dict : Dict, optional
+        A dictionary mapping bit values to their definitions.
+    display_as : str, optional
+        How to display the values. Options are "int", "bitset",
+        or "detailed".
+    **kwargs
+        Any keyword arguments for constructing a pandas DataFrame, like `index` and
+        `columns`, will be treated appropriately. Any unrecognized keys
+        are stored as class attributes.
+
+
+    Attributes
+    ----------
+    array
+    nseries
+    styler
+    units
+    values
+    nrow : int, optional
+        Number of rows in the spatial dimensions.
+    ncol : int, optional
+        Number of columns in the spatial dimensions.
+    row_names : list of strings, optional
+        Names of the row indices.
+    col_names : list of strings, optional
+        Names of the column indices.
+
+    Methods
+    -------
+    describe_cube(**printoptions)
+        Prints a description of the Cube instance.
+    from_pandas(data: pd.DataFrame, **kwargs)
+        Converts a pd.DataFrame to a Cube.
+    make_cadence_label(cadence: int)
+        Creates a formatted cadence label for the HTML representation.
+    single_frame(cadence: int)
+        Creates a stylized single cadence frame of the cube.
+    to_seriescollection(row, col, **kwargs)
+        Converts the Cube to a DataSeriesCollection with given row and column indices.
+
+    """
+
+    _collection_class = BitwiseSeriesCollection
     _series_class = BitwiseSeries
 
     def __init__(
         self,
         data: Union[List, np.ndarray],
-        time_indices: Union[Dict, List, None] = None,
-        row_indices: Union[Dict, List, None] = None,
-        col_indices: Union[Dict, List, None] = None,
-        code_dict: Dict = None,
+        time_indices: Optional[Union[Dict, List]] = None,
+        row_indices: Optional[Union[Dict, List]] = None,
+        col_indices: Optional[Union[Dict, List]] = None,
+        code_dict: Optional[Dict] = None,
         display_as: str = "int",
         **kwargs,
     ):
@@ -684,11 +928,7 @@ class BitwiseCube(BitwiseMixin, Cube):
                 Indices for the row dimension.
             col_indices : Union[Dict, List, None], optional
                 Indices for the column dimension.
-            code_dict : Dict, optional
-                A dictionary mapping bit values to their definitions.
-            display_as : str, optional
-                How to display the values. Options are "int", "bitset",
-                or "detailed".
+
             **kwargs
                 Additional keyword arguments to pass to the parent class.
 

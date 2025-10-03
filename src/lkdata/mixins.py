@@ -348,7 +348,7 @@ class IndexProcessorMixin:
         return index
 
     @staticmethod
-    def parse_pos_indices(row_indices, col_indices, nrow, ncol):
+    def parse_pos_indices(row_indices, col_indices, nrow, ncol, nseries=0):
         """Parse and process row and column indices for data representation.
 
         TPF data are typically stored in an intuitive 3D structure, with
@@ -417,7 +417,7 @@ class IndexProcessorMixin:
             Check and convert the given list-like indices into compatible form
             """
             arr = np.array(indices).flatten()
-            if arr.shape[0] == nrow * ncol:
+            if arr.shape[0] in (nrow * ncol, nseries):
                 # Indices given like coordinates for each datapoint
                 return arr
             elif arr.shape[0] == dim_self:
@@ -538,7 +538,7 @@ class IndexProcessorMixin:
             )
 
         row_indices, col_indices = self.parse_pos_indices(
-            row_indices, col_indices, nrow, ncol
+            row_indices, col_indices, nrow, ncol, nseries
         )
 
         if columns is not None:
@@ -1016,7 +1016,7 @@ class StatsMixin(MathMixin):
 
     Attributes
     ----------
-    ds_agg_func : str
+    ds_agg_func : func
         The aggregation function to use for downsampling, default is "sum".
 
     Methods
@@ -1026,7 +1026,20 @@ class StatsMixin(MathMixin):
     """
 
     _stats_type = "data"
-    ds_agg_func = "sum"
+
+    @property
+    def ds_agg_func(self):
+        """Numpy sum aggregation wrapper for pandas groupby
+
+        pandas.groupby objects treat NaN values as 0 when applying the default
+        sum aggregation.
+
+        Returns
+        -------
+        func
+            Aggregation function to sum a given array
+        """
+        return lambda arr: np.sum(np.array(arr))
 
     def _create_cum_method(self, method_name):
         def _method(*args, **kwargs):
@@ -1399,7 +1412,7 @@ class AggMixin:
         level: Union[int, str],
         agg_func: Union[str, Callable, None] = None,
         uncertainty_agg_func: Union[str, Callable, None] = None,
-        return_gb: bool = False,
+        counts: bool = False,
     ):
         """Perform user-defined binning.
 
@@ -1417,9 +1430,8 @@ class AggMixin:
             For data classes, define how uncertainty should be aggregated.
             If None is given for a class with uncertainty, the root mean square
             is used. If the class has no associated uncertainty, this is ignored.
-        return_gb : bool, default = False
-            Whether to return the groupby object created by the bins. Useful in
-            generating conditional masks.
+        counts : bool, default = False
+            Whether to return the counts for each bin including NaNs.
 
         Returns
         -------
@@ -1428,7 +1440,7 @@ class AggMixin:
         """
         round_arr = AggMixin._set_precision(np.array)
         index = self.index.get_level_values(level=level)
-        index_names = list(index.names)
+        index_names = list(self.index.names)
 
         try:
             index = round_arr(index)
@@ -1486,8 +1498,10 @@ class AggMixin:
 
         if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
             new_obj.uncertainty = new_error.reshape(new_obj.array.shape)
-        if return_gb:
-            return new_obj, gb
+        if counts:
+            gb = dfcopy.fillna(0).groupby(bin_edges_left, observed=False)
+            counts = gb.count().values
+            return new_obj, counts
         return new_obj
 
     def downsample(
@@ -1542,23 +1556,19 @@ class AggMixin:
         # groupby these bin edges
         bins = AggMixin.get_bins(index, nframes, right=False)
 
-        binned, gb = self.bin(
+        binned, count = self.bin(
             bins=bins,
             level=level,
             agg_func=self.ds_agg_func,
             uncertainty_agg_func=lambda x: np.sqrt(np.sum(x**2)),
-            return_gb=True,
+            counts=True,
         )
 
         # We only accept cases where the number of points in a bin is the same
         # as the number of frames we downsample to
         if hasattr(dfcopy, "columns") and getattr(dfcopy, "columns") is not None:
-            count = gb.count().iloc[:, 0]
-            bin_mask = np.asarray(count == nframes)
-        else:
-            # for DataSeries
-            count = gb.count()
-            bin_mask = np.asarray(count == nframes)
+            count = count[:, 0]
+        bin_mask = np.asarray(count == nframes)
 
         return binned[bin_mask]
 
