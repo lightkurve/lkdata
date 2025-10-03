@@ -128,19 +128,23 @@ class Series(
             max_name_len = max(map(len, self._metadata))
             print(f"{repr(self)} {self.shape} (ntime)")
             print()
-            if hasattr(self, "uncertainty") and issubclass(self.__class__, DataSeries):
+            if (
+                hasattr(self, "uncertainty")
+                and issubclass(self.__class__, DataSeries)
+                and bool(self.uncertainty)
+            ):
                 print("Uncertainty:")
                 try:
                     print(
-                        f"\tuncertainty\t:\t{type(self.uncertainty).__name__}(np.ndarray{self.uncertainty.shape})"
+                        f"  uncertainty\t:\t{type(self.uncertainty).__name__}(np.ndarray{self.uncertainty.shape})"
                     )
                 except AttributeError:
-                    print("\tuncertainty\t:\tUncertainty(None)")
+                    print("  uncertainty\t:\tUncertainty(None)")
             print()
             print("Time indices available: " + str(self.index.names))
             for key in self.index.names:
                 print(
-                    f"\t{key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not Defined')}"
+                    f"  {key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not Defined')}"
                 )
             if len(self._user_kwargs) == 0:
                 return
@@ -148,7 +152,7 @@ class Series(
             print("User defined attributes accessible via `object.key`")
             for key in self._user_kwargs:
                 print(
-                    f"\t{key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not defined')}"
+                    f"  {key.ljust(max_name_len + 1)} {type(getattr(self, key, None))}\t:\t{getattr(self, key, 'Not defined')}"
                 )
 
     @classmethod
@@ -203,7 +207,7 @@ class DataSeries(StatsMixin, Series):
         return f"📉 DataSeries {self.shape}, Uncertainty: {bool(self.uncertainty)}"
 
     def _repr_html_(self):
-        print(super().__repr__())
+        print(repr(self) + "\n" + super().__repr__())
 
 
 class BoolSeries(
@@ -231,7 +235,7 @@ class BoolSeries(
         return f"⚫️⚪️ BoolSeries {self.shape}"
 
     def _repr_html_(self):
-        print(super().__repr__())
+        print(repr(self) + "/n" + super().__repr__())
 
 
 class BitwiseSeries(BitwiseMixin, Series):

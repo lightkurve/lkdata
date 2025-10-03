@@ -159,33 +159,35 @@ class SeriesCollection(
             max_name_len = max(map(len, self._metadata))
             print(repr(self) + " (ntime, nseries)")
             print()
-            if hasattr(self, "uncertainty") and issubclass(
-                self.__class__, DataSeriesCollection
+            if (
+                hasattr(self, "uncertainty")
+                and issubclass(self.__class__, DataSeriesCollection)
+                and bool(self.uncertainty)
             ):
                 print("Uncertainty:")
                 print(
-                    f"\tuncertainty\t:\t{type(self.uncertainty).__name__}(np.ndarray{self.uncertainty.shape})"
+                    f"  uncertainty\t:\t{type(self.uncertainty).__name__}(np.ndarray{self.uncertainty.shape})"
                 )
 
             print()
             print("Time indices available: " + str(self.index.names))
             for key in self.index.names:
                 print(
-                    f"\t{key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not Defined')}"
+                    f"  {key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not Defined')}"
                 )
             print()
             if hasattr(self, "row_names") and getattr(self, "row_names") is not None:
                 print("Row names: " + str(self.row_names))
                 for key in self.row_names:
                     print(
-                        f"\t{key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not Defined')}"
+                        f"  {key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not Defined')}"
                     )
                 print()
             if hasattr(self, "col_names") and getattr(self, "col_names") is not None:
                 print("Column names: " + str(self.col_names))
                 for key in self.col_names:
                     print(
-                        f"\t{key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not Defined')}"
+                        f"  {key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not Defined')}"
                     )
                 print()
             if self._user_kwargs is not None and len(self._user_kwargs) > 0:
@@ -193,7 +195,7 @@ class SeriesCollection(
                 print("(displaying only unique values)")
                 for key in self._user_kwargs:
                     print(
-                        f"\t{key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not defined')}"
+                        f"  {key.ljust(max_name_len + 1)} {type(getattr(self, key, None))}\t:\t{getattr(self, key, 'Not defined')}"
                     )
 
     @classmethod

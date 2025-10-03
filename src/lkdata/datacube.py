@@ -377,17 +377,21 @@ class Cube(
             print(repr(self) + " (ntime, nrow, ncol)")
             print(f"pd.DataFrame shape: {self.shape}")
             print()
-            if hasattr(self, "uncertainty") and issubclass(self.__class__, DataCube):
+            if (
+                hasattr(self, "uncertainty")
+                and issubclass(self.__class__, DataCube)
+                and bool(self.uncertainty)
+            ):
                 print("Uncertainty:")
                 print(
-                    f"\tuncertainty\t:\t{type(self.uncertainty).__name__}(np.ndarray{self.uncertainty.shape})"
+                    f"  uncertainty\t:\t{type(self.uncertainty).__name__}(np.ndarray{self.uncertainty.shape})"
                 )
 
             print()
             print("Time indices available: " + str(self.index.names))
             for key in self.index.names:
                 print(
-                    f"\t{key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not Defined')}"
+                    f"  {key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not Defined')}"
                 )
             print()
             print(f"Number of unique 'series': {len(self.series)}")
@@ -395,20 +399,22 @@ class Cube(
             print("Row names: " + str(self.row_names))
             for key in self.row_names:
                 print(
-                    f"\t{key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not Defined')}"
+                    f"  {key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not Defined')}"
                 )
             print()
             print("Column names: " + str(self.col_names))
             for key in self.col_names:
                 print(
-                    f"\t{key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not Defined')}"
+                    f"  {key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not Defined')}"
                 )
+            if len(self._user_kwargs) == 0:
+                return
             print()
             print("User defined attributes accessible via `object.key`")
             print("(displaying only unique values)")
             for key in self._user_kwargs:
                 print(
-                    f"\t{key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not defined')}"
+                    f"  {key.ljust(max_name_len + 1)} {type(getattr(self, key, None))}\t:\t{getattr(self, key, 'Not defined')}"
                 )
 
     @classmethod

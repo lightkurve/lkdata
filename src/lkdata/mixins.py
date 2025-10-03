@@ -348,7 +348,7 @@ class IndexProcessorMixin:
         return index
 
     @staticmethod
-    def parse_pos_indices(row_indices, col_indices, nrow, ncol):
+    def parse_pos_indices(row_indices, col_indices, nrow, ncol, nseries=0):
         """Parse and process row and column indices for data representation.
 
         TPF data are typically stored in an intuitive 3D structure, with
@@ -417,7 +417,7 @@ class IndexProcessorMixin:
             Check and convert the given list-like indices into compatible form
             """
             arr = np.array(indices).flatten()
-            if arr.shape[0] == nrow * ncol:
+            if arr.shape[0] in (nrow * ncol, nseries):
                 # Indices given like coordinates for each datapoint
                 return arr
             elif arr.shape[0] == dim_self:
@@ -538,7 +538,7 @@ class IndexProcessorMixin:
             )
 
         row_indices, col_indices = self.parse_pos_indices(
-            row_indices, col_indices, nrow, ncol
+            row_indices, col_indices, nrow, ncol, nseries
         )
 
         if columns is not None:
