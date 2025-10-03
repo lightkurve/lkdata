@@ -981,7 +981,7 @@ class DataSet:
         return series
 
     @property
-    def attrs(self) -> dict:
+    def attrs(self) -> AttrsHolder:
         """Keywords passed by the user"""
         return self._attrs
 
@@ -1041,3 +1041,32 @@ class DataSet:
     def spatial_downsample(self, *args, **kwargs):
         s_downsample = self._batch_wrapper("spatial_downsample", cubes_only=True)
         return s_downsample(*args, **kwargs)
+
+    def describe_set(self, **printoptions):
+        """Print a description of the Cube instance.
+
+        This description prints information about the temporal and spatial
+        indices available in the Cube. It also prints out any additional
+        user-assigned properties given via keyword arguments on initialization.
+        """
+        printoptions["linewidth"] = printoptions.get("linewidth", 79)
+        printoptions["edgeitems"] = printoptions.get("edgeitems", 2)
+        printoptions["threshold"] = printoptions.get("threshold", 20)
+        with np.printoptions(**printoptions):
+            max_name_len = max(map(len, self.attrs))
+            print(f"🗂️ DataSet: {len(self.contents)} product(s).\n")
+            if len(self.data_products) > 0:
+                print(f"\nData Products:\n  {self.data_products}\n")
+            if len(self.bool_products) > 0:
+                print(f"\nBool Products:\n  {self.bool_products}\n")
+            if len(self.bitwise_products) > 0:
+                print(f"\nBitwise Products:\n  {self.bitwise_products}\n")
+            print("Time indices available: " + str(self.index.names))
+            print()
+            if len(self.attrs) == 0:
+                return
+            print("User defined attributes accessible via `object.key`")
+            for key, val in self.attrs.items():
+                print(
+                    f"  {key.ljust(max_name_len + 1)} {type(getattr(self, key, None))}\t:\t{getattr(self, key, 'Not defined')}"
+                )
