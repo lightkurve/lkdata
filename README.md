@@ -6,19 +6,6 @@
 [![Coverage](https://github.com/tessgi/secret/actions/workflows/coverage.yml/badge.svg?event=push)](https://github.com/tessgi/secret/actions/workflows/coverage.yml)
 [![Coverage badge](https://github.com/tessgi/secret/raw/python-coverage-comment-action-data/badge.svg)](https://github.com/tessgi/secret/tree/python-coverage-comment-action-data)
 
-**<big> TODO: Expound </big>**
-
-Add to readme, link to specific sections of notebook
-Sections:
-What problems does this solve? Handling astronomical data in an industry standard way
-Why not just use pandas?
-- There's a lot more to astronomical data than numbers
-- There are apertures, quality flags, uncertainties, and a lot of metadata
-Classes of objects and their expected use
-- Data
-- Bool
-- Bitwise
-
 ## How to install
 The easiest way:
 ```
@@ -60,11 +47,7 @@ A mixture of any of these types of data can be bundled in a single lkdata DataSe
 
 ## Lightkurve; now more easy to develop
 
-I'm going to to try to make it so that it is easier to develop for lightkurve. This includes some new things;
+Developing for lightkurve now includes some new features:
 
 - pre-commit hooks. This is going to stop anyone from commiting anything to their branch that breaks our standards. That means linted, formatted code, well written markdown files, checking with mypy etc. This means it's going to be harder (but not impossible) for you to open a PR against lightkurve that doesn't have these things fixed. This is much more strict than V2.
-- docs that comiple better. We're going to try to make documentation that is easier to compile and upload by using a sphinx gallery.
-
-Must add to developer instructions;
-
-- deprecation steps
+- docs that comiple better. We're making documentation that is easier to compile and upload by using a sphinx gallery.

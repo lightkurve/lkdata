@@ -1043,11 +1043,11 @@ class DataSet:
         return s_downsample(*args, **kwargs)
 
     def describe_set(self, **printoptions):
-        """Print a description of the Cube instance.
+        """Print a description of the DataSet instance.
 
-        This description prints information about the temporal and spatial
-        indices available in the Cube. It also prints out any additional
-        user-assigned properties given via keyword arguments on initialization.
+        This description prints information about the temporal
+        indices available in the DataSet. It also prints out any additional
+        user-assigned properties.
         """
         printoptions["linewidth"] = printoptions.get("linewidth", 79)
         printoptions["edgeitems"] = printoptions.get("edgeitems", 2)

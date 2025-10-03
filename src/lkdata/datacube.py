@@ -52,6 +52,9 @@ class Cube(
         corresponding key. A default RangeIndex from 0 to the length of the
         given index (or data, when this argument is not provided) with the key
         "time_index" is added if the "time_index" key is not specified.
+        If this argument and no keyword argument "index" or "ntime" are given,
+        a RangeIndex from 0 to the size of the first dimension of the data is
+        added as "time_index".
     row_indices : array-like or dictionary of array-like, optional
         Indices for the row dimension.
         If an array-like, the default name "row" will be assigned.
