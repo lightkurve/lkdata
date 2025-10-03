@@ -5,7 +5,7 @@
 # from the environment for the first two.
 SPHINXOPTS    ?=
 SPHINXBUILD   ?= sphinx-build
-SPHINXPROJ    = lightkurve
+SPHINXPROJ    = lkdata
 SOURCEDIR     = .
 BUILDDIR      = _build
 

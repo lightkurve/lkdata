@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.abspath("../../src"))
 
 
 project = "lkdata"
-copyright = "2024, TESS Science Support Center"
+copyright = "2025, TESS Science Support Center"
 author = "TESS Science Support Center"
 
 # -- General configuration ---------------------------------------------------
@@ -44,7 +44,7 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 html_static_path = ["_static"]
 
 html_theme_options = {
-    "github_url": "https://github.com/lightkurve/lightkurve",
+    "github_url": "https://github.com/lightkurve/lkdata",
 }
 
 

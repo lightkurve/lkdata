@@ -10,12 +10,3 @@ Exceptions
    :members:
    :undoc-members:
    :show-inheritance:
-
-
-Notebooks
----------
-
-.. automodule:: lkdata.utils.notebook
-   :members:
-   :undoc-members:
-   :show-inheritance:

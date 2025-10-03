@@ -1,7 +1,14 @@
-Cube
-====
+.._api.objects
 
-.. automodule:: lkdata.datacube
-   :members:
-   :undoc-members:
-   :show-inheritance:
+=================
+Classes of lkdata
+=================
+.. currentmodule:: lkdata
+
+.. autosummary::
+   :toctree: api/
+
+   lkdata.datacube
+   seriescollection
+   dataseries
+
