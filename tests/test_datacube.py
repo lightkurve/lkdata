@@ -10,7 +10,7 @@ from lkdata import (
     DataSeries,
     BoolCube,
 )
-from lkdata.uncertainty import Uncertainty
+from lkdata.utils.uncertainty import Uncertainty
 from lkdata.mixins import STATS_METHOD_NAMES
 
 ntime, nrow, ncol = 200, 10, 14

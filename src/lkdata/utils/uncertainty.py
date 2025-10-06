@@ -1,4 +1,4 @@
-# This code is modified from astropy.nddata.nduncertainty
+# This code is modified from astropy.nddata.nduncertainty v7.0.0 release
 # and is distributed under the following MIT license:
 ## Licensed under a 3-clause BSD style license - see LICENSE.rst
 ## Copyright (c) 2011-2024, Astropy Developers
@@ -134,10 +134,7 @@ class NDUncertainty(metaclass=ABCMeta):  # pragma: no cover
 
     @property
     def supports_correlated(self):
-        """`bool` : Supports uncertainty propagation with correlated uncertainties?
-
-        .. versionadded:: 1.2
-        """
+        """`bool` : Supports uncertainty propagation with correlated uncertainties?"""
         return False
 
     @property
@@ -226,8 +223,6 @@ class NDUncertainty(metaclass=ABCMeta):  # pragma: no cover
 
     def propagate(self, operation, other_nddata, result_data, correlation, axis=None):
         """Calculate the resulting uncertainty given an operation on the data.
-
-        .. versionadded:: 1.2
 
         Parameters
         ----------

@@ -1,4 +1,4 @@
-"""Classes and tools for working with 3 dimensional data."""
+"""Classes and tools for working with data cubes, continuous regions of time series data."""
 
 import logging
 from abc import ABC

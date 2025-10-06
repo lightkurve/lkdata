@@ -7,8 +7,8 @@ from numpy.typing import ArrayLike
 from textwrap import dedent
 from typing import Iterable, Union, Tuple, Callable
 from warnings import warn
-from .uncertainty import NDUncertainty, Uncertainty
-from .bitset import BitSet
+from .utils.uncertainty import NDUncertainty, Uncertainty
+from .utils.bitset import BitSet
 
 import numpy as np
 import pandas as pd

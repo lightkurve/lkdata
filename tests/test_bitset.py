@@ -1,6 +1,6 @@
 """Tests for lk bitset"""
 import pytest
-from lkdata.bitset import BitSet
+from lkdata.utils.bitset import BitSet
 
 
 def test_bitset_breakdown():

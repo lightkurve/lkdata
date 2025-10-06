@@ -1,9 +1,9 @@
-.. _api:
 API
 ===
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
+   :titlesonly:
 
-    datacube.rst
-    bitset.rst
-    utils.rst
+   Products <products.rst>
+   Mixins <mixins.rst>
+   Utils <utils.rst>

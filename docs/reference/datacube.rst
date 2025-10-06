@@ -1,14 +1,11 @@
-.._api.objects
+.. _api.datacube:
 
-=================
-Classes of lkdata
-=================
+====
+Cube
+====
 .. currentmodule:: lkdata
 
 .. autosummary::
    :toctree: api/
 
-   lkdata.datacube
-   seriescollection
-   dataseries
-
+    datacube
