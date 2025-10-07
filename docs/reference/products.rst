@@ -11,6 +11,6 @@ Classes of lkdata
 .. toctree::
    :hidden:
 
-   Series <lkdata.dataseries.rst>
-   Series Collections <lkdata.seriescollection.rst>
-   Cubes <lkdata.datacube.rst>
+   Series <dataseries.rst>
+   Series Collections <seriescollection.rst>
+   Cubes <datacube.rst>
