@@ -10,7 +10,6 @@
 
     What's new? <whatsnew/index.rst>
     API Reference <reference/index>
-    About <about/index>
     Development <development/index>
 
 .. include:: ../README.rst

@@ -3,6 +3,11 @@ lkdata
 
 |Installation| |ruff| |Tests| |Coverage| |Coverage badge|
 
+The ``lkdata`` module is intended as a general purpose data access layer for
+lightkurve modules in a pandas based format. It provides a high level interface to the
+underlying data and is not intended to be used directly by a user, but rather as
+a base for the suite of lightkurve modules with minimal external dependencies.
+
 How to install
 --------------
 
@@ -17,7 +22,7 @@ The easiest way:
 What’s all this, then?
 ----------------------
 
-The ``lkdata`` package has been developed to handle time-series data
+This package has been developed to handle time-series data
 using the built-in power and standard functionality of
 `pandas <https://pandas.pydata.org/>`__.
 
