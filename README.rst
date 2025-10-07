@@ -111,10 +111,10 @@ Developing for lightkurve now includes some new features:
 .. |Installation| image:: https://github.com/lightkurve/lkdata/actions/workflows/install.yml/badge.svg?event=push
    :target: https://github.com/lightkurve/lkdata/actions/workflows/install.yml
 .. |ruff| image:: https://github.com/lightkurve/lkdata/actions/workflows/check.yml/badge.svg?event=push
-   :target: https://github.com/tessgi/lightkurve/lkdata/workflows/check.yml
+   :target: https://github.com/lightkurve/lkdata/workflows/check.yml
 .. |Tests| image:: https://github.com/lightkurve/lkdata/actions/workflows/test.yml/badge.svg?branch=main&event=push
    :target: https://github.com/lightkurve/lkdata/actions/workflows/test.yml
 .. |Coverage| image:: https://github.com/lightkurve/lkdata/actions/workflows/coverage.yml/badge.svg?event=push
-   :target: https://github.com/tessgi/lightkurve/lkdata/workflows/coverage.yml
+   :target: https://github.com/lightkurve/lkdata/workflows/coverage.yml
 .. |Coverage badge| image:: https://github.com/lightkurve/lkdata/raw/python-coverage-comment-action-data/badge.svg
    :target: https://github.com/lightkurve/lkdata/tree/python-coverage-comment-action-data
