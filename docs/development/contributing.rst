@@ -28,8 +28,8 @@ If in doubt on how to open a pull request, we recommend Astropy's
 After you follow steps 1 through 4 from our `install instructions <development>`_, you can take the following steps to open a pull request to any `Lightkurve` module.
 
 
-5. Create a new branch
-~~~~~~~~~~~~~~~~~~~~~~
+Create a new branch
+~~~~~~~~~~~~~~~~~~~
 
 You are now ready to start contributing changes.
 Before making new changes, always make sure to retrieve the latest version
@@ -48,8 +48,8 @@ You are now ready to create your own branch with a name of your choice:
     $ git checkout name-of-your-branch
 
 
-6. Make changes and add them to the repository
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Make changes and add them to the repository
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 You can now go ahead and modify source files.
 When you are happy about a change, you can commit it
@@ -62,8 +62,8 @@ to your local version of the repository as follows:
     $ git commit -m "description of changes"
 
 
-7. Push your changes to GitHub and open a Pull Request
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Push your changes to GitHub and open a Pull Request
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Finally, send the changes to the fork of the Lightkurve module that resides in your GitHub account:
 
@@ -71,6 +71,6 @@ Finally, send the changes to the fork of the Lightkurve module that resides in y
 
     $ git push origin name-of-your-branch
 
-Head to https://github.com/lightkurve/lkdata after issuing the `git push`
+Head to `https://github.com/lightkurve/lkdata <https://github.com/lightkurve/lkdata>`_ after issuing the `git push`
 command above. You should automatically see a button that says "Compare and open a pull request".
 Click the button and submit your pull request!

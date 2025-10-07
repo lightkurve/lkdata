@@ -4,10 +4,6 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-lkdata
-======
-.. include:: ../README.rst
-
 .. toctree::
     :maxdepth: 1
     :titlesonly:
@@ -16,3 +12,5 @@ lkdata
     API Reference <reference/index>
     About <about/index>
     Development <development/index>
+
+.. include:: ../README.rst

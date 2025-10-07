@@ -50,4 +50,4 @@ A mixture of any of these types of data can be bundled in a single lkdata DataSe
 Developing for lightkurve now includes some new features:
 
 - pre-commit hooks. This is going to stop anyone from commiting anything to their branch that breaks our standards. That means linted, formatted code, well written markdown files, checking with mypy etc. This means it's going to be harder (but not impossible) for you to open a PR against lightkurve that doesn't have these things fixed. This is much more strict than V2.
-- docs that comiple better. We're making documentation that is easier to compile and upload by using a sphinx gallery.
+<!-- - docs that compile better. We're making documentation that is easier to compile and upload by using a sphinx gallery.-->
