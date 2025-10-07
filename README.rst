@@ -10,7 +10,7 @@ The easiest way:
 
 ::
 
-   git clone ...
+   git clone https://github.com/lightkurve/lkdata.git
    pip install poetry --upgrade
    make install
 
@@ -108,13 +108,13 @@ Developing for lightkurve now includes some new features:
   open a PR against lightkurve that doesn’t have these things fixed.
   This is much more strict than V2.
 
-.. |Installation| image:: https://github.com/tessgi/secret/actions/workflows/install.yml/badge.svg?event=push
-   :target: https://github.com/tessgi/secret/actions/workflows/install.yml
-.. |ruff| image:: https://github.com/tessgi/secret/actions/workflows/check.yml/badge.svg?event=push
-   :target: https://github.com/tessgi/secret/actions/workflows/check.yml
-.. |Tests| image:: https://github.com/tessgi/secret/actions/workflows/test.yml/badge.svg?branch=main&event=push
-   :target: https://github.com/tessgi/secret/actions/workflows/test.yml
-.. |Coverage| image:: https://github.com/tessgi/secret/actions/workflows/coverage.yml/badge.svg?event=push
-   :target: https://github.com/tessgi/secret/actions/workflows/coverage.yml
-.. |Coverage badge| image:: https://github.com/tessgi/secret/raw/python-coverage-comment-action-data/badge.svg
-   :target: https://github.com/tessgi/secret/tree/python-coverage-comment-action-data
+.. |Installation| image:: https://github.com/lightkurve/lkdata/actions/workflows/install.yml/badge.svg?event=push
+   :target: https://github.com/lightkurve/lkdata/actions/workflows/install.yml
+.. |ruff| image:: https://github.com/lightkurve/lkdata/actions/workflows/check.yml/badge.svg?event=push
+   :target: https://github.com/tessgi/lightkurve/lkdata/workflows/check.yml
+.. |Tests| image:: https://github.com/lightkurve/lkdata/actions/workflows/test.yml/badge.svg?branch=main&event=push
+   :target: https://github.com/lightkurve/lkdata/actions/workflows/test.yml
+.. |Coverage| image:: https://github.com/lightkurve/lkdata/actions/workflows/coverage.yml/badge.svg?event=push
+   :target: https://github.com/tessgi/lightkurve/lkdata/workflows/coverage.yml
+.. |Coverage badge| image:: https://github.com/lightkurve/lkdata/raw/python-coverage-comment-action-data/badge.svg
+   :target: https://github.com/lightkurve/lkdata/tree/python-coverage-comment-action-data
