@@ -60,24 +60,6 @@ class IndexProcessorMixin:
     utilities for folding time series, parsing indices, and handling various index
     operations specific to astronomical time series data.
 
-    Methods
-    -------
-    droplevel(level, axis=0)
-        Drop a level from the index while preserving the data structure.
-
-    parse_index(index=None, time_indices=None, ntime=0)
-        Parse given indices and return a single pandas MultiIndex.
-
-    parse_pos_indices(row_indices, col_indices, nrow, ncol)
-        Parse positional indices and reshape arrays to the appropriate shape
-        for pandas columns.
-
-    parse_columns(columns=None, row_indices=None, col_indices=None, nrow=0, ncol=0, continuous=False, nseries=0)
-        Parse row and column information from given inputs.
-
-    sort_index(*args, **kwargs)
-        Sort the index of the data structure, wraps pandas sort_index methods.
-
     See Also
     --------
         pandas.Index : The basic object storing axis labels for all pandas objects.
@@ -127,7 +109,7 @@ class IndexProcessorMixin:
 
     @staticmethod
     def agg_index(index_names, new_index_gb):
-        """_summary_
+        """Aggregate indices by mean and a string of indices included
 
         Parameters
         ----------
@@ -140,6 +122,7 @@ class IndexProcessorMixin:
         -------
         pd.MultiIndex
             An aggregated index
+
         """
         if "indices" in index_names:
             # If previously downsampled, "indices" will contain strings that
@@ -233,6 +216,7 @@ class IndexProcessorMixin:
         default: bool = True,
     ):
         """Parse given indices and return a single pandas MultiIndex
+
         Parameters
         ----------
         index : pd.MultiIndex, optional
@@ -247,6 +231,7 @@ class IndexProcessorMixin:
             The number of time points. Used to create a default time index if
             no other time information is provided. Default is 0, overwritten by
             the shape of any other given  parameter.
+
         Returns
         -------
         pd.MultiIndex
@@ -261,12 +246,13 @@ class IndexProcessorMixin:
         Notes
         -----
         - If neither 'time_index' nor 'mid_index' are present in the input,
-        a default 'time_index' will be created using numpy.arange.
+          a default 'time_index' will be created using numpy.arange.
         - For downsampled data, 'mid_index' is used in place of 'time_index',
-        and an additional 'indices' level is included, containing a string of
-        all indices aggregated for the row.
+          and an additional 'indices' level is included, containing a string of
+          all indices aggregated for the row.
         - The method prioritizes existing index information, falling back to
-        provided time_indices, and finally to a default range index if necessary.
+          provided time_indices, and finally to a default range index if necessary.
+
         """
         if time_indices:
             if isinstance(time_indices, dict):
@@ -405,11 +391,12 @@ class IndexProcessorMixin:
         Notes
         -----
         - If row_indices or col_indices is an integer, it's interpreted as the starting
-        index, and a range is created.
+          index, and a range is created.
         - If row_indices or col_indices is an array-like object, it's processed to ensure
-        compatibility with the data shape.
+          compatibility with the data shape.
         - If row_indices or col_indices is a dictionary, each value is processed to ensure
-        compatibility with the data shape.
+          compatibility with the data shape.
+
         """
 
         def process_listlike(indices, dim_self, dim_other, label, expand_method):
@@ -523,6 +510,7 @@ class IndexProcessorMixin:
         pd.MultiIndex, int, int
             Returns a tuple of the parsed columns instance, the number of rows,
             and the number of columns inferred from the inputs.
+
         """
         if (
             (columns is None)
@@ -603,15 +591,13 @@ class IndexProcessorMixin:
 
         Parameters
         ----------
-        *args : tuple
+        *args
             Positional arguments to pass to pandas' sort_index method.
-        **kwargs : dict
+        **kwargs
             Keyword arguments to pass to pandas' sort_index method.
             Notable kwargs include:
-            - inplace : bool, optional
-                If True, perform operation in-place.
-            - level : int or str, optional
-                If index is a MultiIndex, sort on the given level.
+            inplace : bool, optional. If True, perform operation in-place.
+            level : int or str, optional. If index is a MultiIndex, sort on the given level.
 
         Returns
         -------
@@ -628,6 +614,7 @@ class IndexProcessorMixin:
         See Also
         --------
         pandas.DataFrame.sort_index : The pandas method this wraps.
+
         """
         init_kwds = self.user_kwargs.copy()
 
@@ -1104,7 +1091,9 @@ class StatsMixin(MathMixin):
 
         The efficiency of the variance of the median to the variance of the mean
         is calculated as (π * N) / (2 * (N - 1)), where N is the number of data
-        points along the specified axis.
+        points along the specified axis (this is the inverse of the form usually
+        presented for the efficiency of the mean to the median).
+        See https://mathworld.wolfram.com/StatisticalMedian.html.
 
         See Also
         --------

@@ -24,15 +24,15 @@ Setting up a Development Environment
 
 To set up a development environment for lkdata you can follow the steps below.
 
-1. Fork lkdata's GitHub repository
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Fork lkdata's GitHub repository
+-------------------------------
 
 The first step is to create a copy of lkdata's GitHub repository by logging into GitHub, browsing to
 `https://github.com/lightkurve/lkdata <https://github.com/lightkurve/lkdata>`_,
 and clicking the ``Fork`` button in the top right corner.
 
-2. Clone the fork to your computer
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Clone the fork to your computer
+-------------------------------
 
 Head to a local directory of your choice and download your fork:
 
@@ -43,8 +43,8 @@ Head to a local directory of your choice and download your fork:
 
 .. _install-dev-env:
 
-3. Install the development environment
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Install the development environment
+-----------------------------------
 
 Lightkurve uses the `poetry <https://python-poetry.org/>`_ package to create an isolated development
 environment which you can use to modify and test changes to the source code without interfering with
@@ -103,8 +103,8 @@ environment in Lightkurve's `Makefile <https://github.com/lightkurve/lkdata/blob
     when you wish to modify and test multiple different packages in a single environment.
 
 
-4. Add a link to the main repository to your git environment
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Add a link to the main repository to your git environment
+---------------------------------------------------------
 
 To be able to pull in any recent changes, we need to tell your copy of lightkurve
 where the upstream repository is located:
@@ -127,6 +127,3 @@ You should see something like this:
     origin	https://github.com/YOUR-GITHUB-USERNAME/lkdata.git (push)
     upstream	https://github.com/lightkurve/lkdata.git (fetch)
     upstream	https://github.com/lightkurve/lkdata.git (push)
-
-
-

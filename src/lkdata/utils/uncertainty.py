@@ -1,8 +1,11 @@
-# This code is modified from astropy.nddata.nduncertainty v7.0.0 release
-# and is distributed under the following MIT license:
-## Licensed under a 3-clause BSD style license - see LICENSE.rst
-## Copyright (c) 2011-2024, Astropy Developers
-## All rights reserved.
+"""Uncertainty class and methods for use with numerical lkdata objects
+This code is modified from astropy.nddata.nduncertainty v7.0.0 release
+distributed under the following MIT license:
+
+Licensed under a 3-clause BSD style license - see LICENSE.rst
+Copyright (c) 2011-2024, Astropy Developers
+All rights reserved.
+"""
 
 import weakref
 from abc import ABCMeta, abstractmethod

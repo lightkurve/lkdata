@@ -431,6 +431,7 @@ class Cube(
         **kwargs,
     ):
         """Convert a pd.DataFrame to a DataCube
+
         Parameters
         ----------
         data : pandas DataFrame
@@ -446,8 +447,9 @@ class Cube(
             if col_name is given.
 
         Note:
-        Keywords `index` and `columns` may not  be specified, they are inferred
-        from the pandas DataFrame.
+            Keywords `index` and `columns` may not  be specified, they are inferred
+            from the pandas DataFrame.
+
         """
         if row_names:
             if isinstance(row_names, str):
