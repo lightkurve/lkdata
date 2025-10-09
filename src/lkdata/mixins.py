@@ -1650,14 +1650,15 @@ class AggMixin:
         bin_edges_left_col = pd.cut(col, bins_col, right=False)
 
         gb = self.T.groupby([bin_edges_left_row, bin_edges_left_col], observed=False)
-        count = gb[int(self.index.get_level_values(0)[0])].count()
+        count = gb[int(self.fillna(0).index.get_level_values(0)[0])].count()
         bin_mask = np.asarray(count == row_factor * col_factor)[:, 0]
 
         new_columns_left = self.columns.to_frame().groupby(
             [bin_edges_left_row, bin_edges_left_col], observed=False
         )
         if indexed:
-            # If the old indices weren't positional, use min index for each bin for new index
+            # If the old indices weren't positional,
+            # use min index for each bin for new index. I.e., bottom left pixel.
             new_columns_left = new_columns_left.min().reset_index(drop=True)
         else:
             # If old indices were positional, use mean of bin for new index
