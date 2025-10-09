@@ -1,7 +1,5 @@
-Cube
-====
-
+Cubes
+=====
 .. automodule:: lkdata.datacube
    :members:
-   :undoc-members:
-   :show-inheritance:
+   :member-order: bysource

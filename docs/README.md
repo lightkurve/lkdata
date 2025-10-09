@@ -48,11 +48,13 @@ If you need to stop the local server, use:
 make stop-serve
 ```
 
+<!-- sphinx gallery not currently implemented
 ## Adding Tutorials
 
 1. Place your tutorial files (either `.rst` or `.ipynb`) in the `examples` directory.
 2. Ensure they follow the same writing and formatting guidelines.
 3. The Sphinx build process will automatically include them in the documentation.
+-->
 
 ## Making Your Pages Appear
 

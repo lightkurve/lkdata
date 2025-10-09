@@ -1,4 +1,4 @@
-"""Classes and tools for working with 3 dimensional data."""
+"""Classes and tools for working with data cubes, continuous regions of time series data."""
 
 import logging
 from abc import ABC
@@ -431,6 +431,7 @@ class Cube(
         **kwargs,
     ):
         """Convert a pd.DataFrame to a DataCube
+
         Parameters
         ----------
         data : pandas DataFrame
@@ -446,8 +447,9 @@ class Cube(
             if col_name is given.
 
         Note:
-        Keywords `index` and `columns` may not  be specified, they are inferred
-        from the pandas DataFrame.
+            Keywords `index` and `columns` may not  be specified, they are inferred
+            from the pandas DataFrame.
+
         """
         if row_names:
             if isinstance(row_names, str):

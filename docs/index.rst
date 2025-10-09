@@ -4,22 +4,12 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Lightkurve's lkdata documentation!
-=============================================
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Contents:
-
-
-Documentation
--------------
-
 .. toctree::
     :maxdepth: 1
     :titlesonly:
 
     What's new? <whatsnew/index.rst>
     API Reference <reference/index>
-    About <about/index>
     Development <development/index>
+
+.. include:: ../README.rst

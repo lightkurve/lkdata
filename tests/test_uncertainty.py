@@ -1,6 +1,6 @@
 """Test Uncetainty"""
 import numpy as np
-from lkdata.uncertainty import Uncertainty
+from lkdata.utils.uncertainty import Uncertainty
 
 
 def test_init():

@@ -1,4 +1,4 @@
-"""Classes and tools for working with 3 dimensional data."""
+"""Classes and tools for working with collections of Series products."""
 
 import logging
 from abc import ABC

@@ -1,11 +1,11 @@
 [project]
 name = "lkdata"
-version = "0.1.0"
+version = "1.0.0"
 description = "A friendly package for analysing TESS & Kepler time series data"
 authors = [
     { name = "TESS Science Support Center", email = "tesshelp@bigbang.gsfc.nasa.gov" }]
 license = "MIT"
-readme = "README.md"
+readme = "README.rst"
 requires-python = ">=3.9"
 dependencies = [
     "numpy>=1.26.3",

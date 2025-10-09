@@ -18,9 +18,9 @@ Building documentation
     Building the documentation is not necessary unless you are
     writing new documentation or do not have internet access, because the
     latest version of the documentation is available online at
-    `docs.lightkurve.org <https://docs.lightkurve.org/>`_ .
+    `lightkurve.github.io/lkdata/ <https://lightkurve.github.io/lkdata/>`_.
 
-Building the *lightkurve* documentation requires `sphinx` and a few extra packages. We recommend using `poetry` to install the development dependencies::
+Building the *lkdata* documentation requires `sphinx` and a few extra packages. We recommend using `poetry` to install the development dependencies::
 
     $  poetry install
 
@@ -34,15 +34,25 @@ To build the documentation in HTML format, execute::
     $ cd docs
     $ make html
 
-.. warning::
+Serving Documentation Locally
 
-    Christina needs to add information here about how to use make serve
+To view the documentation with live updates as you write:
 
-Finally, if you have write permission to *lightkurve*'s GitHub repository,
-you can upload the documentation to the web server using::
+    $ make serve
 
-    $ make upload
+This will start a local server. You can view the documentation in your browser at `http://localhost:8001`.
 
-.. warning::
+Stopping the Local Server
 
-    Christina needs to implement this
+If you need to stop the local server, use:
+
+    $ make stop-serve
+
+.. Finally, if you have write permission to *lkdata*'s GitHub repository,
+.. you can upload the documentation to the web server using::
+
+..     $ make upload
+
+.. .. warning::
+
+..     Not yet implemented
