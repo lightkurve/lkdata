@@ -1566,10 +1566,10 @@ class AggMixin:
             **agg_kwargs,
         )
         mask = counts != nframes
-        binned[mask] = np.NaN
+        binned[mask] = np.nan
         if hasattr(binned, "uncertainty") and binned.uncertainty.array is not None:
             error = binned.uncertainty.array.reshape(binned.shape)
-            error[mask] = np.NaN
+            error[mask] = np.nan
             error = error.reshape(binned.array.shape)
             binned.uncertainty.array = error
         return binned
