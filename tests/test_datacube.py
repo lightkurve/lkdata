@@ -189,9 +189,14 @@ df = DataCube(test_data, uncertainty=test_data)
 def test_downsample():
     """Test downsampling methods"""
     # Time downsample
-    assert (df.downsample(2).array == 2).all()
+    assert (df.downsample(2).dropna() == 2).all(axis=None)
     # Uncetainty adds in quadrature
-    assert (df.downsample(4).uncertainty.array == 2).all()
+    assert (
+        df.downsample(4).uncertainty.array[
+            ~np.isnan(df.downsample(4).uncertainty.array)
+        ]
+        == 2
+    ).all()
 
     # Spatial downsample data
     assert df.spatial_downsample(2).array.shape == (200, 5, 7)
@@ -377,8 +382,13 @@ def test_real_data():
     assert flux.array.shape == (50, 6, 6)
     assert flux.uncertainty.array.shape == (50, 6, 6)
 
-    assert flux.downsample(5).array.shape == (8, 6, 6)
-    assert flux.downsample(5).uncertainty.array.shape == (8, 6, 6)
+    assert flux.downsample(5).array.shape == (10, 6, 6)
+    assert flux.downsample(5).uncertainty.array.shape == (10, 6, 6)
+
+    assert flux.downsample(5).dropna().shape == (8, 36)
+    assert flux.downsample(5).uncertainty.array[
+        ~np.isnan(flux.downsample(5).uncertainty.array[:, 0, 0])
+    ].shape == (8, 6, 6)
 
     assert isinstance(flux[:, aper], DataSeriesCollection)
     assert isinstance(flux[:, aper].uncertainty, Uncertainty)

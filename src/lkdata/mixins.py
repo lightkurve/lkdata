@@ -108,7 +108,7 @@ class IndexProcessorMixin:
         return kwargs
 
     @staticmethod
-    def agg_index(index_names, new_index_gb):
+    def agg_index(index_names, new_index_gb, agg_func="mean"):
         """Aggregate indices by mean and a string of indices included
 
         Parameters
@@ -117,6 +117,12 @@ class IndexProcessorMixin:
             List of index names
         new_index_gb : pd.groupby
             Groupby object used to aggregate the index
+        agg_func : str
+            Method by which to aggregate the indices. Pandas recognized
+            aggregation strings ("mean", "median", etc.) and "detailed" are
+            supported. "detailed" will aggregate by mean as well and a new index
+            containing a string of all indices in a grouping.
+            Note: Aggregation keyword arguments are not supported here.
 
         Returns
         -------
@@ -124,6 +130,11 @@ class IndexProcessorMixin:
             An aggregated index
 
         """
+
+        if agg_func != "detailed":
+            new_index_left = new_index_gb.agg(agg_func).reset_index(drop=True)
+            return new_index_left.set_index(index_names).index
+
         if "indices" in index_names:
             # If previously downsampled, "indices" will contain strings that
             # look like lists. This combines those "lists".
@@ -136,16 +147,12 @@ class IndexProcessorMixin:
             new_index_gb = new_index_gb[index_names]
 
         elif "time_index" in index_names:
-            indices_in_bin = (
-                new_index_gb["time_index"].apply(lambda val: str(np.unique(val))).values
-            )
+            indices_in_bin = new_index_gb["time_index"].unique().astype(str).values
 
         elif "mid_index" in index_names:
             # "mid_index" should only exist when "indices" does, but if it was
             # removed, carry on by combining the mid_index values combined
-            indices_in_bin = (
-                new_index_gb["mid_index"].apply(lambda val: str(np.unique(val))).values
-            )
+            indices_in_bin = new_index_gb["mid_index"].unique().astype(str).values
 
         else:
             indices_in_bin = []
@@ -1013,20 +1020,7 @@ class StatsMixin(MathMixin):
     """
 
     _stats_type = "data"
-
-    @property
-    def ds_agg_func(self):
-        """Numpy sum aggregation wrapper for pandas groupby
-
-        pandas.groupby objects treat NaN values as 0 when applying the default
-        sum aggregation.
-
-        Returns
-        -------
-        func
-            Aggregation function to sum a given array
-        """
-        return lambda arr: np.sum(np.array(arr))
+    ds_agg_func = "sum"
 
     def _create_cum_method(self, method_name):
         def _method(*args, **kwargs):
@@ -1402,6 +1396,8 @@ class AggMixin:
         agg_func: Union[str, Callable, None] = None,
         uncertainty_agg_func: Union[str, Callable, None] = None,
         counts: bool = False,
+        index_agg_func="mean",
+        **agg_kwargs,
     ):
         """Perform user-defined binning.
 
@@ -1421,6 +1417,11 @@ class AggMixin:
             is used. If the class has no associated uncertainty, this is ignored.
         counts : bool, default = False
             Whether to return the counts for each bin including NaNs.
+        index_agg_func: str
+            How to aggregate the indices, by default uses "mean" which returns
+            a mean aggregation. "detailed" will use a mean aggregation and add
+            an index to track the indices used in aggregation. All other pandas
+            supported aggregation identifiable by a string are supported.
 
         Returns
         -------
@@ -1445,21 +1446,27 @@ class AggMixin:
         agg_func = (
             agg_func or self.ds_agg_func if hasattr(self, "ds_agg_func") else "mean"
         )
-        new = gb.agg(agg_func)
+        new = gb.agg(agg_func, **agg_kwargs)
 
         new_index_gb = dfcopy.index.to_frame().groupby(bin_edges_left, observed=False)
-        new_index = IndexProcessorMixin.agg_index(index_names, new_index_gb)
+        new_index = IndexProcessorMixin.agg_index(
+            index_names, new_index_gb, agg_func=index_agg_func
+        )
 
         if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
-            if uncertainty_agg_func is None:
-
-                def uncertainty_agg_func(x):
-                    return np.sqrt(np.sum(x**2))
-
             error = self.uncertainty.array[sorted_inds].reshape(self.shape)
-            error = pd.DataFrame(error)
-            error = error.groupby(bin_edges_left, observed=False)
-            new_error = error.agg(uncertainty_agg_func).to_numpy()
+
+            if uncertainty_agg_func is not None:
+                error = pd.DataFrame(error)
+                error = error.groupby(bin_edges_left, observed=False)
+                new_error = error.agg(uncertainty_agg_func).to_numpy()
+            else:
+                # Faster to do these individual operations than to define
+                # a single function a la error.agg(lambda x: np.sqrt(np.sum(error**2)))
+                error = pd.DataFrame(error**2)
+                error = error.groupby(bin_edges_left, observed=False)
+                error = error.agg("sum", **agg_kwargs).to_numpy()
+                new_error = np.sqrt(error)
 
         if hasattr(self, "columns"):
             if hasattr(self, "nrow") and hasattr(self, "ncol"):
@@ -1497,6 +1504,7 @@ class AggMixin:
         self,
         nframes: int = 5,
         level: Union[int, str] = -1,
+        index_agg_func="mean",
     ):
         """Downsample the data by averaging over `nframes` consecutive rows.
 
@@ -1506,8 +1514,11 @@ class AggMixin:
             Number of frames to average over. Default is 5.
         level : Union[int, str], default=-1
             Index level to use for downsampling. Default is -1 (last level).
-        bins : Union[int, ArrayLike], optional
-            User provided bin edges, overrides `nframes`.
+        index_agg_func: str
+            How to aggregate the indices, by default uses "mean" which returns
+            a mean aggregation. "detailed" will use a mean aggregation and add
+            an index to track the indices used in aggregation. All other pandas
+            supported aggregation identifiable by a string are supported.
 
         Returns
         -------
@@ -1533,9 +1544,6 @@ class AggMixin:
         # Get the values of the index on which to downsample
         index = self.index.get_level_values(level=level)
 
-        sorted_inds = np.argsort(index)
-        dfcopy = self.iloc[sorted_inds]
-
         try:
             index = round_arr(index)
         except ValueError:
@@ -1544,22 +1552,27 @@ class AggMixin:
 
         # groupby these bin edges
         bins = AggMixin.get_bins(index, nframes, right=False)
+        if self.ds_agg_func == "sum":
+            agg_kwargs = {"min_count": nframes}
+        else:
+            agg_kwargs = {}
 
-        binned, count = self.bin(
+        binned, counts = self.bin(
             bins=bins,
             level=level,
             agg_func=self.ds_agg_func,
-            uncertainty_agg_func=lambda x: np.sqrt(np.sum(x**2)),
+            index_agg_func=index_agg_func,
             counts=True,
+            **agg_kwargs,
         )
-
-        # We only accept cases where the number of points in a bin is the same
-        # as the number of frames we downsample to
-        if hasattr(dfcopy, "columns") and getattr(dfcopy, "columns") is not None:
-            count = count[:, 0]
-        bin_mask = np.asarray(count == nframes)
-
-        return binned[bin_mask]
+        mask = counts != nframes
+        binned[mask] = np.nan
+        if hasattr(binned, "uncertainty") and binned.uncertainty.array is not None:
+            error = binned.uncertainty.array.reshape(binned.shape)
+            error[mask] = np.nan
+            error = error.reshape(binned.array.shape)
+            binned.uncertainty.array = error
+        return binned
 
     def spatial_downsample(
         self,
