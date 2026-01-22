@@ -1,4 +1,4 @@
-lkdata
+lkdata - whoops
 ======
 
 |Installation| |ruff| |Tests| |Coverage| |Coverage badge|
