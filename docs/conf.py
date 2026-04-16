@@ -86,5 +86,5 @@ intersphinx_mapping = {
 
 
 # rst_epilog = """
-# .. |version| replace:: 1.0.0
+# .. |version| replace:: 1.0.1
 # """
