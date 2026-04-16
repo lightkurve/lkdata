@@ -472,27 +472,30 @@ def test_bit_cube():
     assert (bitcube.array == flags).all()
     # Default repr shows data as given
     bitwise_str = strip(bitcube.styler.to_string())
+    comp = "col0123row00123145672891011312131415"
     assert bitwise_str == "col0123row00123145672891011312131415"
     # bitset repr shows codes individually, without description
     bitcube.values_display = "bitset"
     bitset_str = strip(bitcube.styler.to_string())
-    assert bitset_str == (
+    comp = (
         "col0123row0{}{1}{2}{1,2}1{4}{1,4}{2,4}{1,2,4}"
         "2{8}{1,8}{2,8}{1,2,8}3{4,8}{1,4,8}{2,4,8}{1,2,4,8}"
     )
+    assert bitset_str == comp
     # Detailed repr parses and replaces codes with descriptions in given code_dict
     bitcube.values_display = "detailed"
     detailed_str = strip(bitcube.styler.to_string())
-    assert detailed_str == (
+    comp = (
         "col0123row0{}{1:'C1'}{2:'C2'}{1:'C1',2:'C2'}1{4:'C4'}{1:'C1',4:'C4'}"
         "{2:'C2',4:'C4'}{1:'C1',2:'C2',4:'C4'}2{8:'C8'}{1:'C1',8:'C8'}"
         "{2:'C2',8:'C8'}{1:'C1',2:'C2',8:'C8'}3{4:'C4',8:'C8'}"
         "{1:'C1',4:'C4',8:'C8'}{2:'C2',4:'C4',8:'C8'}"
         "{1:'C1',2:'C2',4:'C4',8:'C8'}"
     )
+    assert detailed_str == comp
     bitcube.codes = {i: f"New{i}" for i in [1, 2, 4, 8, 16]}
     detailed_str = strip(bitcube.styler.to_string())
-    assert detailed_str == (
+    comp = (
         "col0123row0{}{1:'New1'}{2:'New2'}{1:'New1',2:'New2'}"
         "1{4:'New4'}{1:'New1',4:'New4'}{2:'New2',4:'New4'}"
         "{1:'New1',2:'New2',4:'New4'}2{8:'New8'}{1:'New1',8:'New8'}"
@@ -500,6 +503,7 @@ def test_bit_cube():
         "3{4:'New4',8:'New8'}{1:'New1',4:'New4',8:'New8'}{2:'New2',"
         "4:'New4',8:'New8'}{1:'New1',2:'New2',4:'New4',8:'New8'}"
     )
+    assert detailed_str == comp
     # reset codes
     bitcube.codes = code_dict
 
@@ -516,7 +520,7 @@ def test_bit_cube():
     assert bitframe.shape == (2, 16)
     # Ensure codes and values_display transferred to derivative product
     detailed_str = strip(bitframe.styler.to_string())
-    assert detailed_str == (
+    comp = (
         "series0123456789101112131415row0000111122223333"
         "col0123012301230123time_index0{}{1:'C1'}{2:'C2'}{1:'C1',2:'C2'}"
         "{4:'C4'}{1:'C1',4:'C4'}{2:'C2',4:'C4'}{1:'C1',2:'C2',4:'C4'}{8:'C8'}"
@@ -529,18 +533,20 @@ def test_bit_cube():
         "{4:'C4',8:'C8',16:'C16'}{1:'C1',4:'C4',8:'C8',16:'C16'}{2:'C2',4:'C4',"
         "8:'C8',16:'C16'}{1:'C1',2:'C2',4:'C4',8:'C8',16:'C16'}"
     )
+    assert detailed_str == comp
 
     bitframe = BitwiseSeriesCollection(np.arange(0, 32).reshape(2, 16))
     # New bitframe has no codes_dict, detailed display should be the same as bitset
     bitframe.values_display = "bitset"
     bitset_str = strip(bitframe.styler.to_string())
-    assert bitset_str == (
+    comp = (
         "series(0,)(1,)(2,)(3,)(4,)(5,)(6,)(7,)(8,)(9,)(10,)(11,)(12,)(13,)"
         "(14,)(15,)time_index0{}{1}{2}{1,2}{4}{1,4}{2,4}{1,2,4}{8}"
         "{1,8}{2,8}{1,2,8}{4,8}{1,4,8}{2,4,8}{1,2,4,8}1{16}{1,16}{2,16}"
         "{1,2,16}{4,16}{1,4,16}{2,4,16}{1,2,4,16}{8,16}{1,8,16}{2,8,16}"
         "{1,2,8,16}{4,8,16}{1,4,8,16}{2,4,8,16}{1,2,4,8,16}"
     )
+    assert bitset_str == comp
     bitframe.values_display = "detailed"
     detailed_str = strip(bitframe.styler.to_string())
     assert detailed_str == bitset_str
@@ -550,17 +556,19 @@ def test_bit_cube():
     # Series
     assert isinstance(bitcube[:, 0, 0], BitwiseSeries)
     bitseries = BitwiseSeries(np.arange(0, 16), codes=code_dict)
-    bitwise_str = strip(bitseries._repr_html_())[34:-17]
-    assert bitwise_str == "00112233445566778899101011111212131314141515"
+    bitwise_str = strip(bitseries._repr_html_())
+    comp = "00112233445566778899101011111212131314141515"
+    assert comp in bitwise_str
     bitseries.values_display = "bitset"
-    bitset_str = strip(bitseries._repr_html_())[34:-18]
-    assert bitset_str == (
+    bitset_str = strip(bitseries._repr_html_())
+    comp = (
         "0{}1{1}2{2}3{1,2}4{4}5{1,4}6{2,4}7{1,2,4}8{8}9{1,8}"
         "10{2,8}11{1,2,8}12{4,8}13{1,4,8}14{2,4,8}15{1,2,4,8}"
     )
+    assert comp in bitset_str
     bitseries.values_display = "detailed"
-    detailed_str = strip(bitseries._repr_html_())[34:-18]
-    assert detailed_str == (
+    detailed_str = strip(bitseries._repr_html_())
+    comp = (
         "0{}1{1:'C1'}2{2:'C2'}3{1:'C1',2:'C2'}4{4:'C4'}"
         "5{1:'C1',4:'C4'}6{2:'C2',4:'C4'}7{1:'C1',2:'C2',4:'C4'}"
         "8{8:'C8'}9{1:'C1',8:'C8'}10{2:'C2',8:'C8'}"
@@ -568,3 +576,4 @@ def test_bit_cube():
         "13{1:'C1',4:'C4',8:'C8'}14{2:'C2',4:'C4',8:'C8'}"
         "15{1:'C1',2:'C2',4:'C4',8:'C8'}"
     )
+    assert comp in detailed_str

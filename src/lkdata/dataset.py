@@ -287,8 +287,9 @@ class ProductBundle(dict, DataProcessorMixin):
     ):
         ntime = kwargs.pop("ntime", 0)
         time_indices = kwargs.pop("time_indices", None)
-        index = IndexProcessorMixin.parse_index(index, time_indices, ntime)
-
+        if (index is not None) or (time_indices is not None) or (ntime != 0):
+            index = IndexProcessorMixin.parse_index(index, time_indices, ntime)
+            self.index = index
         self._data_types = dict()
         if input_data is not None:
             input_data = self._unpack_input(input_data)
@@ -446,7 +447,7 @@ class DataProducts(ProductBundle):
         **kwargs,
     ):
         self.kwargs = kwargs
-        super().__init__(data, index)
+        super().__init__(data, index, **kwargs)
 
 
 class BoolProducts(ProductBundle):
@@ -464,7 +465,7 @@ class BoolProducts(ProductBundle):
         **kwargs,
     ):
         self.kwargs = kwargs
-        super().__init__(bools, index)
+        super().__init__(bools, index, **kwargs)
 
 
 class BitwiseProducts(ProductBundle):
@@ -482,7 +483,7 @@ class BitwiseProducts(ProductBundle):
         **kwargs,
     ):
         self.kwargs = kwargs
-        super().__init__(bitwise, index)
+        super().__init__(bitwise, index, **kwargs)
 
 
 class AttrsHolder(dict):

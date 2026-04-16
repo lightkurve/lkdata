@@ -68,8 +68,8 @@ class Series(
                 for level in index.levels:
                     common = set(level).intersection(check_index)
                     if len(common) > n_match:
-                        inds_dict = np.where(np.in1d(check_index, list(common)))
-                        inds_index = np.where(np.in1d(level, list(common)))
+                        inds_dict = np.where(np.isin(check_index, list(common)))
+                        inds_index = np.where(np.isin(level, list(common)))
                         n_match = len(common)
                 if n_match > 0:
                     data = np.array([*data.values()])[inds_dict]
