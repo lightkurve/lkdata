@@ -1055,7 +1055,6 @@ class DataSet:
         printoptions["edgeitems"] = printoptions.get("edgeitems", 2)
         printoptions["threshold"] = printoptions.get("threshold", 20)
         with np.printoptions(**printoptions):
-            max_name_len = max(map(len, self.attrs))
             print(f"🗂️ DataSet: {len(self.contents)} product(s).\n")
             if len(self.data_products) > 0:
                 print(f"\nData Products:\n  {self.data_products}\n")
@@ -1067,6 +1066,7 @@ class DataSet:
             print()
             if len(self.attrs) == 0:
                 return
+            max_name_len = max(map(len, self.attrs))
             print("User defined attributes accessible via `object.key`")
             for key, val in self.attrs.items():
                 print(
