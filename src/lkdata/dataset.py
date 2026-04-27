@@ -296,6 +296,7 @@ class ProductBundle(dict, DataProcessorMixin):
             self.update(input_data)
             for v in self.values():
                 v.index = self.index
+                v._include_convenience_index()
 
     def __deepcopy__(self, *args, **kwargs):
         return self.__class__({key: deepcopy(val) for key, val in self.items()})
