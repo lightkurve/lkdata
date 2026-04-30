@@ -130,7 +130,7 @@ class DataProcessorMixin(ABC):
                         {working_attr.shape} != {check_attr.shape}
                         """
                     )
-                elif all(working_attr == check_attr):
+                elif working_attr.equals(check_attr):
                     # attributes match
                     pass
                 elif attr == "colunmns":
@@ -294,9 +294,6 @@ class ProductBundle(dict, DataProcessorMixin):
         if input_data is not None:
             input_data = self._unpack_input(input_data)
             self.update(input_data)
-            for v in self.values():
-                v.index = self.index
-                v._include_convenience_index()
 
     def __deepcopy__(self, *args, **kwargs):
         return self.__class__({key: deepcopy(val) for key, val in self.items()})
@@ -330,6 +327,7 @@ class ProductBundle(dict, DataProcessorMixin):
         super().__setitem__(key, val)
         if self.index is not None:
             setattr(val, "index", self.index)
+            val._include_convenience_index()
         else:
             setattr(self, "index", val.index)
         if not self.ntime:
@@ -849,7 +847,10 @@ class DataSet:
                     index_df2 = check_index.to_frame().reset_index(drop=True)
                     common_cols = index_df1.columns.intersection(index_df2.columns)
                     matching_cols = common_cols[
-                        (index_df1[common_cols] == index_df2[common_cols]).all()
+                        (
+                            index_df1[common_cols].dropna()
+                            == index_df2[common_cols].dropna()
+                        ).all()
                     ]
                     new_index = pd.merge(
                         index_df1,

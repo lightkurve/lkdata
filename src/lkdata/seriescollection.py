@@ -46,8 +46,8 @@ class SeriesCollection(
         # Reserved names
         kwargs.pop("ntime", None)
         ntime = np.array(data).shape[0]
-        nrow = kwargs.pop("nrow", 0)
-        ncol = kwargs.pop("ncol", 0)
+        nrow = kwargs.pop("nrow", 0) or 0
+        ncol = kwargs.pop("ncol", 0) or 0
         index = kwargs.pop("index", None)
         if index is not None and not isinstance(index, pd.Index):
             index = pd.Index(index, name="given_index")
@@ -252,9 +252,7 @@ class DataSeriesCollection(StatsMixin, SeriesCollection):
         self._set_stats_methods()
 
     def __repr__(self):  # pragma: no cover
-        return (
-            f"🟦 SeriesCollection {self.shape}, Uncertainty: {bool(self.uncertainty)}"
-        )
+        return f"🟦 DataSeriesCollection {self.shape}, Uncertainty: {bool(self.uncertainty)}"
 
 
 class BoolSeriesCollection(
