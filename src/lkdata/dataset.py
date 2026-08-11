@@ -586,8 +586,7 @@ class DataSet:
             raise ValueError("Unrecognized key")
 
     @__getitem__.register(int)
-    @__getitem__.register(list)
-    @__getitem__.register(np.ndarray)
+    @__getitem__.register(Iterable)
     def _(self, key):
         """Time index subselection
 
