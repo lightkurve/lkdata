@@ -1,0 +1,823 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Index &#8212; lkdata  documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="_static/graphviz.css?v=4ae1632d" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'genindex';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="#" />
+    <link rel="search" title="Search" href="search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+    <meta name="docbuild:last-update" content="14 Aug 2026"/>
+  
+    
+    <script src="_static/searchtools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <script src="searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">lkdata  documentation</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="whatsnew/index.html">
+    What's new?
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="development/index.html">
+    Development
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/lightkurve/lkdata" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="whatsnew/index.html">
+    What's new?
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="development/index.html">
+    Development
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/lightkurve/lkdata" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none"></div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+
+<h1 id="index">Index</h1>
+
+<div class="genindex-jumpbox">
+ <a href="#A"><strong>A</strong></a>
+ | <a href="#B"><strong>B</strong></a>
+ | <a href="#C"><strong>C</strong></a>
+ | <a href="#D"><strong>D</strong></a>
+ | <a href="#F"><strong>F</strong></a>
+ | <a href="#G"><strong>G</strong></a>
+ | <a href="#I"><strong>I</strong></a>
+ | <a href="#L"><strong>L</strong></a>
+ | <a href="#M"><strong>M</strong></a>
+ | <a href="#N"><strong>N</strong></a>
+ | <a href="#P"><strong>P</strong></a>
+ | <a href="#R"><strong>R</strong></a>
+ | <a href="#S"><strong>S</strong></a>
+ | <a href="#T"><strong>T</strong></a>
+ | <a href="#U"><strong>U</strong></a>
+ | <a href="#V"><strong>V</strong></a>
+ 
+</div>
+<h2 id="A">A</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/utils.html#lkdata.utils.bitset.BitSet.add">add() (lkdata.utils.bitset.BitSet method)</a>
+</li>
+      <li><a href="reference/mixins.html#lkdata.mixins.IndexProcessorMixin.agg_index">agg_index() (lkdata.mixins.IndexProcessorMixin static method)</a>
+</li>
+      <li><a href="reference/mixins.html#lkdata.mixins.AggMixin">AggMixin (class in lkdata.mixins)</a>
+</li>
+      <li><a href="reference/datacube.html#lkdata.datacube.Cube.array">array (lkdata.datacube.Cube property)</a>
+
+      <ul>
+        <li><a href="reference/dataseries.html#lkdata.dataseries.Series.array">(lkdata.dataseries.Series property)</a>
+</li>
+        <li><a href="reference/mixins.html#lkdata.mixins.MathMixin.array">(lkdata.mixins.MathMixin property)</a>
+</li>
+        <li><a href="reference/seriescollection.html#lkdata.seriescollection.SeriesCollection.array">(lkdata.seriescollection.SeriesCollection property)</a>
+</li>
+        <li><a href="reference/utils.html#lkdata.utils.uncertainty.NDUncertainty.array">(lkdata.utils.uncertainty.NDUncertainty property)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="B">B</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/mixins.html#lkdata.mixins.AggMixin.bin">bin() (lkdata.mixins.AggMixin method)</a>
+
+      <ul>
+        <li><a href="reference/utils.html#lkdata.utils.bitset.BitSet.bin">(lkdata.utils.bitset.BitSet method)</a>
+</li>
+      </ul></li>
+      <li><a href="reference/mixins.html#lkdata.mixins.BitwiseMixin.bin_to_int">bin_to_int (lkdata.mixins.BitwiseMixin attribute)</a>
+</li>
+      <li><a href="reference/utils.html#lkdata.utils.bitset.BitSet">BitSet (class in lkdata.utils.bitset)</a>
+</li>
+      <li><a href="reference/datacube.html#lkdata.datacube.BitwiseCube">BitwiseCube (class in lkdata.datacube)</a>
+</li>
+      <li><a href="reference/mixins.html#lkdata.mixins.BitwiseMixin">BitwiseMixin (class in lkdata.mixins)</a>
+</li>
+      <li><a href="reference/dataseries.html#lkdata.dataseries.BitwiseSeries">BitwiseSeries (class in lkdata.dataseries)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/seriescollection.html#lkdata.seriescollection.BitwiseSeriesCollection">BitwiseSeriesCollection (class in lkdata.seriescollection)</a>
+</li>
+      <li><a href="reference/datacube.html#lkdata.datacube.BoolCube">BoolCube (class in lkdata.datacube)</a>
+</li>
+      <li><a href="reference/mixins.html#lkdata.mixins.BoolMixin">BoolMixin (class in lkdata.mixins)</a>
+</li>
+      <li><a href="reference/dataseries.html#lkdata.dataseries.BoolSeries">BoolSeries (class in lkdata.dataseries)</a>
+</li>
+      <li><a href="reference/seriescollection.html#lkdata.seriescollection.BoolSeriesCollection">BoolSeriesCollection (class in lkdata.seriescollection)</a>
+</li>
+      <li><a href="reference/mixins.html#lkdata.mixins.BitwiseMixin.breakdown">breakdown() (lkdata.mixins.BitwiseMixin static method)</a>
+
+      <ul>
+        <li><a href="reference/utils.html#lkdata.utils.bitset.BitSet.breakdown">(lkdata.utils.bitset.BitSet static method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="C">C</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/mixins.html#lkdata.mixins.BitwiseMixin.codes">codes (lkdata.mixins.BitwiseMixin property)</a>
+</li>
+      <li><a href="reference/mixins.html#lkdata.mixins.ConvenienceMixins">ConvenienceMixins (class in lkdata.mixins)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/mixins.html#lkdata.mixins.BitwiseMixin.convert_set_to_int">convert_set_to_int (lkdata.mixins.BitwiseMixin attribute)</a>
+</li>
+      <li><a href="reference/datacube.html#lkdata.datacube.Cube">Cube (class in lkdata.datacube)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="D">D</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/mixins.html#lkdata.mixins.MathMixin.data">data (lkdata.mixins.MathMixin property)</a>
+</li>
+      <li><a href="reference/datacube.html#lkdata.datacube.DataCube">DataCube (class in lkdata.datacube)</a>
+</li>
+      <li><a href="reference/dataseries.html#lkdata.dataseries.DataSeries">DataSeries (class in lkdata.dataseries)</a>
+</li>
+      <li><a href="reference/seriescollection.html#lkdata.seriescollection.DataSeriesCollection">DataSeriesCollection (class in lkdata.seriescollection)</a>
+</li>
+      <li><a href="reference/seriescollection.html#lkdata.seriescollection.SeriesCollection.describe_collection">describe_collection() (lkdata.seriescollection.SeriesCollection method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/datacube.html#lkdata.datacube.Cube.describe_cube">describe_cube() (lkdata.datacube.Cube method)</a>
+</li>
+      <li><a href="reference/dataseries.html#lkdata.dataseries.Series.describe_series">describe_series() (lkdata.dataseries.Series method)</a>
+</li>
+      <li><a href="reference/utils.html#lkdata.utils.bitset.BitSet.discard">discard() (lkdata.utils.bitset.BitSet method)</a>
+</li>
+      <li><a href="reference/mixins.html#lkdata.mixins.AggMixin.downsample">downsample() (lkdata.mixins.AggMixin method)</a>
+</li>
+      <li><a href="reference/mixins.html#lkdata.mixins.IndexProcessorMixin.droplevel">droplevel() (lkdata.mixins.IndexProcessorMixin method)</a>
+</li>
+      <li><a href="reference/mixins.html#lkdata.mixins.BoolMixin.ds_agg_func">ds_agg_func() (lkdata.mixins.BoolMixin method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="F">F</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/mixins.html#lkdata.mixins.ConvenienceMixins.fillna">fillna() (lkdata.mixins.ConvenienceMixins method)</a>
+</li>
+      <li><a href="reference/mixins.html#lkdata.mixins.ConvenienceMixins.fold">fold() (lkdata.mixins.ConvenienceMixins method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/datacube.html#lkdata.datacube.Cube.from_pandas">from_pandas() (lkdata.datacube.Cube class method)</a>
+
+      <ul>
+        <li><a href="reference/dataseries.html#lkdata.dataseries.Series.from_pandas">(lkdata.dataseries.Series class method)</a>
+</li>
+        <li><a href="reference/seriescollection.html#lkdata.seriescollection.SeriesCollection.from_pandas">(lkdata.seriescollection.SeriesCollection class method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="G">G</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/mixins.html#lkdata.mixins.AggMixin.get_bins">get_bins() (lkdata.mixins.AggMixin static method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="I">I</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/utils.html#lkdata.utils.uncertainty.IncompatibleUncertaintiesException">IncompatibleUncertaintiesException</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/mixins.html#lkdata.mixins.IndexProcessorMixin">IndexProcessorMixin (class in lkdata.mixins)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="L">L</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/utils.html#lkdata.utils.exceptions.LightkurveDeprecationWarning">LightkurveDeprecationWarning</a>
+</li>
+      <li><a href="reference/utils.html#lkdata.utils.exceptions.LightkurveError">LightkurveError</a>
+</li>
+      <li><a href="reference/utils.html#lkdata.utils.exceptions.LightkurveWarning">LightkurveWarning</a>
+</li>
+      <li>
+    lkdata.datacube
+
+      <ul>
+        <li><a href="reference/datacube.html#module-lkdata.datacube">module</a>
+</li>
+      </ul></li>
+      <li>
+    lkdata.dataseries
+
+      <ul>
+        <li><a href="reference/dataseries.html#module-lkdata.dataseries">module</a>
+</li>
+      </ul></li>
+      <li>
+    lkdata.mixins
+
+      <ul>
+        <li><a href="reference/mixins.html#module-lkdata.mixins">module</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    lkdata.seriescollection
+
+      <ul>
+        <li><a href="reference/seriescollection.html#module-lkdata.seriescollection">module</a>
+</li>
+      </ul></li>
+      <li>
+    lkdata.utils.bitset
+
+      <ul>
+        <li><a href="reference/utils.html#module-lkdata.utils.bitset">module</a>
+</li>
+      </ul></li>
+      <li>
+    lkdata.utils.exceptions
+
+      <ul>
+        <li><a href="reference/utils.html#module-lkdata.utils.exceptions">module</a>
+</li>
+      </ul></li>
+      <li>
+    lkdata.utils.uncertainty
+
+      <ul>
+        <li><a href="reference/utils.html#module-lkdata.utils.uncertainty">module</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="M">M</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/datacube.html#lkdata.datacube.Cube.make_cadence_label">make_cadence_label() (lkdata.datacube.Cube method)</a>
+</li>
+      <li><a href="reference/mixins.html#lkdata.mixins.MathMixin">MathMixin (class in lkdata.mixins)</a>
+</li>
+      <li><a href="reference/mixins.html#lkdata.mixins.StatsMixin.median">median() (lkdata.mixins.StatsMixin method)</a>
+</li>
+      <li><a href="reference/utils.html#lkdata.utils.uncertainty.MissingDataAssociationException">MissingDataAssociationException</a>
+</li>
+      <li>
+    module
+
+      <ul>
+        <li><a href="reference/datacube.html#module-lkdata.datacube">lkdata.datacube</a>
+</li>
+        <li><a href="reference/dataseries.html#module-lkdata.dataseries">lkdata.dataseries</a>
+</li>
+        <li><a href="reference/mixins.html#module-lkdata.mixins">lkdata.mixins</a>
+</li>
+        <li><a href="reference/seriescollection.html#module-lkdata.seriescollection">lkdata.seriescollection</a>
+</li>
+        <li><a href="reference/utils.html#module-lkdata.utils.bitset">lkdata.utils.bitset</a>
+</li>
+        <li><a href="reference/utils.html#module-lkdata.utils.exceptions">lkdata.utils.exceptions</a>
+</li>
+        <li><a href="reference/utils.html#module-lkdata.utils.uncertainty">lkdata.utils.uncertainty</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="N">N</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/utils.html#lkdata.utils.uncertainty.NDUncertainty">NDUncertainty (class in lkdata.utils.uncertainty)</a>
+</li>
+      <li><a href="reference/datacube.html#lkdata.datacube.Cube.nseries">nseries (lkdata.datacube.Cube property)</a>
+
+      <ul>
+        <li><a href="reference/seriescollection.html#lkdata.seriescollection.SeriesCollection.nseries">(lkdata.seriescollection.SeriesCollection property)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/mixins.html#lkdata.mixins.ConvenienceMixins.ntime">ntime (lkdata.mixins.ConvenienceMixins property)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="P">P</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/utils.html#lkdata.utils.uncertainty.NDUncertainty.parent_nddata">parent_nddata (lkdata.utils.uncertainty.NDUncertainty property)</a>
+</li>
+      <li><a href="reference/mixins.html#lkdata.mixins.BitwiseMixin.parse_code">parse_code() (lkdata.mixins.BitwiseMixin method)</a>
+</li>
+      <li><a href="reference/mixins.html#lkdata.mixins.IndexProcessorMixin.parse_columns">parse_columns() (lkdata.mixins.IndexProcessorMixin method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/mixins.html#lkdata.mixins.IndexProcessorMixin.parse_index">parse_index() (lkdata.mixins.IndexProcessorMixin static method)</a>
+</li>
+      <li><a href="reference/mixins.html#lkdata.mixins.IndexProcessorMixin.parse_pos_indices">parse_pos_indices() (lkdata.mixins.IndexProcessorMixin static method)</a>
+</li>
+      <li><a href="reference/utils.html#lkdata.utils.uncertainty.NDUncertainty.propagate">propagate() (lkdata.utils.uncertainty.NDUncertainty method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="R">R</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/utils.html#lkdata.utils.bitset.BitSet.remove">remove() (lkdata.utils.bitset.BitSet method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/utils.html#lkdata.utils.uncertainty.NDUncertainty.reshape">reshape() (lkdata.utils.uncertainty.NDUncertainty method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="S">S</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/dataseries.html#lkdata.dataseries.Series">Series (class in lkdata.dataseries)</a>
+</li>
+      <li><a href="reference/seriescollection.html#lkdata.seriescollection.SeriesCollection">SeriesCollection (class in lkdata.seriescollection)</a>
+</li>
+      <li><a href="reference/utils.html#lkdata.utils.uncertainty.NDUncertainty.shape">shape (lkdata.utils.uncertainty.NDUncertainty property)</a>
+</li>
+      <li><a href="reference/datacube.html#lkdata.datacube.Cube.single_frame">single_frame() (lkdata.datacube.Cube method)</a>
+</li>
+      <li><a href="reference/mixins.html#lkdata.mixins.IndexProcessorMixin.sort_index">sort_index() (lkdata.mixins.IndexProcessorMixin method)</a>
+</li>
+      <li><a href="reference/mixins.html#lkdata.mixins.AggMixin.spatial_aggregate">spatial_aggregate() (lkdata.mixins.AggMixin method)</a>
+</li>
+      <li><a href="reference/mixins.html#lkdata.mixins.AggMixin.spatial_downsample">spatial_downsample() (lkdata.mixins.AggMixin method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/mixins.html#lkdata.mixins.StatsMixin">StatsMixin (class in lkdata.mixins)</a>
+</li>
+      <li><a href="reference/datacube.html#lkdata.datacube.Cube.styler">styler (lkdata.datacube.Cube property)</a>
+
+      <ul>
+        <li><a href="reference/seriescollection.html#lkdata.seriescollection.BitwiseSeriesCollection.styler">(lkdata.seriescollection.BitwiseSeriesCollection property)</a>
+</li>
+      </ul></li>
+      <li><a href="reference/datacube.html#lkdata.datacube.Cube.stylize_frame">stylize_frame() (lkdata.datacube.Cube method)</a>
+
+      <ul>
+        <li><a href="reference/mixins.html#lkdata.mixins.BitwiseMixin.stylize_frame">(lkdata.mixins.BitwiseMixin method)</a>
+</li>
+      </ul></li>
+      <li><a href="reference/mixins.html#lkdata.mixins.AggMixin.super_sample">super_sample() (lkdata.mixins.AggMixin method)</a>
+</li>
+      <li><a href="reference/utils.html#lkdata.utils.uncertainty.NDUncertainty.supports_correlated">supports_correlated (lkdata.utils.uncertainty.NDUncertainty property)</a>
+
+      <ul>
+        <li><a href="reference/utils.html#lkdata.utils.uncertainty.Uncertainty.supports_correlated">(lkdata.utils.uncertainty.Uncertainty property)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="T">T</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/datacube.html#lkdata.datacube.Cube.to_seriescollection">to_seriescollection() (lkdata.datacube.Cube method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/utils.html#lkdata.utils.bitset.BitSet.type">type (lkdata.utils.bitset.BitSet attribute)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="U">U</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/utils.html#lkdata.utils.uncertainty.Uncertainty">Uncertainty (class in lkdata.utils.uncertainty)</a>
+</li>
+      <li><a href="reference/mixins.html#lkdata.mixins.MathMixin.uncertainty">uncertainty (lkdata.mixins.MathMixin property)</a>
+</li>
+      <li><a href="reference/utils.html#lkdata.utils.uncertainty.NDUncertainty.uncertainty_type">uncertainty_type (lkdata.utils.uncertainty.NDUncertainty property)</a>
+
+      <ul>
+        <li><a href="reference/utils.html#lkdata.utils.uncertainty.Uncertainty.uncertainty_type">(lkdata.utils.uncertainty.Uncertainty property)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/datacube.html#lkdata.datacube.Cube.units">units (lkdata.datacube.Cube property)</a>
+</li>
+      <li><a href="reference/mixins.html#lkdata.mixins.ConvenienceMixins.user_kwargs">user_kwargs (lkdata.mixins.ConvenienceMixins property)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="V">V</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/datacube.html#lkdata.datacube.Cube.values">values (lkdata.datacube.Cube property)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/datacube.html#lkdata.datacube.BitwiseCube.values_display">values_display (lkdata.datacube.BitwiseCube property)</a>
+
+      <ul>
+        <li><a href="reference/mixins.html#lkdata.mixins.BitwiseMixin.values_display">(lkdata.mixins.BitwiseMixin property)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, TESS Science Support Center.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

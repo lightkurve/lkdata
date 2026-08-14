@@ -1,0 +1,570 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>lkdata &#8212; lkdata  documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="_static/graphviz.css?v=4ae1632d" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'index';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Major Release History" href="whatsnew/index.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+    <meta name="docbuild:last-update" content="14 Aug 2026"/>
+  
+    
+    <script src="_static/searchtools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <script src="searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="#">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">lkdata  documentation</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="whatsnew/index.html">
+    What's new?
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="development/index.html">
+    Development
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/lightkurve/lkdata" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="whatsnew/index.html">
+    What's new?
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="development/index.html">
+    Development
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/lightkurve/lkdata" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none"></div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="whatsnew/index.html">What's new?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/index.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="development/index.html">Developing for lkdata</a></li>
+<li class="toctree-l1"><a class="reference internal" href="development/index.html#setting-up-a-development-environment">Setting up a Development Environment</a></li>
+</ul>
+</div>
+<section id="lkdata">
+<h1>lkdata<a class="headerlink" href="#lkdata" title="Link to this heading">#</a></h1>
+<p><a class="reference external" href="https://github.com/lightkurve/lkdata/actions/workflows/install.yml"><img alt="Installation" src="https://github.com/lightkurve/lkdata/actions/workflows/install.yml/badge.svg?event=push" /></a> <a class="reference external" href="https://github.com/lightkurve/lkdata/workflows/check.yml"><img alt="ruff" src="https://github.com/lightkurve/lkdata/actions/workflows/check.yml/badge.svg?event=push" /></a> <a class="reference external" href="https://github.com/lightkurve/lkdata/actions/workflows/test.yml"><img alt="Tests" src="https://github.com/lightkurve/lkdata/actions/workflows/test.yml/badge.svg?branch=main&amp;event=push" /></a> <a class="reference external" href="https://github.com/lightkurve/lkdata/workflows/coverage.yml"><img alt="Coverage" src="https://github.com/lightkurve/lkdata/actions/workflows/coverage.yml/badge.svg?event=push" /></a> <a class="reference external" href="https://github.com/lightkurve/lkdata/tree/python-coverage-comment-action-data"><img alt="Coverage badge" src="https://github.com/lightkurve/lkdata/raw/python-coverage-comment-action-data/badge.svg" /></a></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">lkdata</span></code> module is intended as a general purpose data access layer for
+lightkurve modules in a pandas based format. It provides a high level interface to the
+underlying data and is not intended to be used directly by a user, but rather as
+a base for the suite of lightkurve modules with minimal external dependencies.</p>
+<section id="how-to-install">
+<h2>How to install<a class="headerlink" href="#how-to-install" title="Link to this heading">#</a></h2>
+<p>The easiest way:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">clone</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">lightkurve</span><span class="o">/</span><span class="n">lkdata</span><span class="o">.</span><span class="n">git</span>
+<span class="n">pip</span> <span class="n">install</span> <span class="n">poetry</span> <span class="o">--</span><span class="n">upgrade</span>
+<span class="n">make</span> <span class="n">install</span>
+</pre></div>
+</div>
+</section>
+<section id="whats-all-this-then">
+<h2>What’s all this, then?<a class="headerlink" href="#whats-all-this-then" title="Link to this heading">#</a></h2>
+<p>This package has been developed to handle time-series data
+using the built-in power and standard functionality of
+<a class="reference external" href="https://pandas.pydata.org/">pandas</a>.</p>
+<p>Users of <code class="docutils literal notranslate"><span class="pre">lightkurve</span></code> will not typically interact directly with
+lkdata. Rather, the lkdata package serves at the backend for
+<code class="docutils literal notranslate"><span class="pre">lightkurve</span></code> v3. This represents a paradigm shift towards modularity
+and smaller independently maintained packages composing the
+<code class="docutils literal notranslate"><span class="pre">lightkurve</span></code> ecosystem.</p>
+<p>As <code class="docutils literal notranslate"><span class="pre">lightkurve</span></code> is updated to v3, <code class="docutils literal notranslate"><span class="pre">lkdata</span></code> will be used for the
+affiliated packages to process
+<a class="reference external" href="https://archive.stsci.edu/missions/tess/doc/EXP-TESS-ARC-ICD-TM-0014.pdf#page=32">Lightcurve</a>
+(LC), <a class="reference external" href="https://archive.stsci.edu/missions/tess/doc/EXP-TESS-ARC-ICD-TM-0014.pdf#page=24">Target Pixel
+File</a>
+(TPF), and <a class="reference external" href="https://archive.stsci.edu/missions/tess/doc/EXP-TESS-ARC-ICD-TM-0014.pdf#page=18">Full Frame
+Image</a>
+(FFI)
+<a class="reference external" href="https://outerspace.stsci.edu/display/TESS/2.0+-+Data+Product+Overview">data</a>
+for the <a class="reference external" href="https://tess.mit.edu">TESS</a> and
+<a class="reference external" href="https://science.nasa.gov/mission/kepler/">Kepler/K2</a> missions.</p>
+</section>
+<section id="what-does-lkdata-do-specifically">
+<h2>What does <code class="docutils literal notranslate"><span class="pre">lkdata</span></code> do, specifically?<a class="headerlink" href="#what-does-lkdata-do-specifically" title="Link to this heading">#</a></h2>
+<section id="time-series-data-format">
+<h3>Time Series Data Format<a class="headerlink" href="#time-series-data-format" title="Link to this heading">#</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">lkdata</span></code> supports three data formats commonly dealt with in
+time-domain astronomy: time series, collections of multiple time series,
+and data cubes. - Time series (such as light curves) data is handled by
+<code class="docutils literal notranslate"><span class="pre">Series</span></code> objects, containing a time index and data. - Collections of
+time series-like arrays with shared times can be handled by
+<code class="docutils literal notranslate"><span class="pre">SeriesCollection</span></code> objects. - Data cube products (such as TPF or FFI
+time series) are handled by <code class="docutils literal notranslate"><span class="pre">Cube</span></code> objects. The difference between a
+collection and a <code class="docutils literal notranslate"><span class="pre">Cube</span></code> is that <code class="docutils literal notranslate"><span class="pre">Cube</span></code> objects must be contiguous
+along the spatial axes.</p>
+</section>
+<section id="data-types-numerical-and-otherwise">
+<h3>Data types, numerical and otherwise<a class="headerlink" href="#data-types-numerical-and-otherwise" title="Link to this heading">#</a></h3>
+<p>Data that are associated with time values can be represented by one of
+three different classes: DataSeries, BoolSeries, or BitwiseSeries.</p>
+<p><strong>Data[Series/SeriesCollection/Cube]</strong> represent numerical data that
+varies with time, such as flux, energy, or other lightcurve-like data.</p>
+<p><strong>Bool[Series/SeriesCollection/Cube]</strong> handle any Boolean data that
+varies by time, such as a Boolean mask for time steps that are ‘good’ or
+‘bad’.</p>
+<p><strong>Bitwise[Series/SeriesCollection/Cube]</strong> handle data that represents
+bitwise information. This was motivated by the
+<a class="reference external" href="https://outerspace.stsci.edu/display/TESS/2.0+-+Data+Product+Overview#id-2.0-DataProductOverview-Table:CadenceQualityFlags">TESS</a>,
+<a class="reference external" href="https://archive.stsci.edu/files/live/sites/mast/files/home/missions-and-data/k2/_documents/MAST_Kepler_Archive_Manual_2020.pdf#page=18">Kepler, and
+K2</a>
+quality masks, which use bitwise AND operations to represent different
+combinations of data quality flags.</p>
+</section>
+<section id="familiar-intuitive-efficient">
+<h3>Familiar, intuitive, efficient<a class="headerlink" href="#familiar-intuitive-efficient" title="Link to this heading">#</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">lkdata</span></code> uses <code class="docutils literal notranslate"><span class="pre">pandas</span></code> for its familiar interface and its efficient
+data handling, and extends it for time domain specific applications. All
+lkdata products operate on data associated with temporal indices and
+spatial columns. For numerical data, support for associated errors has
+been included, as well as classes to handle boolean and bitwise data
+type aggregation.</p>
+<p>A mixture of any of these types of data can be bundled in a single
+lkdata DataSet class, provided they all have the same times associated
+with them. The advantage of the DataSet is that operations applied to
+the DataSet, such as binning or slicing, are applied to all associated
+Series, Frame, and Cube objects as appropriate. For example, you could
+bundle a group of DataSeries that each represent a single source of flux
+(simple aperture flux, corrected flux, background flux, etc) and
+simulataneously cutout a time range of interest. We will see more
+applications for DataCubes in the examples throughout this notebook.</p>
+</section>
+</section>
+<section id="lightkurve-now-more-easy-to-develop">
+<h2>Lightkurve; now more easy to develop<a class="headerlink" href="#lightkurve-now-more-easy-to-develop" title="Link to this heading">#</a></h2>
+<p>Developing for lightkurve now includes some new features:</p>
+<ul class="simple">
+<li><p>pre-commit hooks. This is going to stop anyone from commiting anything
+to their branch that breaks our standards. That means linted,
+formatted code, well written markdown files, checking with mypy etc.
+This means it’s going to be harder (but not impossible) for you to
+open a PR against lightkurve that doesn’t have these things fixed.
+This is much more strict than V2.</p></li>
+</ul>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="right-next"
+       href="whatsnew/index.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Major Release History</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-to-install">How to install</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#whats-all-this-then">What’s all this, then?</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-does-lkdata-do-specifically">What does <code class="docutils literal notranslate"><span class="pre">lkdata</span></code> do, specifically?</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#time-series-data-format">Time Series Data Format</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data-types-numerical-and-otherwise">Data types, numerical and otherwise</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#familiar-intuitive-efficient">Familiar, intuitive, efficient</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#lightkurve-now-more-easy-to-develop">Lightkurve; now more easy to develop</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="_sources/index.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, TESS Science Support Center.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>
