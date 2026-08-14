@@ -2,7 +2,7 @@
 
 import logging
 from abc import ABC
-from typing import Dict, Iterable, List, Optional, Union
+from typing import Dict, Iterable, List, Optional, Union, Any
 
 import numpy as np
 import pandas as pd
@@ -31,7 +31,7 @@ class Series(
 
     def __init__(
         self,
-        data: Union[List, np.ndarray, Dict],
+        data: Union[Iterable[Any], Dict],
         time_indices: Union[Dict, List, None] = None,
         **kwargs,
     ):
@@ -42,6 +42,8 @@ class Series(
         copy = kwargs.pop("copy", None)
         dtype = kwargs.pop("dtype", None)
         name = kwargs.pop("name", None)
+        if not isinstance(data, dict):
+            data = np.array(data)
         pdseries = pd.Series(data)
         index = kwargs.pop("index", None)
         if index is not None and not isinstance(index, pd.Index):
@@ -81,6 +83,7 @@ class Series(
                 data = [*data.values()]
 
         # User defined properties, stored as custom attributes
+        self._user_kwargs = self._user_kwargs or []
         for key, val in kwargs.items():
             self._user_kwargs.append(key)
             self._metadata.append(key)
@@ -188,7 +191,14 @@ class DataSeries(StatsMixin, Series):
         inferred from `data`.
     """
 
-    def __init__(self, data, uncertainty=None, index=None, dtype=None, **kwargs):
+    def __init__(
+        self,
+        data: Iterable[Any],
+        uncertainty: Union[Iterable[Any], None] = None,
+        index: Union[Iterable[Any], pd.MultiIndex, None] = None,
+        dtype: Union[str, np.dtype, None] = None,
+        **kwargs,
+    ):
         self._metadata: List[str] = ["uncertainty"]
         self._user_kwargs: List[str] = []
         super().__init__(
@@ -266,7 +276,7 @@ class BitwiseSeries(BitwiseMixin, Series):
     def __init__(
         self,
         data: Iterable[Union[Iterable[int], int]],
-        code_dict: Dict = None,
+        code_dict: Union[Dict, None] = None,
         display_as: str = "int",
         index=None,
         **kwargs,
