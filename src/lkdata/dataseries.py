@@ -33,7 +33,7 @@ class Series(
         self,
         data: Union[Iterable[Any], Dict],
         time_indices: Union[Dict, List, None] = None,
-        **kwargs,
+        **kwargs: Any,
     ):
         time_indices = time_indices or {}
 
@@ -197,7 +197,7 @@ class DataSeries(StatsMixin, Series):
         uncertainty: Union[Iterable[Any], None] = None,
         index: Union[Iterable[Any], pd.MultiIndex, None] = None,
         dtype: Union[str, np.dtype, None] = None,
-        **kwargs,
+        **kwargs: Any,
     ):
         self.units = getattr(data, "unit", kwargs.pop("units", ""))
         self._metadata: List[str] = ["uncertainty"]
