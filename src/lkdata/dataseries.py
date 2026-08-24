@@ -42,7 +42,7 @@ class Series(
         copy = kwargs.pop("copy", None)
         dtype = kwargs.pop("dtype", None)
         name = kwargs.pop("name", None)
-        if not isinstance(data, dict):
+        if not isinstance(data, dict) and not hasattr(data, "unit"):
             data = np.array(data)
         pdseries = pd.Series(data)
         index = kwargs.pop("index", None)
@@ -55,7 +55,7 @@ class Series(
         - a singular key with an array-like value will be treated as `name: data`, per intuition and akin to DataFrame objects
         - a longer dictionary will be treated like pandas Series
         - the index keyword argument will overwrite if the shapes don't match, otherwise it'll aggregate
-        - I'll implement some cross matching  in the case of MultiIndex entries
+        - cross matching implemented in the case of MultiIndex entries
         """
         if isinstance(data, dict):
             if len(data) == 1:
@@ -115,7 +115,7 @@ class Series(
     @property
     def array(self):
         """Numpy array representation"""
-        return self.to_numpy()
+        return self._array
 
     def describe_series(self, **printoptions):  # pragma: no cover
         """Print a description of the Series instance.
@@ -199,6 +199,7 @@ class DataSeries(StatsMixin, Series):
         dtype: Union[str, np.dtype, None] = None,
         **kwargs,
     ):
+        self.units = getattr(data, "unit", kwargs.pop("units", ""))
         self._metadata: List[str] = ["uncertainty"]
         self._user_kwargs: List[str] = []
         super().__init__(
@@ -217,7 +218,11 @@ class DataSeries(StatsMixin, Series):
         return f"📉 DataSeries {self.shape}, Uncertainty: {bool(self.uncertainty)}"
 
     def _repr_html_(self):
-        print(repr(self) + "\n" + super().__repr__())
+        if hasattr(self.values, "unit"):
+            # UnitConversionError from astropy.units if values are Quantity objects
+            print(repr(self) + "\n" + super().astype(str).__repr__())
+        else:
+            print(repr(self) + "\n" + super().__repr__())
 
 
 class BoolSeries(

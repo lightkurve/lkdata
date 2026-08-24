@@ -794,6 +794,7 @@ class DataCube(
         col_indices: Optional[Union[Dict, List]] = None,
         **kwargs,
     ):
+        self.units = getattr(data, "unit", kwargs.pop("units", ""))
         # For pandas DataFrames subclasses, new properties must
         # be included in the _metadata list
         self._metadata: List[str] = ["uncertainty"]
