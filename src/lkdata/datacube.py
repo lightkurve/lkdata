@@ -3,7 +3,7 @@
 import logging
 from abc import ABC
 from functools import singledispatchmethod
-from typing import Union, List, Dict, Optional
+from typing import Union, List, Dict, Optional, Any
 import pandas as pd
 from pandas.io.formats.style import Styler
 import numpy as np
@@ -307,6 +307,62 @@ class Cube(
             series_index = row_indices * self.ncol + col_indices
         series_index.sort()
         return nrow, ncol, series_index
+
+    def get_iloc_key(self, key):
+        """Return positional iloc index tuple for a given key.
+
+        Resolves a key using the same logic as __getitem__ but returns the
+        positional (time, col) index tuple instead of fetching data, so it
+        can be passed directly to iloc.
+
+        Parameters
+        ----------
+        key : int, slice, np.ndarray, list, range, or tuple
+            Key as accepted by __getitem__. All keys are positional (iloc-style).
+
+        Returns
+        -------
+        tuple
+            ``(time_indexer,)`` for time-only keys, or
+            ``(time_indexer, col_indexer)`` for spatial keys.
+            The result can be passed directly to ``self.iloc[result]``.
+        """
+        if not isinstance(key, tuple):
+            if isinstance(key, int):
+                return ([key],)
+            return (key,)
+
+        if len(key) == 1:
+            return self.get_iloc_key(key[0])
+
+        time = key[0]
+        if isinstance(time, (int, list, np.ndarray)):
+            time = np.atleast_1d(time)
+        elif isinstance(time, slice):
+            time = range(self.ntime)[time]
+        else:
+            raise ValueError(f"Cannot parse time key {time!r}")
+
+        if len(key) == 2:
+            if isinstance(key[1], int):
+                return (time, key[1])
+            elif isinstance(key[1], slice):
+                row, col = key[1], slice(self.ncol + 1)
+            elif np.ndim(key[1]) == 2:
+                row, col = np.where(key[1])
+            elif len(key[1]) == self.ncol * self.nrow:
+                return (time, key[1])
+            else:
+                raise KeyError(f"Unsupported key[1] type: {type(key[1])}")
+        elif len(key) == 3:
+            row, col = key[1], key[2]
+        else:
+            raise KeyError("Too many values passed for key.")
+
+        _, _, series_index = self._convert_to_series_index(row, col)
+        if isinstance(row, int) and isinstance(col, int):
+            return (time, int(series_index[0]))
+        return (time, series_index)
 
     def _preprocess_data(self, data):
         data = np.array(data)
@@ -711,6 +767,37 @@ class Cube(
             ncol=ncol,
             **kwargs,
         )
+
+    def update(
+        self,
+        key: Union[int, str, tuple, slice],
+        values: Any,
+        axis: Union[int, str, None] = None,
+    ):
+        # Q: modify inplace or return copy? Currently modifying inplace
+        if axis is None:
+            intime = key in self.index
+            incols = str(key) in self.columns
+            if intime and incols:
+                msg = f"Given key ({key}) is ambiguous. Specify the axis."
+                raise KeyError(msg)
+
+        time_idx, series_idx = self.get_iloc_key(key)
+        self.iloc[time_idx, series_idx] = values
+
+    @property
+    def units(self):
+        """Data units, if any"""
+        return self._flux_units
+
+    @units.setter
+    def units(self, unit):
+        # remove formatting, if present
+        self._flux_units = str(unit)
+
+    @property
+    def values(self):
+        return super().values
 
 
 class DataCube(
