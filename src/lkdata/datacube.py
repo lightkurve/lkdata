@@ -712,20 +712,6 @@ class Cube(
             **kwargs,
         )
 
-    @property
-    def units(self):
-        """Data units, if any"""
-        return self._flux_units
-
-    @units.setter
-    def units(self, unit):
-        # remove formatting, if present
-        self._flux_units = str(unit)
-
-    @property
-    def values(self):
-        return super().values
-
 
 class DataCube(
     StatsMixin,
