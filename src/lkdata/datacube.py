@@ -210,6 +210,7 @@ class Cube(
                     init_kwds["uncertainty"] = self.uncertainty[key[0], key[1]]
                 return DataSeries(self.iloc[time, key[1]], **init_kwds)
             elif isinstance(key[1], slice):
+                # 2nd index corresponds to row
                 row = key[1]
                 col = slice(self.ncol + 1)
             elif np.ndim(key[1]) == 2:
@@ -308,7 +309,38 @@ class Cube(
         series_index.sort()
         return nrow, ncol, series_index
 
-    def get_iloc_key(self, key):
+    def _resolve_label_key(self, label_key):
+        """Convert series label(s) to positional column indices.
+
+        Looks up string label(s) in the ``"series"`` level of the column
+        MultiIndex and returns the matching positional column indices.
+
+        Parameters
+        ----------
+        label_key : str or list of str
+
+        Returns
+        -------
+        np.ndarray of int
+            Positional column indices for matching series labels.
+
+        Raises
+        ------
+        KeyError
+            If a label is not found in the ``"series"`` column level.
+        """
+        series_labels = self.columns.get_level_values("series")
+        if isinstance(label_key, str):
+            label_key = [label_key]
+        positions = []
+        for lbl in label_key:
+            idx = np.where(series_labels == lbl)[0]
+            if len(idx) == 0:
+                raise KeyError(f"Series label {lbl!r} not found.")
+            positions.extend(idx.tolist())
+        return np.array(positions, dtype=int)
+
+    def _get_iloc_key(self, key):
         """Return positional iloc index tuple for a given key.
 
         Resolves a key using the same logic as __getitem__ but returns the
@@ -317,23 +349,35 @@ class Cube(
 
         Parameters
         ----------
-        key : int, slice, np.ndarray, list, range, or tuple
-            Key as accepted by __getitem__. All keys are positional (iloc-style).
+        key : int, str, list, slice, np.ndarray, range, or tuple
+            Key as accepted by ``__getitem__``. Strings and lists of strings
+            are matched against the ``"series"`` level of the column
+            MultiIndex. All numeric keys are positional (iloc-style).
 
         Returns
         -------
         tuple
             ``(time_indexer,)`` for time-only keys, or
-            ``(time_indexer, col_indexer)`` for spatial keys.
+            ``(time_indexer, col_indexer)`` for spatial/label keys.
             The result can be passed directly to ``self.iloc[result]``.
         """
+
+        def _is_str_key(k):
+            return isinstance(k, str) or (
+                isinstance(k, list) and bool(k) and isinstance(k[0], str)
+            )
+
+        # Standalone string or list of strings: label(s), all time
+        if _is_str_key(key):
+            return (range(self.ntime), self._resolve_label_key(key))
+
         if not isinstance(key, tuple):
             if isinstance(key, int):
                 return ([key],)
             return (key,)
 
         if len(key) == 1:
-            return self.get_iloc_key(key[0])
+            return self._get_iloc_key(key[0])
 
         time = key[0]
         if isinstance(time, (int, list, np.ndarray)):
@@ -344,18 +388,29 @@ class Cube(
             raise ValueError(f"Cannot parse time key {time!r}")
 
         if len(key) == 2:
-            if isinstance(key[1], int):
-                return (time, key[1])
-            elif isinstance(key[1], slice):
-                row, col = key[1], slice(self.ncol + 1)
-            elif np.ndim(key[1]) == 2:
-                row, col = np.where(key[1])
-            elif len(key[1]) == self.ncol * self.nrow:
-                return (time, key[1])
+            k1 = key[1]
+            if _is_str_key(k1):
+                return (time, self._resolve_label_key(k1))
+            elif isinstance(k1, int):
+                return (time, k1)
+            elif isinstance(k1, slice):
+                row, col = k1, slice(self.ncol + 1)
+            elif np.ndim(k1) == 2:
+                row, col = np.where(k1)
+            elif len(k1) == self.ncol * self.nrow:
+                return (time, k1)
             else:
-                raise KeyError(f"Unsupported key[1] type: {type(key[1])}")
+                raise KeyError(f"Unsupported key[1] type: {type(k1)}")
         elif len(key) == 3:
             row, col = key[1], key[2]
+            if _is_str_key(row) or _is_str_key(col):
+                row_cols = self._resolve_label_key(row) if _is_str_key(row) else None
+                col_cols = self._resolve_label_key(col) if _is_str_key(col) else None
+                if row_cols is not None and col_cols is not None:
+                    col_idx = np.intersect1d(row_cols, col_cols)
+                else:
+                    col_idx = row_cols if row_cols is not None else col_cols
+                return (time, col_idx)
         else:
             raise KeyError("Too many values passed for key.")
 
@@ -776,28 +831,11 @@ class Cube(
     ):
         # Q: modify inplace or return copy? Currently modifying inplace
         if axis is None:
-            intime = key in self.index
-            incols = str(key) in self.columns
-            if intime and incols:
-                msg = f"Given key ({key}) is ambiguous. Specify the axis."
-                raise KeyError(msg)
-
-        time_idx, series_idx = self.get_iloc_key(key)
-        self.iloc[time_idx, series_idx] = values
-
-    @property
-    def units(self):
-        """Data units, if any"""
-        return self._flux_units
-
-    @units.setter
-    def units(self, unit):
-        # remove formatting, if present
-        self._flux_units = str(unit)
-
-    @property
-    def values(self):
-        return super().values
+            self.iloc[self._get_iloc_key(key)] = values
+        elif axis in [1, "columns", "series"]:
+            super().__setattr__(key, values)
+        elif axis in ["row", "col"]:
+            ...
 
 
 class DataCube(
