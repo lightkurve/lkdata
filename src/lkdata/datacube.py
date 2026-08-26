@@ -2,7 +2,6 @@
 
 import logging
 from abc import ABC
-from functools import singledispatchmethod
 from typing import Union, List, Dict, Optional, Any
 import pandas as pd
 from pandas.io.formats.style import Styler
@@ -162,78 +161,49 @@ class Cube(
             self.array, index=self.index, columns=self.columns, **self.user_kwargs
         )
 
-    @singledispatchmethod
-    def __getitem__(self, key):  # pragma: no cover
-        """
-        Note: keys given to __getitem__ are interpreted as iloc indices.
-        """
-        raise KeyError("Unsupported type given for key.")
-
-    @__getitem__.register(int)
-    @__getitem__.register(slice)
-    @__getitem__.register(np.ndarray)
-    @__getitem__.register(list)
-    @__getitem__.register(range)
-    def _(self, key):
-        """Simple slice only on time, results in Cube"""
-        if isinstance(key, int):
-            key = [key]
+    def __getitem__(self, key):
+        """Keys given to __getitem__ are interpreted as iloc indices."""
         init_kwds = self.user_kwargs.copy()
-        if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
-            init_kwds["uncertainty"] = self.uncertainty[key]
-        return self.__class__.from_pandas(
-            self.iloc[key],
-            nrow=self.nrow,
-            ncol=self.ncol,
-            **init_kwds,
-        )
 
-    @__getitem__.register(tuple)
-    def _(self, key):
-        """Slice on multiple axes."""
-        time = key[0]
-        init_kwds = self.user_kwargs.copy()
+        if not isinstance(key, tuple):
+            time = [key] if isinstance(key, int) else key
+            if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
+                init_kwds["uncertainty"] = self.uncertainty[time]
+            return self.__class__.from_pandas(
+                self.iloc[self._get_iloc_key(key)],
+                nrow=self.nrow,
+                ncol=self.ncol,
+                **init_kwds,
+            )
+
         if len(key) == 1:
             return self[key[0]]
 
-        if isinstance(key[0], (int, list, np.ndarray)):
-            time = np.atleast_1d(time)
-        elif isinstance(key[0], slice):
-            time = range(self.ntime)[time]
-        else:
-            raise ValueError(f"Can not parse time {key[0]}")
+        time = self._get_iloc_key(key)[0]
 
-        # If only two things passed
         if len(key) == 2:
-            if isinstance(key[1], int):
+            k1 = key[1]
+            if isinstance(k1, int):
                 if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
-                    init_kwds["uncertainty"] = self.uncertainty[key[0], key[1]]
-                return DataSeries(self.iloc[time, key[1]], **init_kwds)
-            elif isinstance(key[1], slice):
-                # 2nd index corresponds to row
-                row = key[1]
-                col = slice(self.ncol + 1)
-            elif np.ndim(key[1]) == 2:
-                # Passed an aperture with shape (nrow, ncol),
-                # example:
-                # aper = Cube.sum(axis=1) > 10000
-                # Cube[:, aper]
-                # needs to become frame of time-series
-                row, col = np.where(key[1])
-            elif len(key[1]) == self.ncol * self.nrow:
-                # Passed an aperture with shape(nrow*ncol)
-                # example:
-                # aper = Cube.row == 2
-                # Cube[:, aper]
-                nrow = len(self.columns.get_level_values(1)[key[1]].unique())
-                ncol = len(self.columns.get_level_values(2)[key[1]].unique())
+                    init_kwds["uncertainty"] = self.uncertainty[key[0], k1]
+                return DataSeries(self.iloc[self._get_iloc_key(key)], **init_kwds)
+            elif isinstance(k1, slice):
+                row, col = k1, slice(self.ncol + 1)
+            elif np.ndim(k1) == 2:
+                row, col = np.where(k1)
+            elif len(k1) == self.ncol * self.nrow:
+                if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
+                    init_kwds["uncertainty"] = self.uncertainty[key[0], k1]
+                nrow = len(self.columns.get_level_values(1)[k1].unique())
+                ncol = len(self.columns.get_level_values(2)[k1].unique())
                 return self.__class__.from_pandas(
-                    self.iloc[time, key[1]],
+                    self.iloc[self._get_iloc_key(key)],
                     nrow=nrow,
                     ncol=ncol,
                     **init_kwds,
                 )
-
+            else:
+                raise ValueError(f"Can not parse key[1] {k1!r}")
         elif len(key) == 3:
             row, col = key[1], key[2]
         else:
@@ -242,27 +212,30 @@ class Cube(
         if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
             init_kwds["uncertainty"] = self.uncertainty[key[0], row, col]
 
-        # To be a a 3D dataset needs to pass slices or integers as row/column
-        if isinstance(row, int) & isinstance(col, int):
-            _, _, series = self._convert_to_series_index(row, col)
+        if isinstance(row, int) and isinstance(col, int):
             return self._series_class.from_pandas(
-                self.iloc[time, int(series[0])], **init_kwds
+                self.iloc[self._get_iloc_key(key)], **init_kwds
             )
-        elif (not isinstance(row, (slice))) | (not isinstance(col, (slice))):
+        elif (not isinstance(row, slice)) or (not isinstance(col, slice)):
             return self[time].to_seriescollection(row, col, **init_kwds)
-        elif (isinstance(row, slice) & (row.step not in [None, 1])) | (
-            isinstance(col, slice) & (col.step not in [None, 1])
+        elif (isinstance(row, slice) and row.step not in [None, 1]) or (
+            isinstance(col, slice) and col.step not in [None, 1]
         ):
             return self[time].to_seriescollection(row, col, **init_kwds)
 
-        nrow, ncol, series_index = self._convert_to_series_index(row, col)
-
+        nrow, ncol, _ = self._convert_to_series_index(row, col)
         return self.__class__.from_pandas(
-            self.iloc[time, series_index],
+            self.iloc[self._get_iloc_key(key)],
             nrow=nrow,
             ncol=ncol,
             **init_kwds,
         )
+
+    def __setitem__(self, key, value):
+        if isinstance(key, (int, slice, tuple, list)):
+            self.iloc[self._get_iloc_key(key)] = value
+        else:
+            pd.DataFrame.__setitem__(self, key, value)
 
     def __repr__(self):
         if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
