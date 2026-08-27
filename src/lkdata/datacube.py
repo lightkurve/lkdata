@@ -2,7 +2,7 @@
 
 import logging
 from abc import ABC
-from typing import Union, List, Dict, Optional, Any
+from typing import Union, List, Dict, Optional
 import pandas as pd
 from pandas.io.formats.style import Styler
 import numpy as np
@@ -795,20 +795,6 @@ class Cube(
             ncol=ncol,
             **kwargs,
         )
-
-    def update(
-        self,
-        key: Union[int, str, tuple, slice],
-        values: Any,
-        axis: Union[int, str, None] = None,
-    ):
-        # Q: modify inplace or return copy? Currently modifying inplace
-        if axis is None:
-            self.iloc[self._get_iloc_key(key)] = values
-        elif axis in [1, "columns", "series"]:
-            super().__setattr__(key, values)
-        elif axis in ["row", "col"]:
-            ...
 
 
 class DataCube(
