@@ -244,6 +244,7 @@ class DataSeriesCollection(StatsMixin, SeriesCollection):
             col_indices: Union[Dict, List, None] = None,
             dtype: type = float
         """
+        self.units = getattr(data, "unit", kwargs.pop("units", ""))
         self._metadata = []
         self._user_kwargs = []
         super().__init__(data, time_indices, row_indices, col_indices, **kwargs)

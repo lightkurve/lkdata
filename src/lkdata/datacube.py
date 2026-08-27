@@ -712,20 +712,6 @@ class Cube(
             **kwargs,
         )
 
-    @property
-    def units(self):
-        """Data units, if any"""
-        return self._flux_units
-
-    @units.setter
-    def units(self, unit):
-        # remove formatting, if present
-        self._flux_units = str(unit)
-
-    @property
-    def values(self):
-        return super().values
-
 
 class DataCube(
     StatsMixin,
@@ -794,6 +780,7 @@ class DataCube(
         col_indices: Optional[Union[Dict, List]] = None,
         **kwargs,
     ):
+        self.units = getattr(data, "unit", kwargs.pop("units", ""))
         # For pandas DataFrames subclasses, new properties must
         # be included in the _metadata list
         self._metadata: List[str] = ["uncertainty"]

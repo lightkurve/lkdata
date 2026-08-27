@@ -676,6 +676,7 @@ class MathMixin(IndexProcessorMixin):
 
     _array = None
     _uncertainty = None
+    _units = ""
 
     def __add__(self, other):
         result = self._prepare_then_do_arithmetic(np.add, other)
@@ -686,6 +687,12 @@ class MathMixin(IndexProcessorMixin):
         return result
 
     def __mul__(self, other):
+        if hasattr(other, "bases"):
+            # Handle astropy.units
+            copy = deepcopy(self)
+            copy.units = other
+            return copy
+
         result = self._prepare_then_do_arithmetic(np.multiply, other)
         # Allow scalar multiplication
         if isinstance(other, (float, int, np.ndarray)) and self.uncertainty:
@@ -997,6 +1004,15 @@ class MathMixin(IndexProcessorMixin):
 
         uncertainty.parent_nddata = self.array
         self._uncertainty = uncertainty
+
+    @property
+    def units(self):
+        """Units associated with the data and uncertanties."""
+        return self._units
+
+    @units.setter
+    def units(self, value):
+        self._units = value
 
 
 class StatsMixin(MathMixin):
