@@ -578,7 +578,9 @@ class IndexProcessorMixin:
             parsed_columns[key] = val
 
         if "series" not in parsed_columns:
-            parsed_columns["series"] = np.arange(nrow * ncol).ravel()
+            parsed_columns["series"] = [
+                f"({row}, {col})" for row in range(nrow) for col in range(ncol)
+            ]
 
         series_col = parsed_columns.pop("series")
         parsed_columns.insert(0, "series", series_col)
@@ -632,6 +634,7 @@ class IndexProcessorMixin:
 
         if hasattr(pdobj, "columns"):
             series_inds = pdobj.columns.get_level_values("series")
+            series_inds = np.argwhere(series_inds).flatten()
         else:
             series_inds = None
 

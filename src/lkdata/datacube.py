@@ -2,7 +2,6 @@
 
 import logging
 from abc import ABC
-from functools import singledispatchmethod
 from typing import Union, List, Dict, Optional
 import pandas as pd
 from pandas.io.formats.style import Styler
@@ -162,77 +161,49 @@ class Cube(
             self.array, index=self.index, columns=self.columns, **self.user_kwargs
         )
 
-    @singledispatchmethod
-    def __getitem__(self, key):  # pragma: no cover
-        """
-        Note: keys given to __getitem__ are interpreted as iloc indices.
-        """
-        raise KeyError("Unsupported type given for key.")
-
-    @__getitem__.register(int)
-    @__getitem__.register(slice)
-    @__getitem__.register(np.ndarray)
-    @__getitem__.register(list)
-    @__getitem__.register(range)
-    def _(self, key):
-        """Simple slice only on time, results in Cube"""
-        if isinstance(key, int):
-            key = [key]
+    def __getitem__(self, key):
+        """Keys given to __getitem__ are interpreted as iloc indices."""
         init_kwds = self.user_kwargs.copy()
-        if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
-            init_kwds["uncertainty"] = self.uncertainty[key]
-        return self.__class__.from_pandas(
-            self.iloc[key],
-            nrow=self.nrow,
-            ncol=self.ncol,
-            **init_kwds,
-        )
 
-    @__getitem__.register(tuple)
-    def _(self, key):
-        """Slice on multiple axes."""
-        time = key[0]
-        init_kwds = self.user_kwargs.copy()
+        if not isinstance(key, tuple):
+            time = [key] if isinstance(key, int) else key
+            if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
+                init_kwds["uncertainty"] = self.uncertainty[time]
+            return self.__class__.from_pandas(
+                self.iloc[self._get_iloc_key(key)],
+                nrow=self.nrow,
+                ncol=self.ncol,
+                **init_kwds,
+            )
+
         if len(key) == 1:
             return self[key[0]]
 
-        if isinstance(key[0], (int, list, np.ndarray)):
-            time = np.atleast_1d(time)
-        elif isinstance(key[0], slice):
-            time = range(self.ntime)[time]
-        else:
-            raise ValueError(f"Can not parse time {key[0]}")
+        time = self._get_iloc_key(key)[0]
 
-        # If only two things passed
         if len(key) == 2:
-            if isinstance(key[1], int):
+            k1 = key[1]
+            if isinstance(k1, int):
                 if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
-                    init_kwds["uncertainty"] = self.uncertainty[key[0], key[1]]
-                return DataSeries(self.iloc[time, key[1]], **init_kwds)
-            elif isinstance(key[1], slice):
-                row = key[1]
-                col = slice(self.ncol + 1)
-            elif np.ndim(key[1]) == 2:
-                # Passed an aperture with shape (nrow, ncol),
-                # example:
-                # aper = Cube.sum(axis=1) > 10000
-                # Cube[:, aper]
-                # needs to become frame of time-series
-                row, col = np.where(key[1])
-            elif len(key[1]) == self.ncol * self.nrow:
-                # Passed an aperture with shape(nrow*ncol)
-                # example:
-                # aper = Cube.row == 2
-                # Cube[:, aper]
-                nrow = len(self.columns.get_level_values(1)[key[1]].unique())
-                ncol = len(self.columns.get_level_values(2)[key[1]].unique())
+                    init_kwds["uncertainty"] = self.uncertainty[key[0], k1]
+                return DataSeries(self.iloc[self._get_iloc_key(key)], **init_kwds)
+            elif isinstance(k1, slice):
+                row, col = k1, slice(self.ncol + 1)
+            elif np.ndim(k1) == 2:
+                row, col = np.where(k1)
+            elif len(k1) == self.ncol * self.nrow:
+                if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
+                    init_kwds["uncertainty"] = self.uncertainty[key[0], k1]
+                nrow = len(self.columns.get_level_values(1)[k1].unique())
+                ncol = len(self.columns.get_level_values(2)[k1].unique())
                 return self.__class__.from_pandas(
-                    self.iloc[time, key[1]],
+                    self.iloc[self._get_iloc_key(key)],
                     nrow=nrow,
                     ncol=ncol,
                     **init_kwds,
                 )
-
+            else:
+                raise ValueError(f"Can not parse key[1] {k1!r}")
         elif len(key) == 3:
             row, col = key[1], key[2]
         else:
@@ -241,27 +212,30 @@ class Cube(
         if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
             init_kwds["uncertainty"] = self.uncertainty[key[0], row, col]
 
-        # To be a a 3D dataset needs to pass slices or integers as row/column
-        if isinstance(row, int) & isinstance(col, int):
-            _, _, series = self._convert_to_series_index(row, col)
+        if isinstance(row, int) and isinstance(col, int):
             return self._series_class.from_pandas(
-                self.iloc[time, int(series[0])], **init_kwds
+                self.iloc[self._get_iloc_key(key)], **init_kwds
             )
-        elif (not isinstance(row, (slice))) | (not isinstance(col, (slice))):
+        elif (not isinstance(row, slice)) or (not isinstance(col, slice)):
             return self[time].to_seriescollection(row, col, **init_kwds)
-        elif (isinstance(row, slice) & (row.step not in [None, 1])) | (
-            isinstance(col, slice) & (col.step not in [None, 1])
+        elif (isinstance(row, slice) and row.step not in [None, 1]) or (
+            isinstance(col, slice) and col.step not in [None, 1]
         ):
             return self[time].to_seriescollection(row, col, **init_kwds)
 
-        nrow, ncol, series_index = self._convert_to_series_index(row, col)
-
+        nrow, ncol, _ = self._convert_to_series_index(row, col)
         return self.__class__.from_pandas(
-            self.iloc[time, series_index],
+            self.iloc[self._get_iloc_key(key)],
             nrow=nrow,
             ncol=ncol,
             **init_kwds,
         )
+
+    def __setitem__(self, key, value):
+        if isinstance(key, (int, slice, tuple, list)):
+            self.iloc[self._get_iloc_key(key)] = value
+        else:
+            pd.DataFrame.__setitem__(self, key, value)
 
     def __repr__(self):
         if hasattr(self, "uncertainty") and self.uncertainty.array is not None:
@@ -307,6 +281,116 @@ class Cube(
             series_index = row_indices * self.ncol + col_indices
         series_index.sort()
         return nrow, ncol, series_index
+
+    def _resolve_label_key(self, label_key):
+        """Convert series label(s) to positional column indices.
+
+        Looks up string label(s) in the ``"series"`` level of the column
+        MultiIndex and returns the matching positional column indices.
+
+        Parameters
+        ----------
+        label_key : str or list of str
+
+        Returns
+        -------
+        np.ndarray of int
+            Positional column indices for matching series labels.
+
+        Raises
+        ------
+        KeyError
+            If a label is not found in the ``"series"`` column level.
+        """
+        series_labels = self.columns.get_level_values("series")
+        if isinstance(label_key, str):
+            label_key = [label_key]
+        positions = []
+        for lbl in label_key:
+            idx = np.where(series_labels == lbl)[0]
+            if len(idx) == 0:
+                raise KeyError(f"Series label {lbl!r} not found.")
+            positions.extend(idx.tolist())
+        return np.array(positions, dtype=int)
+
+    def _get_iloc_key(self, key):
+        """Return positional iloc index tuple for a given key.
+
+        Resolves a key using the same logic as __getitem__ but returns the
+        positional (time, col) index tuple instead of fetching data, so it
+        can be passed directly to iloc.
+
+        Parameters
+        ----------
+        key : int, str, list, slice, np.ndarray, range, or tuple
+            Key as accepted by ``__getitem__``. Strings and lists of strings
+            are matched against the ``"series"`` level of the column
+            MultiIndex. All numeric keys are positional (iloc-style).
+
+        Returns
+        -------
+        tuple
+            ``(time_indexer,)`` for time-only keys, or
+            ``(time_indexer, col_indexer)`` for spatial/label keys.
+            The result can be passed directly to ``self.iloc[result]``.
+        """
+
+        def _is_str_key(k):
+            return isinstance(k, str) or (
+                isinstance(k, list) and bool(k) and isinstance(k[0], str)
+            )
+
+        # Standalone string or list of strings: label(s), all time
+        if _is_str_key(key):
+            return (range(self.ntime), self._resolve_label_key(key))
+
+        if not isinstance(key, tuple):
+            if isinstance(key, int):
+                return ([key],)
+            return (key,)
+
+        if len(key) == 1:
+            return self._get_iloc_key(key[0])
+
+        time = key[0]
+        if isinstance(time, (int, list, np.ndarray)):
+            time = np.atleast_1d(time)
+        elif isinstance(time, slice):
+            time = range(self.ntime)[time]
+        else:
+            raise ValueError(f"Cannot parse time key {time!r}")
+
+        if len(key) == 2:
+            k1 = key[1]
+            if _is_str_key(k1):
+                return (time, self._resolve_label_key(k1))
+            elif isinstance(k1, int):
+                return (time, k1)
+            elif isinstance(k1, slice):
+                row, col = k1, slice(self.ncol + 1)
+            elif np.ndim(k1) == 2:
+                row, col = np.where(k1)
+            elif len(k1) == self.ncol * self.nrow:
+                return (time, k1)
+            else:
+                raise KeyError(f"Unsupported key[1] type: {type(k1)}")
+        elif len(key) == 3:
+            row, col = key[1], key[2]
+            if _is_str_key(row) or _is_str_key(col):
+                row_cols = self._resolve_label_key(row) if _is_str_key(row) else None
+                col_cols = self._resolve_label_key(col) if _is_str_key(col) else None
+                if row_cols is not None and col_cols is not None:
+                    col_idx = np.intersect1d(row_cols, col_cols)
+                else:
+                    col_idx = row_cols if row_cols is not None else col_cols
+                return (time, col_idx)
+        else:
+            raise KeyError("Too many values passed for key.")
+
+        _, _, series_index = self._convert_to_series_index(row, col)
+        if isinstance(row, int) and isinstance(col, int):
+            return (time, int(series_index[0]))
+        return (time, series_index)
 
     def _preprocess_data(self, data):
         data = np.array(data)
