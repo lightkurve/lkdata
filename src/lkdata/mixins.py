@@ -586,8 +586,8 @@ class IndexProcessorMixin:
         columns = parsed_columns.set_index(
             ["series", *row_indices.keys(), *col_indices.keys()]
         ).index
-        self.row_names = list(row_indices.keys())
-        self.col_names = list(col_indices.keys())
+        self._row_names = list(row_indices.keys())
+        self._col_names = list(col_indices.keys())
         return columns, nrow, ncol
 
     def sort_index(self, *args, **kwargs):
@@ -1815,8 +1815,8 @@ class AggMixin:
             )
             old_nrow = self.nrow
             old_ncol = self.ncol
-            self.nrow = nrows
-            self.ncol = ncols
+            self._nrow = nrows
+            self._ncol = ncols
             down_res_cube = self._build_instance(
                 down_res_data,
                 time_indices=time_indices,
@@ -1824,8 +1824,8 @@ class AggMixin:
                 col_indices={"column": new_col_inds},
                 uncertainty=down_res_unc,
             )
-            self.nrow = old_nrow
-            self.ncol = old_ncol
+            self._nrow = old_nrow
+            self._ncol = old_ncol
             return down_res_cube
 
 

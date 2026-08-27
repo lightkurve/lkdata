@@ -110,10 +110,10 @@ class Cube(
     """
 
     _pd_class = pd.DataFrame
-    nrow: Optional[int] = None
-    ncol: Optional[int] = None
-    row_names: Optional[List[str]] = None
-    col_names: Optional[List[str]] = None
+    _nrow: int = 0
+    _ncol: int = 0
+    _row_names: Optional[List[str]] = None
+    _col_names: Optional[List[str]] = None
     _user_kwargs: Optional[List[str]] = None
 
     def __init__(
@@ -131,8 +131,8 @@ class Cube(
         # Reserved names
         kwargs.pop("ntime", None)
         ntime = np.array(data).shape[0]
-        self.nrow = kwargs.pop("nrow", None)
-        self.ncol = kwargs.pop("ncol", None)
+        self._nrow = kwargs.pop("nrow", None)
+        self._ncol = kwargs.pop("ncol", None)
         columns = kwargs.pop("columns", None)
         index = kwargs.pop("index", None)
         if index is not None and not isinstance(index, pd.Index):
@@ -145,7 +145,7 @@ class Cube(
             setattr(self, key, val)
         data = self._preprocess_data(data)
         index = self.parse_index(index, time_indices, ntime)
-        columns, self.nrow, self.ncol = self.parse_columns(
+        columns, self._nrow, self._ncol = self.parse_columns(
             columns, row_indices, col_indices, self.nrow, self.ncol, continuous=True
         )
 
@@ -320,8 +320,10 @@ class Cube(
                 )
         elif data.ndim == 3:
             # Reshape for a 2D Pandas DataFrame
-            self._set_dim("nrow", data.shape[1])
-            self._set_dim("ncol", data.shape[2])
+            self._nrow = data.shape[1]
+            self._ncol = data.shape[2]
+            # self._set_dim("nrow", data.shape[1])
+            # self._set_dim("ncol", data.shape[2])
             data = np.hstack(data.transpose([1, 0, 2]))
         else:
             raise ValueError("""Dimension of given data not interpretable as a Cube""")
@@ -334,7 +336,7 @@ class Cube(
         if hasattr(self, "_styler"):
             out0 = self.styler
         else:
-            df = self.single_frame(0)
+            df = self.get_single_frame(0)
             label = self.make_cadence_label(0)
             out0 = self.stylize_frame(df, label=label, cmap="gray")
             self.styler = out0
@@ -353,17 +355,99 @@ class Cube(
             {out0.to_html(max_rows=11, max_columns=11)}
             """
 
-    def _set_dim(self, attr, val):
-        if getattr(self, attr, None) is None:
-            setattr(self, attr, val)
-        elif getattr(self, attr) != val:
-            raise ValueError(f"Given {attr} does not match given data shape {val}")
+    def _stats_post_process(self, result, **kwargs):
+        """Statistics post processer to format return data."""
+        axis = kwargs.pop("axis")
+        uncertainty = kwargs.pop("uncertainty", None)
+        if axis is None:
+            if uncertainty:
+                return result, uncertainty
+            else:
+                return result
+        elif axis in [0, "time"]:
+            if uncertainty:
+                return (
+                    result.reshape(self.nrow, self.ncol),
+                    uncertainty.array.reshape(self.nrow, self.ncol),
+                )
+            else:
+                return result.reshape(self.nrow, self.ncol)
+        elif axis in [1, "series"]:
+            index = kwargs.get("index", None)
+            return self._series_class(result, uncertainty=uncertainty, index=index)
+        else:
+            return result
 
     @property
     def array(self):
         """Numpy array representation with shape (ntime, nrow, ncol)"""
 
         return self.to_numpy().reshape(self.ntime, self.nrow, self.ncol)
+
+    @property
+    def col_names(self) -> List[str]:
+        """List of distinct column names
+
+        Note: this is distinct from pandas.Columns. The columns referred
+        to here correspond to the columnal spatial portion of the given data
+        rather than the tabular columns of the DataFrame.
+        """
+        if self._col_names is None:
+            self._col_names = []
+        return self._col_names
+
+    @property
+    def row_names(self) -> List[str]:
+        """List of distinct row names
+
+        Note:  The rows referred
+        to here correspond to the row spatial portion of the given data
+        rather than the tabular rows of the DataFrame (which correpsond
+        to time indices).
+        """
+        if self._row_names is None:
+            self._row_names = []
+        return self._row_names
+
+    @property
+    def ncol(self):
+        """Number of distinct columns in the data
+
+        Note: this is distinct from  the number of pandas.Columns.
+        The columns referred to here correspond to the columnal spatial portion
+        of the given data rather than the tabular columns of the DataFrame.
+        """
+        return self._ncol
+
+    @property
+    def nrow(self):
+        return self._nrow
+
+    @property
+    def nseries(self):
+        """Total number of time series contained in the cube"""
+        return self.ncol * self.nrow
+
+    @property
+    def styler(self):
+        """The pandas.DataFrame styler for single cadence frames."""
+        if hasattr(self, "_styler"):
+            return self._styler
+        return None
+
+    @styler.setter
+    def styler(self, val: Styler):
+        self._styler = val
+
+    @property
+    def units(self):
+        """Data units, if any"""
+        return self._flux_units
+
+    @units.setter
+    def units(self, unit):
+        # remove formatting, if present
+        self._flux_units = str(unit)
 
     def describe_cube(self, **printoptions):  # pragma: no cover
         """Print a description of the Cube instance.
@@ -399,14 +483,14 @@ class Cube(
             print()
             print(f"Number of unique 'series': {len(self.series)}")
             print()
-            print("Row names: " + str(self.row_names))
-            for key in self.row_names:
+            print("Row names: " + str(self._row_names))
+            for key in self._row_names:
                 print(
                     f"  {key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not Defined')}"
                 )
             print()
-            print("Column names: " + str(self.col_names))
-            for key in self.col_names:
+            print("Column names: " + str(self._col_names))
+            for key in self._col_names:
                 print(
                     f"  {key.ljust(max_name_len + 1)}:\t{getattr(self, key, 'Not Defined')}"
                 )
@@ -523,12 +607,7 @@ class Cube(
         label = "<br>" + "<br>".join(indices)
         return label
 
-    @property
-    def nseries(self):
-        """Total number of time series contained in the cube"""
-        return self.ncol * self.nrow
-
-    def single_frame(self, cadence: int) -> pd.DataFrame:
+    def get_single_frame(self, cadence: int) -> pd.DataFrame:
         """Create a stylized single cadence frame of a datacube
 
         This is distinct from to_seriescollection() and from retreiving a single
@@ -542,50 +621,16 @@ class Cube(
         """
         cadence = int(np.floor(cadence))
 
-        row = getattr(self, self.row_names[0])
-        col = getattr(self, self.col_names[0])
+        row = getattr(self, self._row_names[0])
+        col = getattr(self, self._col_names[0])
         df = pd.DataFrame(
             self.array[cadence],
-            index=pd.Series(row[:: self.ncol], name=self.row_names[0]),
+            index=pd.Series(row[:: self.ncol], name=self._row_names[0]),
             columns=pd.MultiIndex.from_product(
-                [[self.col_names[0]], pd.Series(col[: self.ncol])]
+                [[self._col_names[0]], pd.Series(col[: self.ncol])]
             ),
         )
         return df
-
-    def _stats_post_process(self, result, **kwargs):
-        """Statistics post processer to format return data."""
-        axis = kwargs.pop("axis")
-        uncertainty = kwargs.pop("uncertainty", None)
-        if axis is None:
-            if uncertainty:
-                return result, uncertainty
-            else:
-                return result
-        elif axis in [0, "time"]:
-            if uncertainty:
-                return (
-                    result.reshape(self.nrow, self.ncol),
-                    uncertainty.array.reshape(self.nrow, self.ncol),
-                )
-            else:
-                return result.reshape(self.nrow, self.ncol)
-        elif axis in [1, "series"]:
-            index = kwargs.get("index", None)
-            return self._series_class(result, uncertainty=uncertainty, index=index)
-        else:
-            return result
-
-    @property
-    def styler(self):
-        """The pandas.DataFrame styler for single cadence frames."""
-        if hasattr(self, "_styler"):
-            return self._styler
-        return None
-
-    @styler.setter
-    def styler(self, val: Styler):
-        self._styler = val
 
     def stylize_frame(self, df, **kwargs):
         """Stylize a pandas.DataFrame for display.
@@ -970,6 +1015,6 @@ class BitwiseCube(BitwiseMixin, Cube):
         if value.lower() not in allowed:
             raise AttributeError(f"Display must be one of {allowed}.")
         self._values_display = value.lower()
-        df = self.single_frame(0)
+        df = self.get_single_frame(0)
         label = self.make_cadence_label(0)
         self.styler = self.stylize_frame(df, label=label, cmap="gray")

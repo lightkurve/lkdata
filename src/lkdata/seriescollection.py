@@ -30,10 +30,10 @@ class SeriesCollection(
     """Abstract dataclass for frame-like data with time and multiple series"""
 
     _pd_class = pd.DataFrame
-    nrow: int = None
-    ncol: int = None
-    row_names = None
-    col_names = None
+    _nrow: int = 0
+    _ncol: int = 0
+    _row_names = None
+    _col_names = None
     _user_kwargs = None
 
     def __init__(
@@ -61,7 +61,7 @@ class SeriesCollection(
 
         index = self.parse_index(index, time_indices, ntime)
 
-        columns, self.nrow, self.ncol = self.parse_columns(
+        columns, self._nrow, self._ncol = self.parse_columns(
             columns,
             row_indices,
             col_indices,
