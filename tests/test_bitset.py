@@ -171,3 +171,72 @@ def test_bitset_conversion():
     assert int(bs) == 7
     assert bs.bin() == "0b111"
     assert set(bs) == {1, 2, 4}
+
+
+def test_bitset_repr():
+    """__repr__ returns a 'BitSet {…}' string."""
+    bs = BitSet(3)
+    r = repr(bs)
+    assert r.startswith("BitSet")
+    assert "{1, 2}" in r
+
+
+def test_bitset_eq_bool():
+    """BitSet == bool compares truthiness."""
+    bs = BitSet([1, 2])
+    assert (bs == True) is True  # noqa: E712
+    assert (bs == False) is False  # noqa: E712
+
+    empty = BitSet()
+    assert (empty == True) is False  # noqa: E712
+    assert (empty == False) is True  # noqa: E712
+
+
+def test_bitset_ne_bool():
+    """BitSet != bool is the negation of ==."""
+    bs = BitSet([1])
+    assert (bs != False) is True  # noqa: E712
+    assert (bs != True) is False  # noqa: E712
+
+
+def test_bitset_rand_ror_rxor():
+    """Reflected operators with BitSet operand."""
+    bs = BitSet([1, 4])
+    # __rand__: int & bs
+    result_and = 7 & bs
+    assert isinstance(result_and, BitSet)
+
+    # __ror__: int | bs
+    result_or = 2 | bs
+    assert isinstance(result_or, BitSet)
+
+    # __rxor__: int ^ bs
+    result_xor = 7 ^ bs
+    assert isinstance(result_xor, BitSet)
+
+
+def test_bitset_xor_bool():
+    """__xor__ with bool compares truthiness via bool.__xor__."""
+    bs = BitSet([1])
+    result = bs ^ True
+    assert result is False
+
+    empty = BitSet()
+    result_empty = empty ^ True
+    assert result_empty is True
+
+
+def test_bitset_wrap_breakdown_none():
+    """Wrapped update-type methods return None."""
+    bs = BitSet([1, 2])
+    result = bs.update(4)
+    assert result is None
+    assert 4 in bs
+
+
+def test_bitset_wrap_breakdown_bool():
+    """Wrapped bool-return methods (issubset etc.) return bool."""
+    bs1 = BitSet([1, 2, 4])
+    bs2 = BitSet([1, 2])
+    assert bs2.issubset(bs1) is True
+    assert bs1.issuperset(bs2) is True

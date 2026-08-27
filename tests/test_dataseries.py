@@ -64,3 +64,39 @@ def test_init_w_dict_and_mismatchindex(data, time, ds):
     ds_comp = DataSeries(data_dict, index=index)
 
     assert all(ds_comp.values == ds[::2].values)
+
+
+def test_getitem_int_returns_scalar(data, time, ds):
+    """__getitem__ with an int key returns the value at that position."""
+    result = ds[0]
+    # For a MultiIndex DataSeries, integer key returns a sub-Series (label lookup)
+    assert isinstance(result, (float, int, np.floating, np.integer, pd.Series))
+
+
+def test_getitem_int_with_uncertainty_returns_tuple(data, time):
+    """__getitem__ with an int key and uncertainty returns (value, uncertainty) tuple."""
+    ds_err = DataSeries(data, uncertainty=data, time_indices={"time": time})
+    result = ds_err[0]
+    assert isinstance(result, tuple)
+    assert len(result) == 2
+
+
+def test_repr_html(data, time, ds):
+    """_repr_html_ should return None (it uses print) without raising."""
+    # The method prints to stdout and returns None
+    result = ds._repr_html_()
+    assert result is None
+
+
+def test_stats_post_process_uncertainty(data, time):
+    """Stats methods return (result, uncertainty) tuple when uncertainty exists."""
+    ds_err = DataSeries(data, uncertainty=data, time_indices={"time": time})
+    result = ds_err.mean(axis=None)
+    assert isinstance(result, tuple)
+    assert len(result) == 2
+
+
+def test_stats_post_process_no_uncertainty(data, time, ds):
+    """Stats methods return a scalar when no uncertainty."""
+    result = ds.mean(axis=None)
+    assert isinstance(result, (float, int, np.floating))

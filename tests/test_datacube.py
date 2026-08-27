@@ -3,28 +3,36 @@ import pandas as pd
 import pytest
 
 from astropy.io import fits
+from pandas.io.formats.style import Styler
 from lkdata import (
     TESTDATA,
     DataCube,
     DataSeriesCollection,
     DataSeries,
+    BitwiseCube,
     BoolCube,
 )
 from lkdata.utils.uncertainty import Uncertainty
 from lkdata.mixins import STATS_METHOD_NAMES
 
+# ─── Fixtures ───────────────────────────────────────────────────────────────
+
 ntime, nrow, ncol = 200, 10, 14
-# Actual data values should be irrelevant for these tests
-test_data = np.random.normal(size=(ntime, nrow, ncol))
-df = DataCube(test_data)
 # This aperture makes it timeseries
 aperture = np.zeros((10, 14), bool)
 aperture[1:4, 1:4] = True
 
 
-def test_repr():
-    """Test that the repr is as expected."""
+# ─── Init and repr ──────────────────────────────────────────────────────────
+
+
+def test_repr_and_str():
+    """repr includes the shape; __str__ delegates to __repr__."""
     assert f"DataCube {df.array.shape}" in repr(df)
+    assert str(df) == repr(df)
+    assert str(BoolCube(test_data.astype(bool))) == repr(
+        BoolCube(test_data.astype(bool))
+    )
 
 
 def test_setup():
@@ -103,8 +111,11 @@ def test_reserved_names():
     # assert all(df.col == np.arange(14).tile)
 
 
+# ─── __getitem__ / slicing ──────────────────────────────────────────────────
+
+
 def test_slicing():
-    """Test slicing a DataCube"""
+    """Test slicing a DataCube."""
     # Single time index, int
     # Should this be an image?
     assert isinstance(df[0], DataCube)
@@ -181,13 +192,15 @@ def test_slicing():
     assert df[:, 1, 0].shape == (ntime,)
 
 
-ntime, nrow, ncol = 200, 10, 14  # avoid square data shapes
 test_data = np.ones((ntime, nrow, ncol))
 df = DataCube(test_data, uncertainty=test_data)
 
 
+# ─── Math and downsampling ──────────────────────────────────────────────────
+
+
 def test_downsample():
-    """Test downsampling methods"""
+    """Test downsampling methods."""
     # Time downsample
     assert (df.downsample(2).dropna() == 2).all(axis=None)
     # Uncetainty adds in quadrature
@@ -310,6 +323,9 @@ def test_downsample_order():
     assert all(result == ((1**2 + 2**2 + 3**2) * 11) ** 0.5)
 
 
+# ─── Fold and droplevel ─────────────────────────────────────────────────────
+
+
 def test_fold():
     time = np.arange(10, step=0.1)
     sine10 = np.sin(time)
@@ -339,6 +355,9 @@ def test_drop_level():
     cube = DataCube(data, time_indices=time_indices)
     cube_dropped = cube.droplevel("minutes")
     assert "minutes" not in cube_dropped.index.names
+
+
+# ─── Real data ───────────────────────────────────────────────────────────────
 
 
 def make_test_data():
@@ -437,8 +456,11 @@ def test_real_data():
     ).round() == (flux[:, :, :-2].uncertainty.array ** 2).sum(axis=None).round()
 
 
+# ─── BoolCube ────────────────────────────────────────────────────────────────
+
+
 def test_bool_cube():
-    """Test BoolCube methods"""
+    """Test BoolCube methods."""
     true_bool_array = np.ones(32).reshape((2, 4, 4)).astype(bool)
     assert "BoolCube (2, 4, 4)" in repr(BoolCube(true_bool_array))
     false_bool_array = ~true_bool_array
@@ -458,8 +480,11 @@ def test_bool_cube():
     assert all(BoolCube(false_append_true).downsample(3))
 
 
+# ─── BitwiseCube ─────────────────────────────────────────────────────────────
+
+
 def test_bit_cube():
-    """Test BitwiseCube methods"""
+    """Test BitwiseCube methods."""
     from lkdata import BitwiseCube, BitwiseSeriesCollection, BitwiseSeries
 
     def strip(string):
@@ -579,3 +604,397 @@ def test_bit_cube():
         "15{1:'C1',2:'C2',4:'C4',8:'C8'}"
     )
     assert comp in detailed_str
+
+
+# ─── Fixtures ───────────────────────────────────────────────────────────────
+
+ntime2, nrow2, ncol2 = 20, 5, 6
+data = np.ones((ntime2, nrow2, ncol2))
+err = np.ones((ntime2, nrow2, ncol2))
+
+dc = DataCube(data, uncertainty=err)
+dc_no_err = DataCube(data)
+dc_named = DataCube(
+    data,
+    uncertainty=err,
+    row_indices={"row": np.arange(nrow2)},
+    col_indices={"col": np.arange(ncol2)},
+)
+dc_named_no_err = DataCube(
+    data,
+    row_indices={"row": np.arange(nrow2)},
+    col_indices={"col": np.arange(ncol2)},
+)
+
+
+# ─── _stats_post_process paths ──────────────────────────────────────────────
+
+
+def test_stats_post_process_axis_none_no_uncertainty():
+    """axis=None with no uncertainty returns a scalar."""
+    result = dc_no_err.mean(axis=None)
+    assert isinstance(result, float)
+
+
+def test_stats_post_process_axis0_no_uncertainty():
+    """axis=0 with no uncertainty returns a plain (nrow, ncol) array."""
+    result = dc_no_err.mean(axis=0)
+    assert result.shape == (nrow2, ncol2)
+
+
+def test_stats_post_process_axis1():
+    """axis=1 ('series') returns a DataSeries (uncertainty embedded)."""
+    result = dc.mean(axis=1)
+    assert isinstance(result, DataSeries)
+    assert result.shape == (ntime2,)
+
+
+def test_stats_post_process_axis1_no_uncertainty():
+    """axis=1 with no uncertainty returns just a DataSeries."""
+    result = dc_no_err.mean(axis=1)
+    assert isinstance(result, DataSeries)
+
+
+# ─── Median method ────────────────────────────────────────────────────────────
+
+
+def test_median():
+    """median() returns correct shapes and types for axis=0 and axis=1."""
+    result, _ = dc.median(axis=0)
+    assert result.shape == (nrow2, ncol2)
+
+    result1 = dc.median(axis=1)
+    assert isinstance(result1, DataSeries)
+
+
+def test_median_axis2_raises():
+    """median(axis=2) raises ValueError for Cubes."""
+    with pytest.raises(ValueError, match="axis=2"):
+        dc.median(axis=2)
+
+
+# ─── Cumulative methods ───────────────────────────────────────────────────────
+
+
+def test_cumulative_methods():
+    """cumsum/cummin/cummax/cumprod should return DataSeries of the same shape."""
+    ds = DataSeries(np.ones(ntime2))
+    for method_name in ["cumsum", "cummin", "cummax", "cumprod"]:
+        result = getattr(ds, method_name)()
+        assert isinstance(result, DataSeries)
+        assert result.shape == ds.shape
+
+
+# ─── __getitem__ edge cases ──────────────────────────────────────────────────
+
+
+def test_getitem_1tuple():
+    """Cube[(slice,)] is the same as Cube[slice]."""
+    result = dc[(slice(None),)]
+    assert result.shape == dc.shape
+
+
+def test_getitem_too_many_raises():
+    """Key with 4+ elements raises KeyError."""
+    with pytest.raises(KeyError):
+        _ = dc[0, 0, 0, 0]
+
+
+def test_getitem_2tuple_int_with_uncertainty():
+    """(time, int_pixel) key returns a DataSeries (uncertainty embedded)."""
+    result = dc[0, 0]
+    assert isinstance(result, DataSeries)
+
+
+def test_getitem_2tuple_int_without_uncertainty():
+    """(time, int_pixel) key with no uncertainty → DataSeries."""
+    result = dc_no_err[0, 0]
+    assert isinstance(result, DataSeries)
+
+
+def test_getitem_bool_2d():
+    """2-D boolean mask as key returns a plain DataFrame."""
+    mask = np.zeros((nrow2, ncol2), dtype=bool)
+    mask[0, 0] = True
+    result = dc[:, mask]
+    assert result.shape == (ntime2, 1)
+
+
+def test_getitem_flat_bool_array():
+    """Flat boolean array equal to nrow*ncol selects those columns."""
+    flat = np.ones(nrow2 * ncol2, dtype=bool)
+    result = dc_no_err[:, flat]
+    assert isinstance(result, DataCube)
+    assert result.ntime == ntime2
+
+
+def test_getitem_step_slice_row_col():
+    """Non-unit step slices delegate to to_seriescollection."""
+    result = dc[:, ::2, ::2]
+    assert isinstance(result, DataSeriesCollection)
+
+
+# ─── __setitem__ non-positional key ─────────────────────────────────────────
+
+
+def test_setitem_string_key():
+    """Setting via a string key goes through pd.DataFrame.__setitem__."""
+    dc_copy = DataCube(data.copy(), uncertainty=err.copy())
+    dc_copy["extra"] = np.ones(ntime2)
+
+
+# ─── _preprocess_data error paths ────────────────────────────────────────────
+
+
+def test_preprocess_2d_no_nrow_ncol():
+    """2-D data without nrow/ncol raises ValueError."""
+    with pytest.raises(ValueError):
+        DataCube(np.ones((ntime2, nrow2 * ncol2)))
+
+
+def test_preprocess_wrong_ndim():
+    """1-D data raises ValueError (can't be interpreted as a Cube)."""
+    with pytest.raises(ValueError):
+        DataCube(np.ones(ntime2), nrow=1, ncol=1)
+
+
+# ─── Properties ──────────────────────────────────────────────────────────────
+
+
+def test_col_names_default():
+    """col_names returns [] when _col_names is None (the lazy-init path)."""
+    dc2 = DataCube(data.copy())
+    dc2._col_names = None  # Force the lazy-init branch
+    assert dc2.col_names == []
+
+
+def test_row_names_default():
+    """row_names returns [] when _row_names is None (the lazy-init path)."""
+    dc2 = DataCube(data.copy())
+    dc2._row_names = None  # Force the lazy-init branch
+    assert dc2.row_names == []
+
+
+def test_nseries():
+    """nseries = nrow * ncol."""
+    assert dc.nseries == nrow2 * ncol2
+
+
+def test_styler_property():
+    """styler is None by default, and can be set."""
+    dc2 = DataCube(
+        data.copy(),
+        row_indices={"row": np.arange(nrow2)},
+        col_indices={"col": np.arange(ncol2)},
+    )
+    assert dc2.styler is None
+    frame = dc2.get_single_frame(0)
+    styler_val = dc2.stylize_frame(frame)
+    dc2.styler = styler_val
+    assert dc2.styler is not None
+
+
+# ─── stylize_frame ────────────────────────────────────────────────────────────
+
+
+def test_stylize_frame():
+    """stylize_frame returns a Styler."""
+    frame = dc_named.get_single_frame(0)
+    styler = dc_named.stylize_frame(frame, label="test_label", cmap="gray")
+    assert isinstance(styler, Styler)
+
+
+# ─── _repr_html_ ─────────────────────────────────────────────────────────────
+
+
+def test_repr_html_single_cadence():
+    """_repr_html_ for a 1-cadence cube should not include the '+N cadences' string."""
+    single = DataCube(
+        data[:1],
+        row_indices={"row": np.arange(nrow2)},
+        col_indices={"col": np.arange(ncol2)},
+    )
+    html = single._repr_html_()
+    assert "DataCube" in html
+    assert "+0 cadences" not in html
+
+
+def test_repr_html_multi_cadence():
+    """_repr_html_ for a multi-cadence cube should include the '+N cadences' string."""
+    html = dc_named._repr_html_()
+    assert "DataCube" in html
+    assert f"+{ntime2 - 1} cadences" in html
+
+
+def test_repr_html_cached_styler():
+    """Second call to _repr_html_ uses the cached styler."""
+    dc2 = DataCube(
+        data.copy(),
+        row_indices={"row": np.arange(nrow2)},
+        col_indices={"col": np.arange(ncol2)},
+    )
+    _ = dc2._repr_html_()
+    assert dc2.styler is not None
+    # Second call should use cached styler
+    html2 = dc2._repr_html_()
+    assert "DataCube" in html2
+
+
+# ─── from_pandas with row_names / col_names ──────────────────────────────────
+
+
+def test_from_pandas_row_names_string():
+    """from_pandas with row_names as a string."""
+    df = pd.DataFrame(dc_named)
+    dc3 = DataCube.from_pandas(df, row_names="row", col_names="col")
+    assert dc3.nrow == nrow2
+    assert dc3.ncol == ncol2
+
+
+def test_from_pandas_row_names_list():
+    """from_pandas with row_names as a list."""
+    df = pd.DataFrame(dc_named)
+    dc3 = DataCube.from_pandas(df, row_names=["row"], col_names=["col"])
+    assert dc3.nrow == nrow2
+    assert dc3.ncol == ncol2
+
+
+def test_from_pandas_missing_row_spec_raises():
+    """from_pandas without row_names AND nrow raises KeyError."""
+    df = pd.DataFrame(dc_named)
+    with pytest.raises(KeyError):
+        DataCube.from_pandas(df, col_names="col")
+
+
+def test_from_pandas_missing_col_spec_raises():
+    """from_pandas without col_names AND ncol raises KeyError."""
+    df = pd.DataFrame(dc_named)
+    with pytest.raises(KeyError):
+        DataCube.from_pandas(df, row_names="row")
+
+
+def test_from_pandas_bad_row_names_type_raises():
+    """from_pandas with invalid row_names type raises ValueError."""
+    df = pd.DataFrame(dc_named)
+    with pytest.raises(ValueError):
+        DataCube.from_pandas(df, row_names=123, col_names="col")
+
+
+def test_from_pandas_bad_col_names_type_raises():
+    """from_pandas with invalid col_names type raises ValueError."""
+    df = pd.DataFrame(dc_named)
+    with pytest.raises(ValueError):
+        DataCube.from_pandas(df, row_names="row", col_names=123)
+
+
+# ─── make_cadence_label ──────────────────────────────────────────────────────
+
+
+def test_make_cadence_label_custom_index():
+    """make_cadence_label with a float-valued custom index name (not 'index')."""
+    t = np.linspace(2454833.0, 2454843.0, ntime2)
+    dc2 = DataCube(
+        data,
+        time_indices={"days": t},
+        row_indices={"row": np.arange(nrow2)},
+        col_indices={"col": np.arange(ncol2)},
+    )
+    label = dc2.make_cadence_label(0)
+    assert "days" in label
+
+
+def test_make_cadence_label_indices_in_index():
+    """make_cadence_label with 'indices' level (created by 'detailed' downsample)."""
+    dc2 = DataCube(
+        data,
+        row_indices={"row": np.arange(nrow2)},
+        col_indices={"col": np.arange(ncol2)},
+    )
+    ds = dc2.downsample(nframes=5, index_agg_func="detailed")
+    label = ds.make_cadence_label(0)
+    assert "indices" in label
+
+
+# ─── _resolve_label_key and string-key getitem ───────────────────────────────
+
+
+def test_string_key_getitem():
+    """Accessing a named series via a string key (no uncertainty to avoid bug)."""
+    first_label = dc_named_no_err.columns.get_level_values("series")[0]
+    result = dc_named_no_err[first_label]
+    assert isinstance(result, DataCube)
+    assert result.ntime == ntime2
+
+
+def test_string_key_not_found_raises():
+    """Accessing a nonexistent series label raises KeyError."""
+    with pytest.raises(KeyError):
+        _ = dc_named_no_err["nonexistent_series"]
+
+
+def test_list_of_strings_key():
+    """List of string labels selects multiple series."""
+    labels = list(dc_named_no_err.columns.get_level_values("series")[:2])
+    result = dc_named_no_err[labels]
+    assert isinstance(result, DataCube)
+
+
+# ─── _get_iloc_key – additional paths ────────────────────────────────────────
+
+
+def test_get_iloc_key_string_in_tuple():
+    """_get_iloc_key handles a 2-tuple (time_slice, string_label) correctly."""
+    first_label = dc_named_no_err.columns.get_level_values("series")[0]
+    time_key, col_key = dc_named_no_err._get_iloc_key((slice(None), first_label))
+    assert len(col_key) >= 1
+
+
+def test_get_iloc_key_invalid_time_raises():
+    """Invalid time key type raises ValueError."""
+    with pytest.raises((ValueError, TypeError)):
+        dc._get_iloc_key((1.5, 0))
+
+
+# ─── BitwiseCube ─────────────────────────────────────────────────────────────
+
+
+def test_bitwisecube_repr():
+    """BitwiseCube repr includes class name."""
+    flags = np.arange(20).reshape((4, 5, 1))
+    bc = BitwiseCube(flags)
+    assert "BitwiseCube" in repr(bc)
+
+
+def test_bitwisecube_invalid_display_raises():
+    """Setting values_display to an invalid value raises AttributeError for BitwiseCube."""
+    flags = np.arange(20).reshape((4, 5, 1))
+    bc = BitwiseCube(flags)
+    with pytest.raises(AttributeError):
+        bc.values_display = "not_a_valid_mode"
+
+
+# ─── BoolMixin operations ─────────────────────────────────────────────────────
+
+
+def test_boolcube_arithmetic():
+    """BoolCube arithmetic operators."""
+    bc1 = BoolCube(np.ones((ntime2, nrow2, ncol2), dtype=bool))
+    bc2 = BoolCube(np.zeros((ntime2, nrow2, ncol2), dtype=bool))
+
+    result = bc1 + bc2
+    assert isinstance(result, BoolCube)
+    # logical_or: all True
+    assert result.all(axis=None)
+
+    result_sub = bc1 - bc2
+    assert isinstance(result_sub, BoolCube)
+
+    result_mul = bc1 * bc2
+    assert isinstance(result_mul, BoolCube)
+
+
+def test_boolcube_arithmetic_wrong_type_raises():
+    """BoolCube arithmetic with wrong type raises TypeError."""
+    bc = BoolCube(np.ones((ntime2, nrow2, ncol2), dtype=bool))
+    with pytest.raises(TypeError):
+        _ = bc + 5

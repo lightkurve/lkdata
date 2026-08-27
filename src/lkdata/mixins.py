@@ -1112,7 +1112,6 @@ class StatsMixin(MathMixin):
         --------
         numpy.median : NumPy's median function used internally.
         """
-        axis = kwargs.pop("axis", None)
         if axis == 2:
             raise (ValueError("For Cubes, axis=2 is not supported."))
         result = np.median(self.to_numpy(), axis=axis, **kwargs)
