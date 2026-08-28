@@ -1,0 +1,1406 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Mixins &#8212; lkdata  documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=cb8930eaaf36d9849b67" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=cb8930eaaf36d9849b67" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/graphviz.css?v=4ae1632d" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=cb8930eaaf36d9849b67"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=cb8930eaaf36d9849b67" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=cb8930eaaf36d9849b67" />
+
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'reference/mixins';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Utilities" href="utils.html" />
+    <link rel="prev" title="Cubes" href="datacube.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+    <meta name="docbuild:last-update" content="28 Aug 2026"/>
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">lkdata  documentation</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../whatsnew/index.html">
+    What's new?
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../development/index.html">
+    Development
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/lightkurve/lkdata" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../whatsnew/index.html">
+    What's new?
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../development/index.html">
+    Development
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/lightkurve/lkdata" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item pst-sidebar-collapse"><button id="pst-collapse-sidebar-button" aria-expanded="true" aria-controls="pst-primary-sidebar">
+  <svg class="pst-icon" role="img" aria-hidden="true" focusable="false" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <path fill="currentColor" d="M3 15.5C2.36232 15.5 1.74874 15.2564 1.28478 14.8189C0.820828 14.3815 0.541576 13.7832 0.504167 13.1467L0.5 13L0.5 3C0.499965 2.36232 0.743605 1.74874 1.18107 1.28478C1.61854 0.820828 2.21676 0.541576 2.85333 0.504167L3 0.5L13 0.5C13.6377 0.499965 14.2513 0.743605 14.7152 1.18107C15.1792 1.61854 15.4584 2.21676 15.4958 2.85333L15.5 3L15.5 13C15.5 13.6377 15.2564 14.2513 14.8189 14.7152C14.3815 15.1792 13.7832 15.4584 13.1467 15.4958L13 15.5L3 15.5ZM3 13.8333L10.5 13.8333L10.5 2.16667L3 2.16667C2.79589 2.16669 2.59889 2.24163 2.44636 2.37726C2.29383 2.5129 2.19638 2.69979 2.1725 2.9025L2.16667 3L2.16667 13C2.16669 13.2041 2.24163 13.4011 2.37726 13.5536C2.5129 13.7062 2.69979 13.8036 2.9025 13.8275L3 13.8333ZM6.65583 10.325L6.5775 10.2558L4.91083 8.58917C4.76735 8.44567 4.68116 8.25476 4.66843 8.05223C4.65569 7.84971 4.71729 7.6495 4.84167 7.48917L4.91083 7.41083L6.5775 5.74417C6.72747 5.59471 6.9287 5.50794 7.14032 5.50148C7.35194 5.49502 7.55809 5.56935 7.7169 5.70937C7.8757 5.8494 7.97525 6.04463 7.99533 6.25539C8.01541 6.46616 7.95451 6.67667 7.825 6.84417L7.75583 6.9225L6.67917 8L7.75583 9.0775C7.89931 9.22099 7.98551 9.41191 7.99824 9.61443C8.01097 9.81695 7.94938 10.0172 7.825 10.1775L7.75583 10.2558C7.61234 10.3993 7.42142 10.4855 7.2189 10.4982C7.01638 10.511 6.81617 10.4494 6.65583 10.325Z"/>
+  </svg>
+  <span class="pst-collapse-sidebar-label">Collapse Sidebar</span>
+  <span class="pst-expand-sidebar-label">Expand Sidebar</span>
+</button></div>
+        <div class="sidebar-primary-item">
+
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="products.html">Products</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="dataseries.html">Series</a></li>
+<li class="toctree-l2"><a class="reference internal" href="seriescollection.html">Series Collections</a></li>
+<li class="toctree-l2"><a class="reference internal" href="datacube.html">Cubes</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Mixins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">Utils</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">API</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Mixins</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="module-lkdata.mixins">
+<span id="mixins"></span><h1>Mixins<a class="headerlink" href="#module-lkdata.mixins" title="Link to this heading">#</a></h1>
+<p>Mixin methods and classes for lightkurve data objects</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="lkdata.mixins.AggMixin">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">lkdata.mixins.</span></span><span class="sig-name descname"><span class="pre">AggMixin</span></span><a class="reference internal" href="../_modules/lkdata/mixins.html#AggMixin"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.mixins.AggMixin" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Mixin class for data aggregation methods like downsampling</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="lkdata.mixins.AggMixin.bin">
+<span class="sig-name descname"><span class="pre">bin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bins</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">level</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">agg_func</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uncertainty_agg_func</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">counts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index_agg_func</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'mean'</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">agg_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lkdata/mixins.html#AggMixin.bin"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.mixins.AggMixin.bin" title="Link to this definition">#</a></dt>
+<dd><p>Perform user-defined binning.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>bins</strong><span class="classifier">ArrayLike</span></dt><dd><p>An array of the left edge values for the bins</p>
+</dd>
+<dt><strong>level</strong><span class="classifier">int or str</span></dt><dd><p>Level of the index on which to apply bins</p>
+</dd>
+<dt><strong>agg_func</strong><span class="classifier">str or function, optional</span></dt><dd><p>The aggregation method by which to combine data. If None, the
+class’ ds_agg_func will be used which is summation for data and
+bitwise classes, and np.logical_or for boolean classes.</p>
+</dd>
+<dt><strong>uncertainty_agg_func</strong><span class="classifier">str or function, optional</span></dt><dd><p>For data classes, define how uncertainty should be aggregated.
+If None is given for a class with uncertainty, the root mean square
+is used. If the class has no associated uncertainty, this is ignored.</p>
+</dd>
+<dt><strong>counts</strong><span class="classifier">bool, default = False</span></dt><dd><p>Whether to return the counts for each bin including NaNs.</p>
+</dd>
+<dt><strong>index_agg_func: str</strong></dt><dd><p>How to aggregate the indices, by default uses “mean” which returns
+a mean aggregation. “detailed” will use a mean aggregation and add
+an index to track the indices used in aggregation. All other pandas
+supported aggregation identifiable by a string are supported.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>self.__class__</dt><dd><p>Returns an aggregated object of the same type given.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lkdata.mixins.AggMixin.downsample">
+<span class="sig-name descname"><span class="pre">downsample</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nframes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">level</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index_agg_func</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'mean'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lkdata/mixins.html#AggMixin.downsample"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.mixins.AggMixin.downsample" title="Link to this definition">#</a></dt>
+<dd><p>Downsample the data by averaging over <code class="xref py py-obj docutils literal notranslate"><span class="pre">nframes</span></code> consecutive rows.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>nframes</strong><span class="classifier">int, default=5</span></dt><dd><p>Number of frames to average over. Default is 5.</p>
+</dd>
+<dt><strong>level</strong><span class="classifier">Union[int, str], default=-1</span></dt><dd><p>Index level to use for downsampling. Default is -1 (last level).</p>
+</dd>
+<dt><strong>index_agg_func: str</strong></dt><dd><p>How to aggregate the indices, by default uses “mean” which returns
+a mean aggregation. “detailed” will use a mean aggregation and add
+an index to track the indices used in aggregation. All other pandas
+supported aggregation identifiable by a string are supported.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>Same type as self</dt><dd><p>A new object with downsampled data.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>This method works by creating bins of <code class="xref py py-obj docutils literal notranslate"><span class="pre">nframes</span></code> consecutive rows,
+then averaging the data within each bin. Only bins with exactly
+<code class="xref py py-obj docutils literal notranslate"><span class="pre">nframes</span></code> rows are included in the result.</p>
+<p>If the object has an uncertainty attribute, it will be propagated
+by summing the squares of the uncertainties within each bin and
+then taking the square root.</p>
+<p>The resulting object will have a new index that represents the
+mean of the original indices within each bin. If the original
+index included a ‘time_index’ or ‘indices’ level, this information
+is preserved in the new index.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lkdata.mixins.AggMixin.get_bins">
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">get_bins</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nframes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">right</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lkdata/mixins.html#AggMixin.get_bins"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.mixins.AggMixin.get_bins" title="Link to this definition">#</a></dt>
+<dd><p>Calculate bin edges for downsampling.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>index</strong><span class="classifier">array-like</span></dt><dd><p>The index to be binned.</p>
+</dd>
+<dt><strong>nframes</strong><span class="classifier">int</span></dt><dd><p>Number of frames to average over.</p>
+</dd>
+<dt><strong>right</strong><span class="classifier">bool, optional</span></dt><dd><p>Whether the intervals should be closed on the right (default: False).</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>bins</strong><span class="classifier">array-like</span></dt><dd><p>Evenly spaced left bin edges for the given index containing, on
+on average, the appropriate number of frames.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lkdata.mixins.AggMixin.spatial_aggregate">
+<span class="sig-name descname"><span class="pre">spatial_aggregate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nrows</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ncols</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lkdata/mixins.html#AggMixin.spatial_aggregate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.mixins.AggMixin.spatial_aggregate" title="Link to this definition">#</a></dt>
+<dd><p>Similar to spatial downsample, but specify desired dimensions</p>
+<p>TODO: This shouldn’t be a mixin for lk products, it’s Cube specific
+with an application to a non-timeseries DataFrame and isn’t
+meaningful for series at all.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lkdata.mixins.AggMixin.spatial_downsample">
+<span class="sig-name descname"><span class="pre">spatial_downsample</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">factor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">col_factor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">col_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lkdata/mixins.html#AggMixin.spatial_downsample"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.mixins.AggMixin.spatial_downsample" title="Link to this definition">#</a></dt>
+<dd><p>Spatially downsamples a DataCube by a given factor.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>factor</strong><span class="classifier">int or tuple of int, default 2</span></dt><dd><p>If a tuple is given, the first value will be used as the factor by
+which to reduce the size of the row axis and the second as the
+column factor.
+If factor is an integer and col_factor is also given, this is the
+factor by which to decrease the spatial resolution of the row axis.
+If col_factor is not given, this is the both the row and column factor.</p>
+</dd>
+<dt><strong>col_factor</strong><span class="classifier">int, optional</span></dt><dd><p>Factor by which to decrease the spatial resolution of the column
+axis.</p>
+</dd>
+<dt><strong>row_name</strong><span class="classifier">str, optional</span></dt><dd><p>Name of the axis corresponding to the row to be downsampled. By
+default the primary row axis is used.</p>
+</dd>
+<dt><strong>col_name</strong><span class="classifier">str, optional</span></dt><dd><p>Name of the axis corresponding to the column to be downsampled. By
+default the primary column axis is used.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>lkdata.DataCube</dt><dd><p>A spatially downsampled object of the same type.</p>
+</dd>
+<dt>TODO: This shouldn’t be a mixin for lk products, it’s Cube specific</dt><dd></dd>
+<dt>with an application to a non-timeseries DataFrame and isn’t meaningful</dt><dd></dd>
+<dt>for Series at all.</dt><dd></dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lkdata.mixins.AggMixin.super_sample">
+<span class="sig-name descname"><span class="pre">super_sample</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nrows</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ncols</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lkdata/mixins.html#AggMixin.super_sample"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.mixins.AggMixin.super_sample" title="Link to this definition">#</a></dt>
+<dd><p>Split pixels for super sampling</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="lkdata.mixins.BitwiseMixin">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">lkdata.mixins.</span></span><span class="sig-name descname"><span class="pre">BitwiseMixin</span></span><a class="reference internal" href="../_modules/lkdata/mixins.html#BitwiseMixin"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.mixins.BitwiseMixin" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#lkdata.mixins.IndexProcessorMixin" title="lkdata.mixins.IndexProcessorMixin"><code class="xref py py-class docutils literal notranslate"><span class="pre">IndexProcessorMixin</span></code></a></p>
+<p>Mixin class that provides functionality for handling bitwise data.</p>
+<p>Bitwise data are data which are integers in binary form. In the context of
+the Kepler and TESS Missions, flags are given as integers which, when
+converted to their binary form, indicate which flags apply to the data.
+Each flag corresponds to a bit. For an example, see Table 32 of the TESS
+Science Data Products Description Document. A value of 5 is represented in
+binary as 101, indicating that the 1st and 3rd bits are “on” corresponding
+to flags Attitude Tweak and Spacecraft is in a Coarse Point from the table.</p>
+<p>In aggregating bitwise data, i.e. via downsampling, we combine all flags.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="lkdata.mixins.BitwiseMixin.bin_to_int">
+<span class="sig-name descname"><span class="pre">bin_to_int</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;numpy.vectorize</span> <span class="pre">object&gt;</span></span><a class="headerlink" href="#lkdata.mixins.BitwiseMixin.bin_to_int" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lkdata.mixins.BitwiseMixin.breakdown">
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">breakdown</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">val</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lkdata/mixins.html#BitwiseMixin.breakdown"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.mixins.BitwiseMixin.breakdown" title="Link to this definition">#</a></dt>
+<dd><p>Breaks down an integer into its constituent powers of 2.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="lkdata.mixins.BitwiseMixin.codes">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">codes</span></span><a class="headerlink" href="#lkdata.mixins.BitwiseMixin.codes" title="Link to this definition">#</a></dt>
+<dd><p>Return the code dictionary used in this Bitwise product.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="lkdata.mixins.BitwiseMixin.convert_set_to_int">
+<span class="sig-name descname"><span class="pre">convert_set_to_int</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;numpy.vectorize</span> <span class="pre">object&gt;</span></span><a class="headerlink" href="#lkdata.mixins.BitwiseMixin.convert_set_to_int" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lkdata.mixins.BitwiseMixin.parse_code">
+<span class="sig-name descname"><span class="pre">parse_code</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">val</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lkdata/mixins.html#BitwiseMixin.parse_code"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.mixins.BitwiseMixin.parse_code" title="Link to this definition">#</a></dt>
+<dd><p>Parse a bitset into a dictionary of corresponding codes.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lkdata.mixins.BitwiseMixin.stylize_frame">
+<span class="sig-name descname"><span class="pre">stylize_frame</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lkdata/mixins.html#BitwiseMixin.stylize_frame"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.mixins.BitwiseMixin.stylize_frame" title="Link to this definition">#</a></dt>
+<dd><p>Overrides default to remove background gradient and to parse
+integers to a set of codes based on binary representation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.formats.style.Styler.html#pandas.io.formats.style.Styler" title="(in pandas v3.0.5)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Styler</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="lkdata.mixins.BitwiseMixin.values_display">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">values_display</span></span><a class="headerlink" href="#lkdata.mixins.BitwiseMixin.values_display" title="Link to this definition">#</a></dt>
+<dd><p>Get the current display mode for values.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>str</dt><dd><p>The current display mode for values. Possible values are:
+- ‘int’: Display the raw integer values.
+- ‘bitset’: Display the values as sets of powers of 2.
+- ‘detailed’: Display the values as dictionaries mapping powers of 2 to their corresponding codes.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>This property is used to control how values are displayed in the object’s string representation
+and in any generated output (e.g., when using Jupyter notebooks).</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="lkdata.mixins.BoolMixin">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">lkdata.mixins.</span></span><span class="sig-name descname"><span class="pre">BoolMixin</span></span><a class="reference internal" href="../_modules/lkdata/mixins.html#BoolMixin"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.mixins.BoolMixin" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#lkdata.mixins.IndexProcessorMixin" title="lkdata.mixins.IndexProcessorMixin"><code class="xref py py-class docutils literal notranslate"><span class="pre">IndexProcessorMixin</span></code></a></p>
+<p>Math mixins for lightkurve bool objects.</p>
+<p>All operators should simply return the “logical or” for each element.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="lkdata.mixins.BoolMixin.ds_agg_func">
+<span class="sig-name descname"><span class="pre">ds_agg_func</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keepdims</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;no</span> <span class="pre">value&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">where</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#lkdata.mixins.BoolMixin.ds_agg_func" title="Link to this definition">#</a></dt>
+<dd><p>Reduces <a class="reference external" href="https://docs.python.org/3/library/array.html#module-array" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">array</span></code></a>’s dimension by one, by applying ufunc along one axis.</p>
+<p>Let <span class="math notranslate nohighlight">\(array.shape = (N_0, ..., N_i, ..., N_{M-1})\)</span>.  Then
+<span class="math notranslate nohighlight">\(ufunc.reduce(array, axis=i)[k_0, ..,k_{i-1}, k_{i+1}, .., k_{M-1}]\)</span> =
+the result of iterating <code class="xref py py-obj docutils literal notranslate"><span class="pre">j</span></code> over <span class="math notranslate nohighlight">\(range(N_i)\)</span>, cumulatively applying
+ufunc to each <span class="math notranslate nohighlight">\(array[k_0, ..,k_{i-1}, j, k_{i+1}, .., k_{M-1}]\)</span>.
+For a one-dimensional array, reduce produces results equivalent to:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">r</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">identity</span> <span class="c1"># op = ufunc</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">A</span><span class="p">)):</span>
+  <span class="n">r</span> <span class="o">=</span> <span class="n">op</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">A</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+<span class="k">return</span> <span class="n">r</span>
+</pre></div>
+</div>
+<p>For example, add.reduce() is equivalent to sum().</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>array</strong><span class="classifier">array_like</span></dt><dd><p>The array to act on.</p>
+</dd>
+<dt><strong>axis</strong><span class="classifier">None or int or tuple of ints, optional</span></dt><dd><p>Axis or axes along which a reduction is performed.
+The default (<code class="xref py py-obj docutils literal notranslate"><span class="pre">axis</span></code> = 0) is perform a reduction over the first
+dimension of the input array. <code class="xref py py-obj docutils literal notranslate"><span class="pre">axis</span></code> may be negative, in
+which case it counts from the last to the first axis.</p>
+<p>If this is None, a reduction is performed over all the axes.
+If this is a tuple of ints, a reduction is performed on multiple
+axes, instead of a single axis or all the axes as before.</p>
+<p>For operations which are either not commutative or not associative,
+doing a reduction over multiple axes is not well-defined. The
+ufuncs do not currently raise an exception in this case, but will
+likely do so in the future.</p>
+</dd>
+<dt><strong>dtype</strong><span class="classifier">data-type code, optional</span></dt><dd><p>The data type used to perform the operation. Defaults to that of
+<code class="docutils literal notranslate"><span class="pre">out</span></code> if given, and the data type of <code class="docutils literal notranslate"><span class="pre">array</span></code> otherwise (though
+upcast to conserve precision for some cases, such as
+<code class="docutils literal notranslate"><span class="pre">numpy.add.reduce</span></code> for integer or boolean input).</p>
+</dd>
+<dt><strong>out</strong><span class="classifier">ndarray, None, …, or tuple of ndarray and None, optional</span></dt><dd><p>Location into which the result is stored.
+If not provided or None, a freshly-allocated array is returned.
+If passed as a keyword argument, can be Ellipses (<code class="docutils literal notranslate"><span class="pre">out=...</span></code>) to
+ensure an array is returned even if the result is 0-dimensional
+(which is useful especially for object dtype), or a 1-element tuple
+(latter for consistency with <code class="docutils literal notranslate"><span class="pre">ufunc.__call__</span></code>).</p>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 2.3: </span>Support for <code class="docutils literal notranslate"><span class="pre">out=...</span></code> was added.</p>
+</div>
+</dd>
+<dt><strong>keepdims</strong><span class="classifier">bool, optional</span></dt><dd><p>If this is set to True, the axes which are reduced are left
+in the result as dimensions with size one. With this option,
+the result will broadcast correctly against the original <a class="reference external" href="https://docs.python.org/3/library/array.html#module-array" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">array</span></code></a>.</p>
+</dd>
+<dt><strong>initial</strong><span class="classifier">scalar, optional</span></dt><dd><p>The value with which to start the reduction.
+If the ufunc has no identity or the dtype is object, this defaults
+to None - otherwise it defaults to ufunc.identity.
+If <code class="docutils literal notranslate"><span class="pre">None</span></code> is given, the first element of the reduction is used,
+and an error is thrown if the reduction is empty.</p>
+</dd>
+<dt><strong>where</strong><span class="classifier">array_like of bool, optional</span></dt><dd><p>A boolean array which is broadcasted to match the dimensions
+of <a class="reference external" href="https://docs.python.org/3/library/array.html#module-array" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">array</span></code></a>, and selects elements to include in the reduction. Note
+that for ufuncs like <code class="docutils literal notranslate"><span class="pre">minimum</span></code> that do not have an identity
+defined, one has to pass in also <code class="docutils literal notranslate"><span class="pre">initial</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>r</strong><span class="classifier">ndarray</span></dt><dd><p>The reduced array. If <code class="xref py py-obj docutils literal notranslate"><span class="pre">out</span></code> was supplied, <code class="xref py py-obj docutils literal notranslate"><span class="pre">r</span></code> is a reference to it.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">multiply</span><span class="o">.</span><span class="n">reduce</span><span class="p">([</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">5</span><span class="p">])</span>
+<span class="go">30</span>
+</pre></div>
+</div>
+<p>A multi-dimensional array example:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">X</span>
+<span class="go">array([[[0, 1],</span>
+<span class="go">        [2, 3]],</span>
+<span class="go">       [[4, 5],</span>
+<span class="go">        [6, 7]]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">add</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="go">array([[ 4,  6],</span>
+<span class="go">       [ 8, 10]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">add</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="c1"># confirm: default axis value is 0</span>
+<span class="go">array([[ 4,  6],</span>
+<span class="go">       [ 8, 10]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">add</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="go">array([[ 2,  4],</span>
+<span class="go">       [10, 12]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">add</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="go">array([[ 1,  5],</span>
+<span class="go">       [ 9, 13]])</span>
+</pre></div>
+</div>
+<p>You can use the <code class="docutils literal notranslate"><span class="pre">initial</span></code> keyword argument to initialize the reduction
+with a different value, and <code class="docutils literal notranslate"><span class="pre">where</span></code> to select specific elements to include:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">add</span><span class="o">.</span><span class="n">reduce</span><span class="p">([</span><span class="mi">10</span><span class="p">],</span> <span class="n">initial</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+<span class="go">15</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">add</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)),</span> <span class="n">axis</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="n">initial</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<span class="go">array([14., 14.])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">10.</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="mi">10</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">add</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">where</span><span class="o">=~</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">a</span><span class="p">))</span>
+<span class="go">20.0</span>
+</pre></div>
+</div>
+<p>Allows reductions of empty arrays where they would normally fail, i.e.
+for ufuncs without an identity.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="o">.</span><span class="n">reduce</span><span class="p">([],</span> <span class="n">initial</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">)</span>
+<span class="go">inf</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="o">.</span><span class="n">reduce</span><span class="p">([[</span><span class="mf">1.</span><span class="p">,</span> <span class="mf">2.</span><span class="p">],</span> <span class="p">[</span><span class="mf">3.</span><span class="p">,</span> <span class="mf">4.</span><span class="p">]],</span> <span class="n">initial</span><span class="o">=</span><span class="mf">10.</span><span class="p">,</span> <span class="n">where</span><span class="o">=</span><span class="p">[</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">])</span>
+<span class="go">array([ 1., 10.])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="o">.</span><span class="n">reduce</span><span class="p">([])</span>
+<span class="gt">Traceback (most recent call last):</span>
+<span class="w">    </span><span class="o">...</span>
+<span class="gr">ValueError</span>: <span class="n">zero-size array to reduction operation minimum which has no identity</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="lkdata.mixins.ConvenienceMixins">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">lkdata.mixins.</span></span><span class="sig-name descname"><span class="pre">ConvenienceMixins</span></span><a class="reference internal" href="../_modules/lkdata/mixins.html#ConvenienceMixins"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.mixins.ConvenienceMixins" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Convenience mixins which add properties to lightkurve data objects as attributes.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="lkdata.mixins.ConvenienceMixins.fillna">
+<span class="sig-name descname"><span class="pre">fillna</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lkdata/mixins.html#ConvenienceMixins.fillna"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.mixins.ConvenienceMixins.fillna" title="Link to this definition">#</a></dt>
+<dd><p>Overwrite pandas method to return lk object</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lkdata.mixins.ConvenienceMixins.fold">
+<span class="sig-name descname"><span class="pre">fold</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">period</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t0</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">level</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'phase'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lkdata/mixins.html#ConvenienceMixins.fold"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.mixins.ConvenienceMixins.fold" title="Link to this definition">#</a></dt>
+<dd><p>Fold data on a given period and adds the folded time as an index.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>period</strong><span class="classifier">float</span></dt><dd><p>The period on which to fold the data. The user must ensure that it
+this has the same units and scale as the level.</p>
+</dd>
+<dt><strong>t0</strong><span class="classifier">float, optional</span></dt><dd><p>The time at which to start the first period, by default None and t0
+becomes the minimum value of the time array.</p>
+</dd>
+<dt><strong>level</strong><span class="classifier">Union[int, str], optional</span></dt><dd><p>The index level on which to fold, by default 1, presumed to be the
+first time index that aren’t cadences.</p>
+</dd>
+<dt><strong>inplace</strong><span class="classifier">bool, optional</span></dt><dd><p>Whether to modify the object itself or return a new object, by default False</p>
+</dd>
+<dt><strong>label</strong><span class="classifier">str, optional</span></dt><dd><p>What label to give the new time index, by default “phase”</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>Union[Cube, Frame, Series]</dt><dd><p>Returns an object of the same type given.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="lkdata.mixins.ConvenienceMixins.ntime">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">ntime</span></span><a class="headerlink" href="#lkdata.mixins.ConvenienceMixins.ntime" title="Link to this definition">#</a></dt>
+<dd><p>Number of cadences in the data.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="lkdata.mixins.ConvenienceMixins.user_kwargs">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">user_kwargs</span></span><a class="headerlink" href="#lkdata.mixins.ConvenienceMixins.user_kwargs" title="Link to this definition">#</a></dt>
+<dd><p>Keywords passed by the user</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="lkdata.mixins.IndexProcessorMixin">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">lkdata.mixins.</span></span><span class="sig-name descname"><span class="pre">IndexProcessorMixin</span></span><a class="reference internal" href="../_modules/lkdata/mixins.html#IndexProcessorMixin"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.mixins.IndexProcessorMixin" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>A mixin class that provides methods for processing and manipulating index-related operations.</p>
+<p>This mixin is designed to be used with pandas-based data structures and provides
+utilities for folding time series, parsing indices, and handling various index
+operations specific to astronomical time series data.</p>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<dl class="simple">
+<dt><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Index.html#pandas.Index" title="(in pandas v3.0.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pandas.Index</span></code></a></dt><dd><p>The basic object storing axis labels for all pandas objects.</p>
+</dd>
+</dl>
+</div>
+<p class="rubric">Notes</p>
+<p>This mixin is particularly useful for handling complex index structures in
+astronomical time series data, such as those found in Kepler and TESS observations.
+It provides methods for parsing and manipulating indices, which is crucial for
+operations like folding light curves and handling spatial information in image data.</p>
+<p>The methods in this mixin assume that the class it’s mixed into has certain
+attributes and methods typical of pandas-based data structures, such as <code class="xref py py-obj docutils literal notranslate"><span class="pre">index</span></code>,
+<code class="xref py py-obj docutils literal notranslate"><span class="pre">columns</span></code>, and pandas-style indexing operations.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="lkdata.mixins.IndexProcessorMixin.agg_index">
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">agg_index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index_names</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">new_index_gb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">agg_func</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'mean'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lkdata/mixins.html#IndexProcessorMixin.agg_index"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.mixins.IndexProcessorMixin.agg_index" title="Link to this definition">#</a></dt>
+<dd><p>Aggregate indices by mean and a string of indices included</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>index_names</strong><span class="classifier">list[str]</span></dt><dd><p>List of index names</p>
+</dd>
+<dt><strong>new_index_gb</strong><span class="classifier">pd.groupby</span></dt><dd><p>Groupby object used to aggregate the index</p>
+</dd>
+<dt><strong>agg_func</strong><span class="classifier">str</span></dt><dd><p>Method by which to aggregate the indices. Pandas recognized
+aggregation strings (“mean”, “median”, etc.) and “detailed” are
+supported. “detailed” will aggregate by mean as well and a new index
+containing a string of all indices in a grouping.
+Note: Aggregation keyword arguments are not supported here.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>pd.MultiIndex</dt><dd><p>An aggregated index</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lkdata.mixins.IndexProcessorMixin.droplevel">
+<span class="sig-name descname"><span class="pre">droplevel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">level</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lkdata/mixins.html#IndexProcessorMixin.droplevel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.mixins.IndexProcessorMixin.droplevel" title="Link to this definition">#</a></dt>
+<dd><p>Drop a level from the index, dropping columns this way is disabled</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>level</strong><span class="classifier">int or str</span></dt><dd><p>The level to be dropped, cannot be the 0th level</p>
+</dd>
+<dt><strong>axis</strong><span class="classifier">{0 or ‘index’}, default 0</span></dt><dd><p>axis must be 0, dropping columns is not supported. Included for
+consistency with pandas.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>self.__class__</dt><dd><p>Returns a new instance of the calling class with the index dropped</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>ValueError</dt><dd><p>0-level indices cannot be dropped by this method.</p>
+</dd>
+<dt>NotImplementedError</dt><dd><p>_description_</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<dl class="simple">
+<dt><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.droplevel.html#pandas.DataFrame.droplevel" title="(in pandas v3.0.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pandas.DataFrame.droplevel</span></code></a></dt><dd><p>method to drop levels from DataFrames</p>
+</dd>
+<dt><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.droplevel.html#pandas.Series.droplevel" title="(in pandas v3.0.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pandas.Series.droplevel</span></code></a></dt><dd><p>method to drop levels from Series</p>
+</dd>
+</dl>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lkdata.mixins.IndexProcessorMixin.parse_columns">
+<span class="sig-name descname"><span class="pre">parse_columns</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">columns</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_indices</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">col_indices</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nrow</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ncol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">continuous</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nseries</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lkdata/mixins.html#IndexProcessorMixin.parse_columns"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.mixins.IndexProcessorMixin.parse_columns" title="Link to this definition">#</a></dt>
+<dd><p>Parse row and column information from given information</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>columns</strong><span class="classifier">pd.MultiIndex, optional</span></dt><dd><p>An existing columns instance, easiest to deal with, by default None</p>
+</dd>
+<dt><strong>row_indices</strong><span class="classifier">dict, optional</span></dt><dd><p>A dictionary of row arrays, by default None</p>
+</dd>
+<dt><strong>col_indices</strong><span class="classifier">dict, optional</span></dt><dd><p>A dictionary of column arrays, by default None</p>
+</dd>
+<dt><strong>nrow</strong><span class="classifier">int, default 0</span></dt><dd><p>The number of rows, by default 0. Must be defined if row_indices is
+not None.</p>
+</dd>
+<dt><strong>ncol</strong><span class="classifier">int, default 0</span></dt><dd><p>The number of columns, by default 0. Must be defined if col_indices
+is not None.</p>
+</dd>
+<dt><strong>continuous</strong><span class="classifier">bool, default False</span></dt><dd><p>Whether the rows and columns in row and col indices should be
+interpreted as continuous.
+If not continuous, the arrays given in row and col indices should
+correspond to coordinates by pixel.
+For DataCubes, the region must be continous. For DataFrames, it is
+assumed that the region is non-contiguous, by default False.</p>
+</dd>
+<dt><strong>nseries</strong><span class="classifier">int, default 0</span></dt><dd><p>The number of series, by default 0.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>pd.MultiIndex, int, int</dt><dd><p>Returns a tuple of the parsed columns instance, the number of rows,
+and the number of columns inferred from the inputs.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lkdata.mixins.IndexProcessorMixin.parse_index">
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">parse_index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_indices</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ntime</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lkdata/mixins.html#IndexProcessorMixin.parse_index"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.mixins.IndexProcessorMixin.parse_index" title="Link to this definition">#</a></dt>
+<dd><p>Parse given indices and return a single pandas MultiIndex</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>index</strong><span class="classifier">pd.MultiIndex, optional</span></dt><dd><p>An existing pandas MultiIndex to be parsed. If provided, its levels
+will be incorporated into the resulting index.</p>
+</dd>
+<dt><strong>time_indices</strong><span class="classifier">dict or array-like, optional</span></dt><dd><p>A dictionary of time-related indices or an array of time values.
+If a dictionary, keys represent index names and values are the
+corresponding arrays. Special keys ‘row’ and ‘col’ are reserved
+and will raise an error if used.</p>
+</dd>
+<dt><strong>ntime</strong><span class="classifier">int, optional</span></dt><dd><p>The number of time points. Used to create a default time index if
+no other time information is provided. Default is 0, overwritten by
+the shape of any other given  parameter.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>pd.MultiIndex</dt><dd><p>A pandas MultiIndex constructed from the input parameters.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>ValueError</dt><dd><p>If ‘row’ or ‘col’ keys are present in time_indices.
+If ‘index’ is provided but is not a pd.MultiIndex.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>If neither ‘time_index’ nor ‘mid_index’ are present in the input,
+a default ‘time_index’ will be created using numpy.arange.</p></li>
+<li><p>For downsampled data, ‘mid_index’ is used in place of ‘time_index’,
+and an additional ‘indices’ level is included, containing a string of
+all indices aggregated for the row.</p></li>
+<li><p>The method prioritizes existing index information, falling back to
+provided time_indices, and finally to a default range index if necessary.</p></li>
+</ul>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lkdata.mixins.IndexProcessorMixin.parse_pos_indices">
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">parse_pos_indices</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">row_indices</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">col_indices</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nrow</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ncol</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nseries</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lkdata/mixins.html#IndexProcessorMixin.parse_pos_indices"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.mixins.IndexProcessorMixin.parse_pos_indices" title="Link to this definition">#</a></dt>
+<dd><p>Parse and process row and column indices for data representation.</p>
+<p>TPF data are typically stored in an intuitive 3D structure, with
+time as the 1st dimension, row (or column) as the 2nd, and the
+column (or row) as the 3rd. In using pandas as the backend for our
+data, we store time as the index of the DataFrame and need rows and
+columns to be in the DataFrame.columns.</p>
+<p>This method processes the given row and column indices, ensuring they are in the
+correct format and shape for the data representation. It handles various input
+types and converts them into a standardized dictionary format.</p>
+<p>The standard for row and column arrays is to provide an array of
+size nrow and ncol respectively, definining the row and column
+indices.</p>
+<p>I.e. for a 3x4 image, a possible scenario is that
+row = [1, 2, 3]
+and col = [1, 2, 3, 4].
+In the DataFrame, this must be organized such that each column
+corresponds to one of the coordinates. So row and col must be
+flattend to
+row = [1, 1, 1, 1, 2, 2, …,  3, 3]
+and col = [1, 2, 3, 4, 1, 2, …, 3, 4]
+so that series[0] is [1, 1], series[2] is [1, 2], …,
+and series[11] is [3, 4]</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>row_indices</strong><span class="classifier">int, array-like, or dict</span></dt><dd><p>The row indices. Can be an integer (starting index), an array-like object,
+or a dictionary of named row indices.</p>
+</dd>
+<dt><strong>col_indices</strong><span class="classifier">int, array-like, or dict</span></dt><dd><p>The column indices. Can be an integer (starting index), an array-like object,
+or a dictionary of named column indices.</p>
+</dd>
+<dt><strong>nrow</strong><span class="classifier">int</span></dt><dd><p>The number of rows in the data.</p>
+</dd>
+<dt><strong>ncol</strong><span class="classifier">int</span></dt><dd><p>The number of columns in the data.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>tuple of dicts</dt><dd><p>A tuple containing two dictionaries:
+- The first dictionary contains the processed row indices.
+- The second dictionary contains the processed column indices.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>ValueError</dt><dd><p>If the shape of the provided indices doesn’t match the shape of the data,
+or if ‘time_index’ is used as a key in row_indices or col_indices.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>If row_indices or col_indices is an integer, it’s interpreted as the starting
+index, and a range is created.</p></li>
+<li><p>If row_indices or col_indices is an array-like object, it’s processed to ensure
+compatibility with the data shape.</p></li>
+<li><p>If row_indices or col_indices is a dictionary, each value is processed to ensure
+compatibility with the data shape.</p></li>
+</ul>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lkdata.mixins.IndexProcessorMixin.sort_index">
+<span class="sig-name descname"><span class="pre">sort_index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lkdata/mixins.html#IndexProcessorMixin.sort_index"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.mixins.IndexProcessorMixin.sort_index" title="Link to this definition">#</a></dt>
+<dd><p>Sort the index of the data structure.</p>
+<p>This method wraps pandas’ sort_index method and extends it to handle
+the uncertainty array and maintain the internal array structure.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>*args</strong></dt><dd><p>Positional arguments to pass to pandas’ sort_index method.</p>
+</dd>
+<dt><strong>**kwargs</strong></dt><dd><p>Keyword arguments to pass to pandas’ sort_index method.
+Notable kwargs include:
+inplace : bool, optional. If True, perform operation in-place.
+level : int or str, optional. If index is a MultiIndex, sort on the given level.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>self.__class__ or None</dt><dd><p>If inplace=False, returns a new sorted object.
+If inplace=True, sorts in-place and returns None.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<dl class="simple">
+<dt><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.sort_index.html#pandas.DataFrame.sort_index" title="(in pandas v3.0.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pandas.DataFrame.sort_index</span></code></a></dt><dd><p>The pandas method this wraps.</p>
+</dd>
+</dl>
+</div>
+<p class="rubric">Notes</p>
+<p>This method maintains the structure of the data and uncertainty arrays
+when sorting. It also ensures that convenience attributes are updated
+after sorting.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="lkdata.mixins.MathMixin">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">lkdata.mixins.</span></span><span class="sig-name descname"><span class="pre">MathMixin</span></span><a class="reference internal" href="../_modules/lkdata/mixins.html#MathMixin"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.mixins.MathMixin" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#lkdata.mixins.IndexProcessorMixin" title="lkdata.mixins.IndexProcessorMixin"><code class="xref py py-class docutils literal notranslate"><span class="pre">IndexProcessorMixin</span></code></a></p>
+<p>Mixin class to add arithmetic to lightkurve data classes with uncertainty.</p>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<dl class="simple">
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">astropy.nddata.nduncertainty</span></code></dt><dd><p>astropy module from which uncertainty classes and operations have been derived.</p>
+</dd>
+</dl>
+</div>
+<dl class="py property">
+<dt class="sig sig-object py" id="lkdata.mixins.MathMixin.array">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">array</span></span><a class="headerlink" href="#lkdata.mixins.MathMixin.array" title="Link to this definition">#</a></dt>
+<dd><p>Numpy array representation</p>
+<p>Cubes have shape (ntime, nrow, ncol)
+SeriesCollections have shape (ntime, nseries)
+and Series have shape (ntime)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>np.ndarray</dt><dd><p>An array representation of the data.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>Uncertainties rely on parent data that are persistent and array-like.
+For Data classes, therefore, <a class="reference internal" href="#lkdata.mixins.MathMixin.array" title="lkdata.mixins.MathMixin.array"><code class="xref py py-obj docutils literal notranslate"><span class="pre">array</span></code></a> must be stored in memory.
+This overwrites the on-call form defined in the ConvenienceMixin class.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="lkdata.mixins.MathMixin.data">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">data</span></span><a class="headerlink" href="#lkdata.mixins.MathMixin.data" title="Link to this definition">#</a></dt>
+<dd><p>Alias for self.array</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="lkdata.mixins.MathMixin.uncertainty">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">uncertainty</span></span><a class="headerlink" href="#lkdata.mixins.MathMixin.uncertainty" title="Link to this definition">#</a></dt>
+<dd><p>An NDData.Uncertainty object</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="lkdata.mixins.MathMixin.units">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">units</span></span><a class="headerlink" href="#lkdata.mixins.MathMixin.units" title="Link to this definition">#</a></dt>
+<dd><p>Units associated with the data and uncertanties.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="lkdata.mixins.StatsMixin">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">lkdata.mixins.</span></span><span class="sig-name descname"><span class="pre">StatsMixin</span></span><a class="reference internal" href="../_modules/lkdata/mixins.html#StatsMixin"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.mixins.StatsMixin" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#lkdata.mixins.MathMixin" title="lkdata.mixins.MathMixin"><code class="xref py py-class docutils literal notranslate"><span class="pre">MathMixin</span></code></a></p>
+<p>Generic mixin class for statistical methods in lightkurve data objects.</p>
+<p>This mixin provides common statistical methods such as mean, sum, std, var,
+min, max, and prod for lightkurve data objects. It also includes cumulative
+methods like cumsum, cummin, cummax, and cumprod.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Attributes<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>ds_agg_func</strong><span class="classifier">func</span></dt><dd><p>The aggregation function to use for downsampling, default is “sum”.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Methods</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<tbody>
+<tr class="row-odd"><td><p><strong>median(**kwargs)</strong></p></td>
+<td><p>Calculates the median of the data along a given axis.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<dl class="py method">
+<dt class="sig sig-object py" id="lkdata.mixins.StatsMixin.median">
+<span class="sig-name descname"><span class="pre">median</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lkdata/mixins.html#StatsMixin.median"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.mixins.StatsMixin.median" title="Link to this definition">#</a></dt>
+<dd><p>Get the median of the data along the given axis.</p>
+<p>This method calculates the median of the data and also estimates the
+uncertainty of the median based on the uncertainty of the mean.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>axis</strong><span class="classifier">{0, 1, None}, default None</span></dt><dd><p>Axis along which to calculate the median. If None, then calculate
+along each axis. If 0, then calculates the median for each pixel
+over all time steps and returns a DataFrame. If 1, then calculates
+the median of all pixels for each time step and returns a Series.</p>
+</dd>
+<dt><strong>**kwargs</strong><span class="classifier">dict, optional</span></dt><dd><p>Additional keyword arguments to be passed to numpy’s median function.
+See np.ndarray.median for more details.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>result</strong><span class="classifier">pd.DataFrame, lkData.Series, or float</span></dt><dd><p>The median of the data along the specified axis.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>ValueError</dt><dd><p>If axis=2 is specified for Cubes, as it is not supported.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<dl class="simple">
+<dt><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.median.html#numpy.median" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">numpy.median</span></code></a></dt><dd><p>NumPy’s median function used internally.</p>
+</dd>
+</dl>
+</div>
+<p class="rubric">Notes</p>
+<p>The uncertainty of the median is calculated based on the uncertainty of
+the mean, adjusted by a factor related to the number of data points.</p>
+<p>The efficiency of the variance of the median to the variance of the mean
+is calculated as (π * N) / (2 * (N - 1)), where N is the number of data
+points along the specified axis (this is the inverse of the form usually
+presented for the efficiency of the mean to the median).
+See <a class="reference external" href="https://mathworld.wolfram.com/StatisticalMedian.html">https://mathworld.wolfram.com/StatisticalMedian.html</a>.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="datacube.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Cubes</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="utils.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Utilities</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.mixins.AggMixin"><code class="docutils literal notranslate"><span class="pre">AggMixin</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.mixins.AggMixin.bin"><code class="docutils literal notranslate"><span class="pre">AggMixin.bin()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.mixins.AggMixin.downsample"><code class="docutils literal notranslate"><span class="pre">AggMixin.downsample()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.mixins.AggMixin.get_bins"><code class="docutils literal notranslate"><span class="pre">AggMixin.get_bins()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.mixins.AggMixin.spatial_aggregate"><code class="docutils literal notranslate"><span class="pre">AggMixin.spatial_aggregate()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.mixins.AggMixin.spatial_downsample"><code class="docutils literal notranslate"><span class="pre">AggMixin.spatial_downsample()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.mixins.AggMixin.super_sample"><code class="docutils literal notranslate"><span class="pre">AggMixin.super_sample()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.mixins.BitwiseMixin"><code class="docutils literal notranslate"><span class="pre">BitwiseMixin</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.mixins.BitwiseMixin.bin_to_int"><code class="docutils literal notranslate"><span class="pre">BitwiseMixin.bin_to_int</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.mixins.BitwiseMixin.breakdown"><code class="docutils literal notranslate"><span class="pre">BitwiseMixin.breakdown()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.mixins.BitwiseMixin.codes"><code class="docutils literal notranslate"><span class="pre">BitwiseMixin.codes</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.mixins.BitwiseMixin.convert_set_to_int"><code class="docutils literal notranslate"><span class="pre">BitwiseMixin.convert_set_to_int</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.mixins.BitwiseMixin.parse_code"><code class="docutils literal notranslate"><span class="pre">BitwiseMixin.parse_code()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.mixins.BitwiseMixin.stylize_frame"><code class="docutils literal notranslate"><span class="pre">BitwiseMixin.stylize_frame()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.mixins.BitwiseMixin.values_display"><code class="docutils literal notranslate"><span class="pre">BitwiseMixin.values_display</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.mixins.BoolMixin"><code class="docutils literal notranslate"><span class="pre">BoolMixin</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.mixins.BoolMixin.ds_agg_func"><code class="docutils literal notranslate"><span class="pre">BoolMixin.ds_agg_func()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.mixins.ConvenienceMixins"><code class="docutils literal notranslate"><span class="pre">ConvenienceMixins</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.mixins.ConvenienceMixins.fillna"><code class="docutils literal notranslate"><span class="pre">ConvenienceMixins.fillna()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.mixins.ConvenienceMixins.fold"><code class="docutils literal notranslate"><span class="pre">ConvenienceMixins.fold()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.mixins.ConvenienceMixins.ntime"><code class="docutils literal notranslate"><span class="pre">ConvenienceMixins.ntime</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.mixins.ConvenienceMixins.user_kwargs"><code class="docutils literal notranslate"><span class="pre">ConvenienceMixins.user_kwargs</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.mixins.IndexProcessorMixin"><code class="docutils literal notranslate"><span class="pre">IndexProcessorMixin</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.mixins.IndexProcessorMixin.agg_index"><code class="docutils literal notranslate"><span class="pre">IndexProcessorMixin.agg_index()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.mixins.IndexProcessorMixin.droplevel"><code class="docutils literal notranslate"><span class="pre">IndexProcessorMixin.droplevel()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.mixins.IndexProcessorMixin.parse_columns"><code class="docutils literal notranslate"><span class="pre">IndexProcessorMixin.parse_columns()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.mixins.IndexProcessorMixin.parse_index"><code class="docutils literal notranslate"><span class="pre">IndexProcessorMixin.parse_index()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.mixins.IndexProcessorMixin.parse_pos_indices"><code class="docutils literal notranslate"><span class="pre">IndexProcessorMixin.parse_pos_indices()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.mixins.IndexProcessorMixin.sort_index"><code class="docutils literal notranslate"><span class="pre">IndexProcessorMixin.sort_index()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.mixins.MathMixin"><code class="docutils literal notranslate"><span class="pre">MathMixin</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.mixins.MathMixin.array"><code class="docutils literal notranslate"><span class="pre">MathMixin.array</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.mixins.MathMixin.data"><code class="docutils literal notranslate"><span class="pre">MathMixin.data</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.mixins.MathMixin.uncertainty"><code class="docutils literal notranslate"><span class="pre">MathMixin.uncertainty</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.mixins.MathMixin.units"><code class="docutils literal notranslate"><span class="pre">MathMixin.units</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.mixins.StatsMixin"><code class="docutils literal notranslate"><span class="pre">StatsMixin</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.mixins.StatsMixin.median"><code class="docutils literal notranslate"><span class="pre">StatsMixin.median()</span></code></a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/reference/mixins.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=cb8930eaaf36d9849b67"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=cb8930eaaf36d9849b67"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, TESS Science Support Center.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.21.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

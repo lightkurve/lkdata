@@ -1,0 +1,1163 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>lkdata.utils.uncertainty &#8212; lkdata  documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=cb8930eaaf36d9849b67" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=cb8930eaaf36d9849b67" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/graphviz.css?v=4ae1632d" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../../_static/scripts/fontawesome.js?digest=cb8930eaaf36d9849b67"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=cb8930eaaf36d9849b67" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=cb8930eaaf36d9849b67" />
+
+    <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/lkdata/utils/uncertainty';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+    <meta name="docbuild:last-update" content="28 Aug 2026"/>
+  
+    
+    <script src="../../../_static/searchtools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script src="../../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">lkdata  documentation</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../whatsnew/index.html">
+    What's new?
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../development/index.html">
+    Development
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/lightkurve/lkdata" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../whatsnew/index.html">
+    What's new?
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../development/index.html">
+    Development
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/lightkurve/lkdata" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">lkdata.utils.uncertainty</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for lkdata.utils.uncertainty</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""Uncertainty class and methods for use with numerical lkdata objects</span>
+<span class="sd">This code is modified from astropy.nddata.nduncertainty v7.0.0 release</span>
+<span class="sd">distributed under the following MIT license:</span>
+
+<span class="sd">Licensed under a 3-clause BSD style license - see LICENSE.rst</span>
+<span class="sd">Copyright (c) 2011-2024, Astropy Developers</span>
+<span class="sd">All rights reserved.</span>
+<span class="sd">"""</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">weakref</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">ABCMeta</span><span class="p">,</span> <span class="n">abstractmethod</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">copy</span><span class="w"> </span><span class="kn">import</span> <span class="n">deepcopy</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">"MissingDataAssociationException"</span><span class="p">,</span>
+    <span class="s2">"IncompatibleUncertaintiesException"</span><span class="p">,</span>
+    <span class="s2">"NDUncertainty"</span><span class="p">,</span>
+    <span class="s2">"Uncertainty"</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="c1"># mapping from collapsing operations to the complementary methods used for `to_variance`</span>
+<span class="n">collapse_to_variance_mapping</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">,</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">,</span>
+<span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_move_preserved_axes_first</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">preserve_axes</span><span class="p">):</span>
+    <span class="c1"># When collapsing an ND array and preserving M axes, move the</span>
+    <span class="c1"># preserved axes to the first M axes of the output. For example,</span>
+    <span class="c1"># if arr.shape == (6, 5, 4, 3, 2) and we're preserving axes (1, 2),</span>
+    <span class="c1"># then the output should have shape (20, 6, 3, 2). Axes 1 and 2 have</span>
+    <span class="c1"># shape 5 and 4, so we take their product and put them both in the zeroth</span>
+    <span class="c1"># axis.</span>
+    <span class="n">zeroth_axis_after_reshape</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">arr</span><span class="o">.</span><span class="n">shape</span><span class="p">)[</span><span class="nb">list</span><span class="p">(</span><span class="n">preserve_axes</span><span class="p">)])</span>
+    <span class="n">collapse_axes</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">arr</span><span class="o">.</span><span class="n">ndim</span><span class="p">)</span> <span class="k">if</span> <span class="n">i</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">preserve_axes</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">arr</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+        <span class="p">[</span><span class="n">zeroth_axis_after_reshape</span><span class="p">]</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">arr</span><span class="o">.</span><span class="n">shape</span><span class="p">)[</span><span class="n">collapse_axes</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_unravel_preserved_axes</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">collapsed_arr</span><span class="p">,</span> <span class="n">preserve_axes</span><span class="p">):</span>
+    <span class="c1"># After reshaping an array with _move_preserved_axes_first and collapsing</span>
+    <span class="c1"># the result, convert the reshaped first axis back into the shape of each</span>
+    <span class="c1"># of the original preserved axes.</span>
+    <span class="c1"># For example, if arr.shape == (6, 5, 4, 3, 2) and we're preserving axes (1, 2),</span>
+    <span class="c1"># then the output of _move_preserved_axes_first should have shape (20, 6, 3, 2).</span>
+    <span class="c1"># This method unravels the first axis in the output *after* a collapse, so the</span>
+    <span class="c1"># output with shape (20,) becomes shape (5, 4).</span>
+    <span class="k">if</span> <span class="n">collapsed_arr</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">preserve_axes</span><span class="p">):</span>
+        <span class="n">arr_shape</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">arr</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">collapsed_arr</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">arr_shape</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">preserve_axes</span><span class="p">)])</span>
+    <span class="k">return</span> <span class="n">collapsed_arr</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">from_variance_for_mean</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">axis</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">axis</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># do operation on all dimensions:</span>
+        <span class="n">denom</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ma</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">denom</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ma</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ma</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">axis</span><span class="p">))</span> <span class="o">/</span> <span class="n">denom</span>
+
+
+<span class="c1"># mapping from collapsing operations to the complementary methods used for `from_variance`</span>
+<span class="n">collapse_from_variance_mapping</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">axis</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ma</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">axis</span><span class="p">)),</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">:</span> <span class="n">from_variance_for_mean</span><span class="p">,</span>
+<span class="p">}</span>
+
+
+<div class="viewcode-block" id="IncompatibleUncertaintiesException">
+<a class="viewcode-back" href="../../../reference/utils.html#lkdata.utils.uncertainty.IncompatibleUncertaintiesException">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">IncompatibleUncertaintiesException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>  <span class="c1"># pragma: no cover</span>
+<span class="w">    </span><span class="sd">"""This exception should be used to indicate cases in which uncertainties</span>
+<span class="sd">    with two different classes can not be propagated.</span>
+<span class="sd">    """</span></div>
+
+
+
+<div class="viewcode-block" id="MissingDataAssociationException">
+<a class="viewcode-back" href="../../../reference/utils.html#lkdata.utils.uncertainty.MissingDataAssociationException">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">MissingDataAssociationException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>  <span class="c1"># pragma: no cover</span>
+<span class="w">    </span><span class="sd">"""This exception should be used to indicate that an uncertainty instance</span>
+<span class="sd">    has not been associated with a parent `~astropy.nddata.NDData` object.</span>
+<span class="sd">    """</span></div>
+
+
+
+<div class="viewcode-block" id="NDUncertainty">
+<a class="viewcode-back" href="../../../reference/utils.html#lkdata.utils.uncertainty.NDUncertainty">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">NDUncertainty</span><span class="p">(</span><span class="n">metaclass</span><span class="o">=</span><span class="n">ABCMeta</span><span class="p">):</span>  <span class="c1"># pragma: no cover</span>
+<span class="w">    </span><span class="sd">"""This is the metaclass for uncertainty classes used with `NDData`.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    array : any type, optional</span>
+<span class="sd">        The array or value (the parameter name is due to historical reasons) of</span>
+<span class="sd">        the uncertainty. `numpy.ndarray` or `NDUncertainty` subclasses are recommended.</span>
+<span class="sd">        If the `array` is `list`-like or `numpy.ndarray`-like it will be cast</span>
+<span class="sd">        to a plain `numpy.ndarray`.</span>
+<span class="sd">        Default is ``None``.</span>
+
+<span class="sd">    copy : `bool`, optional</span>
+<span class="sd">        Indicates whether to save the `array` as a copy. ``True`` copies it</span>
+<span class="sd">        before saving, while ``False`` tries to save every parameter as</span>
+<span class="sd">        reference. Note however that it is not always possible to save the</span>
+<span class="sd">        input as reference.</span>
+<span class="sd">        Default is ``True``.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    IncompatibleUncertaintiesException</span>
+<span class="sd">        If given another `NDUncertainty`-like class as ``array`` if their</span>
+<span class="sd">        ``uncertainty_type`` is different.</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">array</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">array</span><span class="p">,</span> <span class="n">NDUncertainty</span><span class="p">):</span>
+            <span class="c1"># Given an NDUncertainty class or subclass check that the type</span>
+            <span class="c1"># is the same.</span>
+            <span class="k">if</span> <span class="n">array</span><span class="o">.</span><span class="n">uncertainty_type</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">uncertainty_type</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">IncompatibleUncertaintiesException</span>
+            <span class="n">array</span> <span class="o">=</span> <span class="n">array</span><span class="o">.</span><span class="n">array</span>
+
+        <span class="k">if</span> <span class="n">copy</span><span class="p">:</span>
+            <span class="n">array</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">array</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">array</span> <span class="o">=</span> <span class="n">array</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent_nddata</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># no associated NDData - until it is set!</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__bool__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">array</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">array</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">uncertainty_type</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""`str` : Short description of the type of uncertainty.</span>
+
+<span class="sd">        Defined as abstract property so subclasses *have* to override this.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">supports_correlated</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""`bool` : Supports uncertainty propagation with correlated uncertainties?"""</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">array</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""`numpy.ndarray` : the uncertainty's value."""</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_array</span>
+
+    <span class="nd">@array</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">array</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)):</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_array</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">parent_nddata</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""`NDData` : reference to `NDData` instance with this uncertainty.</span>
+
+<span class="sd">        In case the reference is not set uncertainty propagation will not be</span>
+<span class="sd">        possible since propagation might need the uncertain data besides the</span>
+<span class="sd">        uncertainty.</span>
+<span class="sd">        """</span>
+        <span class="n">no_parent_message</span> <span class="o">=</span> <span class="s2">"uncertainty is not associated with an NDData object"</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">parent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parent_nddata</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">MissingDataAssociationException</span><span class="p">(</span><span class="n">no_parent_message</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">parent</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">MissingDataAssociationException</span><span class="p">(</span><span class="n">no_parent_message</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># The NDData is saved as weak reference so we must call it</span>
+                <span class="c1"># to get the object the reference points to. However because</span>
+                <span class="c1"># we have a weak reference here it's possible that the parent</span>
+                <span class="c1"># was deleted because its reference count dropped to zero.</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_parent_nddata</span><span class="p">,</span> <span class="n">weakref</span><span class="o">.</span><span class="n">ref</span><span class="p">):</span>
+                    <span class="n">resolved_parent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parent_nddata</span><span class="p">()</span>
+                    <span class="c1"># if resolved_parent is None:</span>
+                    <span class="c1"># log.info(parent_lost_message)</span>
+                    <span class="k">return</span> <span class="n">resolved_parent</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># log.info("parent_nddata should be a weakref to an NDData object.")</span>
+                    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parent_nddata</span>
+
+    <span class="nd">@parent_nddata</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">parent_nddata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">weakref</span><span class="o">.</span><span class="n">ref</span><span class="p">):</span>
+            <span class="c1"># Save a weak reference on the uncertainty that points to this</span>
+            <span class="c1"># instance of NDData. Direct references should NOT be used:</span>
+            <span class="c1"># https://github.com/astropy/astropy/pull/4799#discussion_r61236832</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">weakref</span><span class="o">.</span><span class="n">ref</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="c1"># Set _parent_nddata here and access below with the property because value</span>
+        <span class="c1"># is a weakref</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_parent_nddata</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s2">"("</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">body</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array2string</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">array</span><span class="p">,</span> <span class="n">separator</span><span class="o">=</span><span class="s2">", "</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="n">prefix</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+            <span class="c1"># In case it wasn't possible to use array2string</span>
+            <span class="n">body</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">array</span><span class="p">)</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">prefix</span><span class="si">}{</span><span class="n">body</span><span class="si">}</span><span class="s2">)"</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__getstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># Because of the weak reference the class wouldn't be picklable.</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_array</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_nddata</span>
+        <span class="k">except</span> <span class="n">MissingDataAssociationException</span><span class="p">:</span>
+            <span class="c1"># In case there's no parent</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_array</span><span class="p">,</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__setstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">state</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">"The state should contain 2 items."</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_array</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">parent</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">parent</span> <span class="o">=</span> <span class="n">weakref</span><span class="o">.</span><span class="n">ref</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_parent_nddata</span> <span class="o">=</span> <span class="n">parent</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Normal slicing on the array, return a reference."""</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">array</span><span class="p">[</span><span class="n">item</span><span class="p">],</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+<div class="viewcode-block" id="NDUncertainty.propagate">
+<a class="viewcode-back" href="../../../reference/utils.html#lkdata.utils.uncertainty.NDUncertainty.propagate">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">propagate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">operation</span><span class="p">,</span> <span class="n">other_nddata</span><span class="p">,</span> <span class="n">result_data</span><span class="p">,</span> <span class="n">correlation</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Calculate the resulting uncertainty given an operation on the data.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        operation : callable</span>
+<span class="sd">            The operation that is performed on the `NDData`. Supported are</span>
+<span class="sd">            `numpy.add`, `numpy.subtract`, `numpy.multiply` and</span>
+<span class="sd">            `numpy.true_divide` (or `numpy.divide`).</span>
+
+<span class="sd">        other_nddata : `NDData` instance</span>
+<span class="sd">            The second operand in the arithmetic operation.</span>
+
+<span class="sd">        result_data : ndarray</span>
+<span class="sd">            The result of the arithmetic operations on the data.</span>
+
+<span class="sd">        correlation : `numpy.ndarray` or number</span>
+<span class="sd">            The correlation (rho) is defined between the uncertainties in</span>
+<span class="sd">            sigma_AB = sigma_A * sigma_B * rho. A value of ``0`` means</span>
+<span class="sd">            uncorrelated operands.</span>
+
+<span class="sd">        axis : int or tuple of ints, optional</span>
+<span class="sd">            Axis over which to perform a collapsing operation.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        resulting_uncertainty : `NDUncertainty` instance</span>
+<span class="sd">            Another instance of the same `NDUncertainty` subclass containing</span>
+<span class="sd">            the uncertainty of the result.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If the ``operation`` is not supported or if correlation is not zero</span>
+<span class="sd">            but the subclass does not support correlated uncertainties.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        First this method checks if a correlation is given and the subclass</span>
+<span class="sd">        implements propagation with correlated uncertainties.</span>
+<span class="sd">        Then the second uncertainty is converted (or an Exception is raised)</span>
+<span class="sd">        to the same class in order to do the propagation.</span>
+<span class="sd">        Then the appropriate propagation method is invoked and the result is</span>
+<span class="sd">        returned.</span>
+<span class="sd">        """</span>
+        <span class="c1"># Check if the subclass supports correlation</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">supports_correlated</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">correlation</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">or</span> <span class="n">correlation</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2"> does not support uncertainty propagation"</span>
+                    <span class="s2">" with correlation."</span>
+                <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">other_nddata</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Get the other uncertainty</span>
+            <span class="n">other_uncert</span> <span class="o">=</span> <span class="n">other_nddata</span><span class="o">.</span><span class="n">uncertainty</span>
+
+            <span class="k">if</span> <span class="n">operation</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"add"</span><span class="p">:</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_propagate_add</span><span class="p">(</span><span class="n">other_uncert</span><span class="p">,</span> <span class="n">result_data</span><span class="p">,</span> <span class="n">correlation</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">operation</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"subtract"</span><span class="p">:</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_propagate_subtract</span><span class="p">(</span>
+                    <span class="n">other_uncert</span><span class="p">,</span> <span class="n">result_data</span><span class="p">,</span> <span class="n">correlation</span>
+                <span class="p">)</span>
+            <span class="k">elif</span> <span class="n">operation</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"multiply"</span><span class="p">:</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_propagate_multiply</span><span class="p">(</span>
+                    <span class="n">other_uncert</span><span class="p">,</span> <span class="n">result_data</span><span class="p">,</span> <span class="n">correlation</span>
+                <span class="p">)</span>
+            <span class="k">elif</span> <span class="n">operation</span><span class="o">.</span><span class="vm">__name__</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">"true_divide"</span><span class="p">,</span> <span class="s2">"divide"</span><span class="p">]:</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_propagate_divide</span><span class="p">(</span><span class="n">other_uncert</span><span class="p">,</span> <span class="n">result_data</span><span class="p">,</span> <span class="n">correlation</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"unsupported operation: </span><span class="si">{</span><span class="n">operation</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># assume this is a collapsing operation:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_propagate_collapse</span><span class="p">(</span><span class="n">operation</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></div>
+
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_propagate_add</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other_uncert</span><span class="p">,</span> <span class="n">result_data</span><span class="p">,</span> <span class="n">correlation</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_propagate_subtract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other_uncert</span><span class="p">,</span> <span class="n">result_data</span><span class="p">,</span> <span class="n">correlation</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_propagate_multiply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other_uncert</span><span class="p">,</span> <span class="n">result_data</span><span class="p">,</span> <span class="n">correlation</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_propagate_divide</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other_uncert</span><span class="p">,</span> <span class="n">result_data</span><span class="p">,</span> <span class="n">correlation</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_propagate_collapse</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">operation</span><span class="p">,</span> <span class="n">axis</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="NDUncertainty.reshape">
+<a class="viewcode-back" href="../../../reference/utils.html#lkdata.utils.uncertainty.NDUncertainty.reshape">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">reshape</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""See NDUncertainty.array.reshape()"""</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">array</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span></div>
+
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">shape</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""NDUncertainty.array.shape"""</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">array</span><span class="o">.</span><span class="n">shape</span></div>
+
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">_VariancePropagationMixin</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Propagation of uncertainties for variances, also used to perform error</span>
+<span class="sd">    propagation for variance-like uncertainties (standard deviation and inverse</span>
+<span class="sd">    variance).</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_propagate_collapse</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">numpy_operation</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Error propagation for collapse operations on variance or</span>
+<span class="sd">        variance-like uncertainties. Uncertainties are calculated using the</span>
+<span class="sd">        formulae for variance but can be used for uncertainty convertible to</span>
+<span class="sd">        a variance.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        numpy_op : function</span>
+<span class="sd">            Numpy operation like `np.sum` or `np.max` to use in the collapse</span>
+
+<span class="sd">        subtract : bool, optional</span>
+<span class="sd">            If ``True``, propagate for subtraction, otherwise propagate for</span>
+<span class="sd">            addition.</span>
+
+<span class="sd">        axis : tuple, optional</span>
+<span class="sd">            Axis on which to compute collapsing operations.</span>
+<span class="sd">        """</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">array</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Formula: sigma**2 = dA</span>
+
+            <span class="k">if</span> <span class="n">numpy_operation</span> <span class="ow">in</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">]:</span>
+                <span class="c1"># Find the indices of the min/max in parent data along each axis,</span>
+                <span class="c1"># return the uncertainty at the corresponding entry:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_err_at_extremum</span><span class="p">(</span><span class="n">numpy_operation</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span>
+
+            <span class="c1"># np.sum and np.mean operations use similar pattern</span>
+            <span class="c1"># to `_propagate_add_sub`, for example:</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># lookup the mapping for to_variance and from_variance for this</span>
+                <span class="c1"># numpy operation:</span>
+                <span class="n">to_variance</span> <span class="o">=</span> <span class="n">collapse_to_variance_mapping</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+                    <span class="n">numpy_operation</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span>
+                <span class="p">)</span>
+                <span class="n">from_variance</span> <span class="o">=</span> <span class="n">collapse_from_variance_mapping</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+                    <span class="n">numpy_operation</span><span class="p">,</span> <span class="n">numpy_operation</span>
+                <span class="p">)</span>
+
+                <span class="n">this</span> <span class="o">=</span> <span class="n">to_variance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">array</span><span class="p">)</span>
+
+                <span class="k">return</span> <span class="n">from_variance</span><span class="p">(</span><span class="n">this</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_err_at_extremum</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">extremum</span><span class="p">,</span> <span class="n">axis</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Return the value of the ``uncertainty`` array at the indices</span>
+<span class="sd">        which satisfy the ``extremum`` function applied to the ``measurement`` array,</span>
+<span class="sd">        where we expect ``extremum`` to be np.argmax or np.argmin, and</span>
+<span class="sd">        we expect a two-dimensional output.</span>
+
+<span class="sd">        Assumes the ``measurement`` and ``uncertainty`` array dimensions</span>
+<span class="sd">        are ordered such that the zeroth dimension is the one to preserve.</span>
+<span class="sd">        For example, if you start with array with shape (a, b, c), this</span>
+<span class="sd">        function applies the ``extremum`` function to the last two dimensions,</span>
+<span class="sd">        with shapes b and c.</span>
+
+<span class="sd">        This operation is difficult to cast in a vectorized way. Here</span>
+<span class="sd">        we implement it with a list comprehension, which is likely not the</span>
+<span class="sd">        most performant solution.</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="n">axis</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="s2">"__len__"</span><span class="p">):</span>
+            <span class="c1"># this is a single axis:</span>
+            <span class="n">axis</span> <span class="o">=</span> <span class="p">[</span><span class="n">axis</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">extremum</span> <span class="ow">is</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">:</span>
+            <span class="n">arg_extremum</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ma</span><span class="o">.</span><span class="n">argmin</span>
+        <span class="k">elif</span> <span class="n">extremum</span> <span class="ow">is</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">:</span>
+            <span class="n">arg_extremum</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ma</span><span class="o">.</span><span class="n">argmax</span>
+
+        <span class="n">all_axes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">array</span><span class="o">.</span><span class="n">ndim</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">axis</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># collapse over all dimensions</span>
+            <span class="n">ind</span> <span class="o">=</span> <span class="n">arg_extremum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asanyarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent_nddata</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">array</span><span class="o">.</span><span class="n">ravel</span><span class="p">()[</span><span class="n">ind</span><span class="p">]</span>
+
+        <span class="c1"># collapse an ND array over arbitrary dimensions:</span>
+        <span class="n">preserve_axes</span> <span class="o">=</span> <span class="p">[</span><span class="n">ax</span> <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">all_axes</span> <span class="k">if</span> <span class="n">ax</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">axis</span><span class="p">]</span>
+        <span class="n">meas</span> <span class="o">=</span> <span class="n">_move_preserved_axes_first</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent_nddata</span><span class="p">,</span> <span class="n">preserve_axes</span><span class="p">)</span>
+        <span class="n">err</span> <span class="o">=</span> <span class="n">_move_preserved_axes_first</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">array</span><span class="p">,</span> <span class="n">preserve_axes</span><span class="p">)</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">e</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">unravel_index</span><span class="p">(</span><span class="n">arg_extremum</span><span class="p">(</span><span class="n">m</span><span class="p">),</span> <span class="n">m</span><span class="o">.</span><span class="n">shape</span><span class="p">)]</span> <span class="k">for</span> <span class="n">m</span><span class="p">,</span> <span class="n">e</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">meas</span><span class="p">,</span> <span class="n">err</span><span class="p">)]</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">_unravel_preserved_axes</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent_nddata</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+            <span class="n">result</span><span class="p">,</span>
+            <span class="n">preserve_axes</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_propagate_add_sub</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">other_uncert</span><span class="p">,</span>
+        <span class="n">_</span><span class="p">,</span>  <span class="c1"># arg unused for uncertainty propagation in addition/subtraction</span>
+        <span class="n">correlation</span><span class="p">,</span>
+        <span class="n">subtract</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">to_variance</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">,</span>
+        <span class="n">from_variance</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Error propagation for addition or subtraction of variance or</span>
+<span class="sd">        variance-like uncertainties. Uncertainties are calculated using the</span>
+<span class="sd">        formulae for variance but can be used for uncertainty convertible to</span>
+<span class="sd">        a variance.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        other_uncert : `~astropy.nddata.NDUncertainty` instance</span>
+<span class="sd">            The uncertainty, if any, of the other operand.</span>
+
+<span class="sd">        result_data : `~astropy.nddata.NDData` instance</span>
+<span class="sd">            The results of the operation on the data.</span>
+
+<span class="sd">        correlation : float or array-like</span>
+<span class="sd">            Correlation of the uncertainties.</span>
+
+<span class="sd">        subtract : bool, optional</span>
+<span class="sd">            If ``True``, propagate for subtraction, otherwise propagate for</span>
+<span class="sd">            addition.</span>
+
+<span class="sd">        to_variance : function, optional</span>
+<span class="sd">            Function that will transform the input uncertainties to variance.</span>
+<span class="sd">            The default assumes the uncertainty is the variance.</span>
+
+<span class="sd">        from_variance : function, optional</span>
+<span class="sd">            Function that will convert from variance to the input uncertainty.</span>
+<span class="sd">            The default assumes the uncertainty is the variance.</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="n">subtract</span><span class="p">:</span>
+            <span class="n">correlation_sign</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">correlation_sign</span> <span class="o">=</span> <span class="mi">1</span>
+
+        <span class="k">if</span> <span class="n">other_uncert</span><span class="o">.</span><span class="n">array</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">other</span> <span class="o">=</span> <span class="n">to_variance</span><span class="p">(</span><span class="n">other_uncert</span><span class="o">.</span><span class="n">array</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">other</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">array</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Formula: sigma**2 = dA</span>
+            <span class="n">this</span> <span class="o">=</span> <span class="n">to_variance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">array</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">this</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c1"># Formula: sigma**2 = dA + dB +/- 2*cor*sqrt(dA*dB)</span>
+        <span class="c1"># Formula: sigma**2 = sigma_other + sigma_self +/- 2*cor*sqrt(dA*dB)</span>
+        <span class="c1">#     (sign depends on whether addition or subtraction)</span>
+
+        <span class="c1"># Determine the result depending on the correlation</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">correlation</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">or</span> <span class="n">correlation</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">corr</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">correlation</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">this</span> <span class="o">*</span> <span class="n">other</span><span class="p">)</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">this</span> <span class="o">+</span> <span class="n">other</span> <span class="o">+</span> <span class="n">correlation_sign</span> <span class="o">*</span> <span class="n">corr</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">this</span> <span class="o">+</span> <span class="n">other</span>
+
+        <span class="k">return</span> <span class="n">from_variance</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_propagate_multiply_divide</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">other_uncert</span><span class="p">,</span>
+        <span class="n">_</span><span class="p">,</span>  <span class="c1"># arg unused</span>
+        <span class="n">correlation</span><span class="p">,</span>
+        <span class="n">divide</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">to_variance</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">,</span>
+        <span class="n">from_variance</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Error propagation for multiplication or division of variance or</span>
+<span class="sd">        variance-like uncertainties. Uncertainties are calculated using the</span>
+<span class="sd">        formulae for variance but can be used for uncertainty convertible to</span>
+<span class="sd">        a variance.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        other_uncert : `~astropy.nddata.NDUncertainty` instance</span>
+<span class="sd">            The uncertainty, if any, of the other operand.</span>
+
+<span class="sd">        result_data : `~astropy.nddata.NDData` instance</span>
+<span class="sd">            The results of the operation on the data.</span>
+
+<span class="sd">        correlation : float or array-like</span>
+<span class="sd">            Correlation of the uncertainties.</span>
+
+<span class="sd">        divide : bool, optional</span>
+<span class="sd">            If ``True``, propagate for division, otherwise propagate for</span>
+<span class="sd">            multiplication.</span>
+
+<span class="sd">        to_variance : function, optional</span>
+<span class="sd">            Function that will transform the input uncertainties to variance.</span>
+<span class="sd">            The default assumes the uncertainty is the variance.</span>
+
+<span class="sd">        from_variance : function, optional</span>
+<span class="sd">            Function that will convert from variance to the input uncertainty.</span>
+<span class="sd">            The default assumes the uncertainty is the variance.</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="n">divide</span><span class="p">:</span>
+            <span class="n">correlation_sign</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">correlation_sign</span> <span class="o">=</span> <span class="mi">1</span>
+
+        <span class="k">if</span> <span class="n">other_uncert</span><span class="o">.</span><span class="n">array</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">d_b</span> <span class="o">=</span> <span class="n">to_variance</span><span class="p">(</span><span class="n">other_uncert</span><span class="o">.</span><span class="n">array</span><span class="p">)</span>
+            <span class="c1"># Formula: sigma**2 = |A|**2 * d_b</span>
+            <span class="n">right</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent_nddata</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">d_b</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">right</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">array</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Just the reversed case</span>
+            <span class="n">d_a</span> <span class="o">=</span> <span class="n">to_variance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">array</span><span class="p">)</span>
+            <span class="c1"># Formula: sigma**2 = |B|**2 * d_a</span>
+            <span class="n">left</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">other_uncert</span><span class="o">.</span><span class="n">parent_nddata</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">d_a</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">left</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c1"># Multiplication</span>
+        <span class="c1">#</span>
+        <span class="c1"># The fundamental formula is:</span>
+        <span class="c1">#   sigma**2 = |AB|**2*(d_a/A**2+d_b/B**2+2*sqrt(d_a)/A*sqrt(d_b)/B*cor)</span>
+        <span class="c1">#</span>
+        <span class="c1"># This formula is not very handy since it generates NaNs for every</span>
+        <span class="c1"># zero in A and B. So we rewrite it:</span>
+        <span class="c1">#</span>
+        <span class="c1"># Multiplication Formula:</span>
+        <span class="c1">#   sigma**2 = (d_a*B**2 + d_b*A**2 + (2 * cor * ABsqrt(dAdB)))</span>
+        <span class="c1">#   sigma**2 = (left + right + (2 * cor * ABsqrt(dAdB)))</span>
+        <span class="c1">#</span>
+        <span class="c1"># Division</span>
+        <span class="c1">#</span>
+        <span class="c1"># The fundamental formula for division is:</span>
+        <span class="c1">#   sigma**2 = |A/B|**2*(d_a/A**2+d_b/B**2-2*sqrt(d_a)/A*sqrt(d_b)/B*cor)</span>
+        <span class="c1">#</span>
+        <span class="c1"># As with multiplication, it is convenient to rewrite this to avoid</span>
+        <span class="c1"># nans where A is zero.</span>
+        <span class="c1">#</span>
+        <span class="c1"># Division formula (rewritten):</span>
+        <span class="c1">#   sigma**2 = d_a/B**2 + (A/B)**2 * d_b/B**2</span>
+        <span class="c1">#                   - 2 * cor * A *sqrt(dAdB) / B**3</span>
+        <span class="c1">#   sigma**2 = d_a/B**2 + (A/B)**2 * d_b/B**2</span>
+        <span class="c1">#                   - 2*cor * sqrt(d_a)/B**2  * sqrt(d_b) * A / B</span>
+        <span class="c1">#   sigma**2 = multiplication formula/B**4 (and sign change in</span>
+        <span class="c1">#               the correlation)</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">correlation</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">or</span> <span class="n">correlation</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">corr</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="mi">2</span>
+                <span class="o">*</span> <span class="n">correlation</span>
+                <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">d_a</span> <span class="o">*</span> <span class="n">d_b</span><span class="p">)</span>
+                <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_nddata</span>
+                <span class="o">*</span> <span class="n">other_uncert</span><span class="o">.</span><span class="n">parent_nddata</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">corr</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">if</span> <span class="n">divide</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">from_variance</span><span class="p">(</span>
+                <span class="p">(</span><span class="n">left</span> <span class="o">+</span> <span class="n">right</span> <span class="o">+</span> <span class="n">correlation_sign</span> <span class="o">*</span> <span class="n">corr</span><span class="p">)</span> <span class="o">/</span> <span class="n">other_uncert</span><span class="o">.</span><span class="n">parent_nddata</span><span class="o">**</span><span class="mi">4</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">from_variance</span><span class="p">(</span><span class="n">left</span> <span class="o">+</span> <span class="n">right</span> <span class="o">+</span> <span class="n">correlation_sign</span> <span class="o">*</span> <span class="n">corr</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="Uncertainty">
+<a class="viewcode-back" href="../../../reference/utils.html#lkdata.utils.uncertainty.Uncertainty">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Uncertainty</span><span class="p">(</span><span class="n">_VariancePropagationMixin</span><span class="p">,</span> <span class="n">NDUncertainty</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Standard deviation uncertainty assuming first order gaussian error</span>
+<span class="sd">    propagation.</span>
+
+<span class="sd">    This class implements uncertainty propagation for ``addition``,</span>
+<span class="sd">    ``subtraction``, ``multiplication`` and ``division`` with other instances</span>
+<span class="sd">    of `Uncertainty`.</span>
+<span class="sd">    Also support for correlation is possible but requires the</span>
+<span class="sd">    correlation as input. It cannot handle correlation determination itself.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    args, kwargs :</span>
+<span class="sd">        see `NDUncertainty`</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    `Uncertainty` should always be associated with an `NDData`-like</span>
+<span class="sd">    instance, either by creating it during initialization::</span>
+
+<span class="sd">        &gt;&gt;&gt; from astropy.nddata import NDData, Uncertainty</span>
+<span class="sd">        &gt;&gt;&gt; ndd = NDData([1,2,3],</span>
+<span class="sd">        ...              uncertainty=Uncertainty([0.1, 0.1, 0.1]))</span>
+<span class="sd">        &gt;&gt;&gt; ndd.uncertainty  # doctest: +FLOAT_CMP</span>
+<span class="sd">        Uncertainty([0.1, 0.1, 0.1])</span>
+
+<span class="sd">    or by setting it manually on the `NDData` instance::</span>
+
+<span class="sd">        &gt;&gt;&gt; ndd.uncertainty = Uncertainty([0.2], copy=True)</span>
+<span class="sd">        &gt;&gt;&gt; ndd.uncertainty  # doctest: +FLOAT_CMP</span>
+<span class="sd">        Uncertainty([0.2])</span>
+
+<span class="sd">    the uncertainty ``array`` can also be set directly::</span>
+
+<span class="sd">        &gt;&gt;&gt; ndd.uncertainty.array = 2</span>
+<span class="sd">        &gt;&gt;&gt; ndd.uncertainty</span>
+<span class="sd">        Uncertainty(2)</span>
+
+<span class="sd">    Note</span>
+<span class="sd">    ----</span>
+<span class="sd">    This class was originally StdDevUncertainty from</span>
+<span class="sd">    astropy.nddata.nduncertainty and has been renamed Uncertainty for lkdata</span>
+<span class="sd">    """</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">supports_correlated</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""`True` : `Uncertainty` allows to propagate correlated \</span>
+<span class="sd">                    uncertainties.</span>
+
+<span class="sd">        ``correlation`` must be given, this class does not implement computing</span>
+<span class="sd">        it by itself.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="kc">True</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">uncertainty_type</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""``"std"`` : `Uncertainty` implements standard deviation."""</span>
+        <span class="k">return</span> <span class="s2">"std"</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_propagate_add</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other_uncert</span><span class="p">,</span> <span class="n">result_data</span><span class="p">,</span> <span class="n">correlation</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_propagate_add_sub</span><span class="p">(</span>
+            <span class="n">other_uncert</span><span class="p">,</span>
+            <span class="n">result_data</span><span class="p">,</span>
+            <span class="n">correlation</span><span class="p">,</span>
+            <span class="n">subtract</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">to_variance</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">,</span>
+            <span class="n">from_variance</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_propagate_subtract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other_uncert</span><span class="p">,</span> <span class="n">result_data</span><span class="p">,</span> <span class="n">correlation</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_propagate_add_sub</span><span class="p">(</span>
+            <span class="n">other_uncert</span><span class="p">,</span>
+            <span class="n">result_data</span><span class="p">,</span>
+            <span class="n">correlation</span><span class="p">,</span>
+            <span class="n">subtract</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">to_variance</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">,</span>
+            <span class="n">from_variance</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_propagate_multiply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other_uncert</span><span class="p">,</span> <span class="n">result_data</span><span class="p">,</span> <span class="n">correlation</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_propagate_multiply_divide</span><span class="p">(</span>
+            <span class="n">other_uncert</span><span class="p">,</span>
+            <span class="n">result_data</span><span class="p">,</span>
+            <span class="n">correlation</span><span class="p">,</span>
+            <span class="n">divide</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">to_variance</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">,</span>
+            <span class="n">from_variance</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_propagate_divide</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other_uncert</span><span class="p">,</span> <span class="n">result_data</span><span class="p">,</span> <span class="n">correlation</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_propagate_multiply_divide</span><span class="p">(</span>
+            <span class="n">other_uncert</span><span class="p">,</span>
+            <span class="n">result_data</span><span class="p">,</span>
+            <span class="n">correlation</span><span class="p">,</span>
+            <span class="n">divide</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">to_variance</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">,</span>
+            <span class="n">from_variance</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_propagate_collapse</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">numpy_operation</span><span class="p">,</span> <span class="n">axis</span><span class="p">):</span>
+        <span class="c1"># defer to _VariancePropagationMixin</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_propagate_collapse</span><span class="p">(</span><span class="n">numpy_operation</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span></div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=cb8930eaaf36d9849b67"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=cb8930eaaf36d9849b67"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, TESS Science Support Center.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.21.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

@@ -1,0 +1,849 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Utilities &#8212; lkdata  documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=cb8930eaaf36d9849b67" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=cb8930eaaf36d9849b67" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/graphviz.css?v=4ae1632d" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=cb8930eaaf36d9849b67"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=cb8930eaaf36d9849b67" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=cb8930eaaf36d9849b67" />
+
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'reference/utils';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Developing for lkdata" href="../development/index.html" />
+    <link rel="prev" title="Mixins" href="mixins.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+    <meta name="docbuild:last-update" content="28 Aug 2026"/>
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">lkdata  documentation</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../whatsnew/index.html">
+    What's new?
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../development/index.html">
+    Development
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/lightkurve/lkdata" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../whatsnew/index.html">
+    What's new?
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../development/index.html">
+    Development
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/lightkurve/lkdata" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item pst-sidebar-collapse"><button id="pst-collapse-sidebar-button" aria-expanded="true" aria-controls="pst-primary-sidebar">
+  <svg class="pst-icon" role="img" aria-hidden="true" focusable="false" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <path fill="currentColor" d="M3 15.5C2.36232 15.5 1.74874 15.2564 1.28478 14.8189C0.820828 14.3815 0.541576 13.7832 0.504167 13.1467L0.5 13L0.5 3C0.499965 2.36232 0.743605 1.74874 1.18107 1.28478C1.61854 0.820828 2.21676 0.541576 2.85333 0.504167L3 0.5L13 0.5C13.6377 0.499965 14.2513 0.743605 14.7152 1.18107C15.1792 1.61854 15.4584 2.21676 15.4958 2.85333L15.5 3L15.5 13C15.5 13.6377 15.2564 14.2513 14.8189 14.7152C14.3815 15.1792 13.7832 15.4584 13.1467 15.4958L13 15.5L3 15.5ZM3 13.8333L10.5 13.8333L10.5 2.16667L3 2.16667C2.79589 2.16669 2.59889 2.24163 2.44636 2.37726C2.29383 2.5129 2.19638 2.69979 2.1725 2.9025L2.16667 3L2.16667 13C2.16669 13.2041 2.24163 13.4011 2.37726 13.5536C2.5129 13.7062 2.69979 13.8036 2.9025 13.8275L3 13.8333ZM6.65583 10.325L6.5775 10.2558L4.91083 8.58917C4.76735 8.44567 4.68116 8.25476 4.66843 8.05223C4.65569 7.84971 4.71729 7.6495 4.84167 7.48917L4.91083 7.41083L6.5775 5.74417C6.72747 5.59471 6.9287 5.50794 7.14032 5.50148C7.35194 5.49502 7.55809 5.56935 7.7169 5.70937C7.8757 5.8494 7.97525 6.04463 7.99533 6.25539C8.01541 6.46616 7.95451 6.67667 7.825 6.84417L7.75583 6.9225L6.67917 8L7.75583 9.0775C7.89931 9.22099 7.98551 9.41191 7.99824 9.61443C8.01097 9.81695 7.94938 10.0172 7.825 10.1775L7.75583 10.2558C7.61234 10.3993 7.42142 10.4855 7.2189 10.4982C7.01638 10.511 6.81617 10.4494 6.65583 10.325Z"/>
+  </svg>
+  <span class="pst-collapse-sidebar-label">Collapse Sidebar</span>
+  <span class="pst-expand-sidebar-label">Expand Sidebar</span>
+</button></div>
+        <div class="sidebar-primary-item">
+
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="products.html">Products</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="dataseries.html">Series</a></li>
+<li class="toctree-l2"><a class="reference internal" href="seriescollection.html">Series Collections</a></li>
+<li class="toctree-l2"><a class="reference internal" href="datacube.html">Cubes</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="mixins.html">Mixins</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Utils</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">API</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Utilities</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="utilities">
+<h1>Utilities<a class="headerlink" href="#utilities" title="Link to this heading">#</a></h1>
+<p>This sub-package contains helpful utilities for <code class="xref py py-obj docutils literal notranslate"><span class="pre">Lightkurve</span></code>.</p>
+<section id="module-lkdata.utils.bitset">
+<span id="bitset"></span><h2>BitSet<a class="headerlink" href="#module-lkdata.utils.bitset" title="Link to this heading">#</a></h2>
+<p>A set-like class for bitwise data with support for integer representation</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="lkdata.utils.bitset.BitSet">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">lkdata.utils.bitset.</span></span><span class="sig-name descname"><span class="pre">BitSet</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">iterable</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lkdata/utils/bitset.html#BitSet"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.utils.bitset.BitSet" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.MutableSet" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">MutableSet</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Hashable" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Hashable</span></code></a></p>
+<p>A data type for bitwise objects.</p>
+<p>This datatype combines the utility of sets and the succinct representation
+of integer numbers as used for data quality flags in astronomical data.
+Integers are treated as sets of their constituent powers of 2.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="lkdata.utils.bitset.BitSet.add">
+<span class="sig-name descname"><span class="pre">add</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lkdata/utils/bitset.html#BitSet.add"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.utils.bitset.BitSet.add" title="Link to this definition">#</a></dt>
+<dd><p>Add an element.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lkdata.utils.bitset.BitSet.bin">
+<span class="sig-name descname"><span class="pre">bin</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lkdata/utils/bitset.html#BitSet.bin"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.utils.bitset.BitSet.bin" title="Link to this definition">#</a></dt>
+<dd><p>Return binary represenation</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lkdata.utils.bitset.BitSet.breakdown">
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">breakdown</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">item</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lkdata/utils/bitset.html#BitSet.breakdown"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.utils.bitset.BitSet.breakdown" title="Link to this definition">#</a></dt>
+<dd><p>Breaks down a given item into a single set of bitwise components</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#set" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">set</span></code></a></span></p>
+</dd>
+<dt class="field-even">Parameters<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>item</strong><span class="classifier">Union[int, str, Iterable]</span></dt><dd><p>An integer, binary integer, or collection of integers to be broken down</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lkdata.utils.bitset.BitSet.discard">
+<span class="sig-name descname"><span class="pre">discard</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lkdata/utils/bitset.html#BitSet.discard"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.utils.bitset.BitSet.discard" title="Link to this definition">#</a></dt>
+<dd><p>Breakdown value to powers of 2, remove common elements</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lkdata.utils.bitset.BitSet.remove">
+<span class="sig-name descname"><span class="pre">remove</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lkdata/utils/bitset.html#BitSet.remove"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.utils.bitset.BitSet.remove" title="Link to this definition">#</a></dt>
+<dd><p>Breakdown value to powers of 2 and remove</p>
+<dl class="simple">
+<dt>Raises:</dt><dd><p>KeyError - If not all powers of 2 exist within BitSet</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="lkdata.utils.bitset.BitSet.type">
+<span class="sig-name descname"><span class="pre">type</span></span><a class="headerlink" href="#lkdata.utils.bitset.BitSet.type" title="Link to this definition">#</a></dt>
+<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a></p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="uncertainty">
+<h2>Uncertainty<a class="headerlink" href="#uncertainty" title="Link to this heading">#</a></h2>
+<p>The uncertainty developed for lkdata is based on the
+<a class="reference external" href="https://docs.astropy.org/en/stable/api/astropy.nddata.NDUncertainty.html#astropy.nddata.NDUncertainty">astropy.nddata.NDUncertainty</a>
+module, as of the v7.0.0 release.</p>
+<p id="module-lkdata.utils.uncertainty">Uncertainty class and methods for use with numerical lkdata objects
+This code is modified from astropy.nddata.nduncertainty v7.0.0 release
+distributed under the following MIT license:</p>
+<p>Licensed under a 3-clause BSD style license - see LICENSE.rst
+Copyright (c) 2011-2024, Astropy Developers
+All rights reserved.</p>
+<dl class="py exception">
+<dt class="sig sig-object py" id="lkdata.utils.uncertainty.IncompatibleUncertaintiesException">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">lkdata.utils.uncertainty.</span></span><span class="sig-name descname"><span class="pre">IncompatibleUncertaintiesException</span></span><a class="reference internal" href="../_modules/lkdata/utils/uncertainty.html#IncompatibleUncertaintiesException"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.utils.uncertainty.IncompatibleUncertaintiesException" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></a></p>
+<p>This exception should be used to indicate cases in which uncertainties
+with two different classes can not be propagated.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="lkdata.utils.uncertainty.MissingDataAssociationException">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">lkdata.utils.uncertainty.</span></span><span class="sig-name descname"><span class="pre">MissingDataAssociationException</span></span><a class="reference internal" href="../_modules/lkdata/utils/uncertainty.html#MissingDataAssociationException"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.utils.uncertainty.MissingDataAssociationException" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></a></p>
+<p>This exception should be used to indicate that an uncertainty instance
+has not been associated with a parent <code class="xref py py-obj docutils literal notranslate"><span class="pre">NDData</span></code> object.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="lkdata.utils.uncertainty.NDUncertainty">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">lkdata.utils.uncertainty.</span></span><span class="sig-name descname"><span class="pre">NDUncertainty</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">array</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">copy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lkdata/utils/uncertainty.html#NDUncertainty"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.utils.uncertainty.NDUncertainty" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>This is the metaclass for uncertainty classes used with <code class="xref py py-obj docutils literal notranslate"><span class="pre">NDData</span></code>.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>array</strong><span class="classifier">any type, optional</span></dt><dd><p>The array or value (the parameter name is due to historical reasons) of
+the uncertainty. <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">numpy.ndarray</span></code></a> or <a class="reference internal" href="#lkdata.utils.uncertainty.NDUncertainty" title="lkdata.utils.uncertainty.NDUncertainty"><code class="xref py py-obj docutils literal notranslate"><span class="pre">NDUncertainty</span></code></a> subclasses are recommended.
+If the <a class="reference internal" href="#lkdata.utils.uncertainty.NDUncertainty.array" title="lkdata.utils.uncertainty.NDUncertainty.array"><code class="xref py py-obj docutils literal notranslate"><span class="pre">array</span></code></a> is <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a>-like or <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">numpy.ndarray</span></code></a>-like it will be cast
+to a plain <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">numpy.ndarray</span></code></a>.
+Default is <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+</dd>
+<dt><strong>copy</strong><span class="classifier"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bool</span></code></a>, optional</span></dt><dd><p>Indicates whether to save the <a class="reference internal" href="#lkdata.utils.uncertainty.NDUncertainty.array" title="lkdata.utils.uncertainty.NDUncertainty.array"><code class="xref py py-obj docutils literal notranslate"><span class="pre">array</span></code></a> as a copy. <code class="docutils literal notranslate"><span class="pre">True</span></code> copies it
+before saving, while <code class="docutils literal notranslate"><span class="pre">False</span></code> tries to save every parameter as
+reference. Note however that it is not always possible to save the
+input as reference.
+Default is <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>IncompatibleUncertaintiesException</dt><dd><p>If given another <a class="reference internal" href="#lkdata.utils.uncertainty.NDUncertainty" title="lkdata.utils.uncertainty.NDUncertainty"><code class="xref py py-obj docutils literal notranslate"><span class="pre">NDUncertainty</span></code></a>-like class as <code class="docutils literal notranslate"><span class="pre">array</span></code> if their
+<code class="docutils literal notranslate"><span class="pre">uncertainty_type</span></code> is different.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<dl class="py property">
+<dt class="sig sig-object py" id="lkdata.utils.uncertainty.NDUncertainty.array">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">array</span></span><a class="headerlink" href="#lkdata.utils.uncertainty.NDUncertainty.array" title="Link to this definition">#</a></dt>
+<dd><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">numpy.ndarray</span></code></a> : the uncertainty’s value.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="lkdata.utils.uncertainty.NDUncertainty.parent_nddata">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">parent_nddata</span></span><a class="headerlink" href="#lkdata.utils.uncertainty.NDUncertainty.parent_nddata" title="Link to this definition">#</a></dt>
+<dd><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">NDData</span></code> : reference to <code class="xref py py-obj docutils literal notranslate"><span class="pre">NDData</span></code> instance with this uncertainty.</p>
+<p>In case the reference is not set uncertainty propagation will not be
+possible since propagation might need the uncertain data besides the
+uncertainty.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lkdata.utils.uncertainty.NDUncertainty.propagate">
+<span class="sig-name descname"><span class="pre">propagate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">operation</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">other_nddata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">result_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">correlation</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lkdata/utils/uncertainty.html#NDUncertainty.propagate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.utils.uncertainty.NDUncertainty.propagate" title="Link to this definition">#</a></dt>
+<dd><p>Calculate the resulting uncertainty given an operation on the data.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>operation</strong><span class="classifier">callable</span></dt><dd><p>The operation that is performed on the <code class="xref py py-obj docutils literal notranslate"><span class="pre">NDData</span></code>. Supported are
+<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.add.html#numpy.add" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">numpy.add</span></code></a>, <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.subtract.html#numpy.subtract" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">numpy.subtract</span></code></a>, <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.multiply.html#numpy.multiply" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">numpy.multiply</span></code></a> and
+<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.true_divide.html#numpy.true_divide" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">numpy.true_divide</span></code></a> (or <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.divide.html#numpy.divide" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">numpy.divide</span></code></a>).</p>
+</dd>
+<dt><strong>other_nddata</strong><span class="classifier"><code class="xref py py-obj docutils literal notranslate"><span class="pre">NDData</span></code> instance</span></dt><dd><p>The second operand in the arithmetic operation.</p>
+</dd>
+<dt><strong>result_data</strong><span class="classifier">ndarray</span></dt><dd><p>The result of the arithmetic operations on the data.</p>
+</dd>
+<dt><strong>correlation</strong><span class="classifier"><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.5)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">numpy.ndarray</span></code></a> or number</span></dt><dd><p>The correlation (rho) is defined between the uncertainties in
+sigma_AB = sigma_A * sigma_B * rho. A value of <code class="docutils literal notranslate"><span class="pre">0</span></code> means
+uncorrelated operands.</p>
+</dd>
+<dt><strong>axis</strong><span class="classifier">int or tuple of ints, optional</span></dt><dd><p>Axis over which to perform a collapsing operation.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl>
+<dt><strong>resulting_uncertainty</strong><span class="classifier"><a class="reference internal" href="#lkdata.utils.uncertainty.NDUncertainty" title="lkdata.utils.uncertainty.NDUncertainty"><code class="xref py py-obj docutils literal notranslate"><span class="pre">NDUncertainty</span></code></a> instance</span></dt><dd><p>Another instance of the same <a class="reference internal" href="#lkdata.utils.uncertainty.NDUncertainty" title="lkdata.utils.uncertainty.NDUncertainty"><code class="xref py py-obj docutils literal notranslate"><span class="pre">NDUncertainty</span></code></a> subclass containing
+the uncertainty of the result.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>ValueError</dt><dd><p>If the <code class="docutils literal notranslate"><span class="pre">operation</span></code> is not supported or if correlation is not zero
+but the subclass does not support correlated uncertainties.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>First this method checks if a correlation is given and the subclass
+implements propagation with correlated uncertainties.
+Then the second uncertainty is converted (or an Exception is raised)
+to the same class in order to do the propagation.
+Then the appropriate propagation method is invoked and the result is
+returned.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lkdata.utils.uncertainty.NDUncertainty.reshape">
+<span class="sig-name descname"><span class="pre">reshape</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lkdata/utils/uncertainty.html#NDUncertainty.reshape"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.utils.uncertainty.NDUncertainty.reshape" title="Link to this definition">#</a></dt>
+<dd><p>See NDUncertainty.array.reshape()</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="lkdata.utils.uncertainty.NDUncertainty.shape">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">shape</span></span><a class="headerlink" href="#lkdata.utils.uncertainty.NDUncertainty.shape" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="lkdata.utils.uncertainty.NDUncertainty.supports_correlated">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">supports_correlated</span></span><a class="headerlink" href="#lkdata.utils.uncertainty.NDUncertainty.supports_correlated" title="Link to this definition">#</a></dt>
+<dd><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bool</span></code></a> : Supports uncertainty propagation with correlated uncertainties?</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="lkdata.utils.uncertainty.NDUncertainty.uncertainty_type">
+<span class="property"><span class="k"><span class="pre">abstract</span></span><span class="w"> </span><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">uncertainty_type</span></span><a class="headerlink" href="#lkdata.utils.uncertainty.NDUncertainty.uncertainty_type" title="Link to this definition">#</a></dt>
+<dd><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a> : Short description of the type of uncertainty.</p>
+<p>Defined as abstract property so subclasses <em>have</em> to override this.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="lkdata.utils.uncertainty.Uncertainty">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">lkdata.utils.uncertainty.</span></span><span class="sig-name descname"><span class="pre">Uncertainty</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">array</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">copy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lkdata/utils/uncertainty.html#Uncertainty"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.utils.uncertainty.Uncertainty" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">_VariancePropagationMixin</span></code>, <a class="reference internal" href="#lkdata.utils.uncertainty.NDUncertainty" title="lkdata.utils.uncertainty.NDUncertainty"><code class="xref py py-class docutils literal notranslate"><span class="pre">NDUncertainty</span></code></a></p>
+<p>Standard deviation uncertainty assuming first order gaussian error
+propagation.</p>
+<p>This class implements uncertainty propagation for <code class="docutils literal notranslate"><span class="pre">addition</span></code>,
+<code class="docutils literal notranslate"><span class="pre">subtraction</span></code>, <code class="docutils literal notranslate"><span class="pre">multiplication</span></code> and <code class="docutils literal notranslate"><span class="pre">division</span></code> with other instances
+of <a class="reference internal" href="#lkdata.utils.uncertainty.Uncertainty" title="lkdata.utils.uncertainty.Uncertainty"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Uncertainty</span></code></a>.
+Also support for correlation is possible but requires the
+correlation as input. It cannot handle correlation determination itself.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>args, kwargs</strong></dt><dd><p>see <a class="reference internal" href="#lkdata.utils.uncertainty.NDUncertainty" title="lkdata.utils.uncertainty.NDUncertainty"><code class="xref py py-obj docutils literal notranslate"><span class="pre">NDUncertainty</span></code></a></p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p><a class="reference internal" href="#lkdata.utils.uncertainty.Uncertainty" title="lkdata.utils.uncertainty.Uncertainty"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Uncertainty</span></code></a> should always be associated with an <code class="xref py py-obj docutils literal notranslate"><span class="pre">NDData</span></code>-like
+instance, either by creating it during initialization:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">astropy.nddata</span><span class="w"> </span><span class="kn">import</span> <span class="n">NDData</span><span class="p">,</span> <span class="n">Uncertainty</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ndd</span> <span class="o">=</span> <span class="n">NDData</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span>
+<span class="gp">... </span>             <span class="n">uncertainty</span><span class="o">=</span><span class="n">Uncertainty</span><span class="p">([</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">]))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ndd</span><span class="o">.</span><span class="n">uncertainty</span>
+<span class="go">Uncertainty([0.1, 0.1, 0.1])</span>
+</pre></div>
+</div>
+<p>or by setting it manually on the <code class="xref py py-obj docutils literal notranslate"><span class="pre">NDData</span></code> instance:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">ndd</span><span class="o">.</span><span class="n">uncertainty</span> <span class="o">=</span> <span class="n">Uncertainty</span><span class="p">([</span><span class="mf">0.2</span><span class="p">],</span> <span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ndd</span><span class="o">.</span><span class="n">uncertainty</span>
+<span class="go">Uncertainty([0.2])</span>
+</pre></div>
+</div>
+<p>the uncertainty <code class="docutils literal notranslate"><span class="pre">array</span></code> can also be set directly:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">ndd</span><span class="o">.</span><span class="n">uncertainty</span><span class="o">.</span><span class="n">array</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ndd</span><span class="o">.</span><span class="n">uncertainty</span>
+<span class="go">Uncertainty(2)</span>
+</pre></div>
+</div>
+<dl class="py property">
+<dt class="sig sig-object py" id="lkdata.utils.uncertainty.Uncertainty.supports_correlated">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">supports_correlated</span></span><a class="headerlink" href="#lkdata.utils.uncertainty.Uncertainty.supports_correlated" title="Link to this definition">#</a></dt>
+<dd><p><a class="reference external" href="https://docs.python.org/3/library/constants.html#True" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">True</span></code></a> : <a class="reference internal" href="#lkdata.utils.uncertainty.Uncertainty" title="lkdata.utils.uncertainty.Uncertainty"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Uncertainty</span></code></a> allows to propagate correlated                     uncertainties.</p>
+<p><code class="docutils literal notranslate"><span class="pre">correlation</span></code> must be given, this class does not implement computing
+it by itself.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="lkdata.utils.uncertainty.Uncertainty.uncertainty_type">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">uncertainty_type</span></span><a class="headerlink" href="#lkdata.utils.uncertainty.Uncertainty.uncertainty_type" title="Link to this definition">#</a></dt>
+<dd><p><code class="docutils literal notranslate"><span class="pre">&quot;std&quot;</span></code> : <a class="reference internal" href="#lkdata.utils.uncertainty.Uncertainty" title="lkdata.utils.uncertainty.Uncertainty"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Uncertainty</span></code></a> implements standard deviation.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-lkdata.utils.exceptions">
+<span id="exceptions"></span><h2>Exceptions<a class="headerlink" href="#module-lkdata.utils.exceptions" title="Link to this heading">#</a></h2>
+<p>Contains all lightkurve exceptions.</p>
+<dl class="py exception">
+<dt class="sig sig-object py" id="lkdata.utils.exceptions.LightkurveDeprecationWarning">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">lkdata.utils.exceptions.</span></span><span class="sig-name descname"><span class="pre">LightkurveDeprecationWarning</span></span><a class="reference internal" href="../_modules/lkdata/utils/exceptions.html#LightkurveDeprecationWarning"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.utils.exceptions.LightkurveDeprecationWarning" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#lkdata.utils.exceptions.LightkurveWarning" title="lkdata.utils.exceptions.LightkurveWarning"><code class="xref py py-class docutils literal notranslate"><span class="pre">LightkurveWarning</span></code></a></p>
+<p>Class for all Lightkurve deprecation warnings.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="lkdata.utils.exceptions.LightkurveError">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">lkdata.utils.exceptions.</span></span><span class="sig-name descname"><span class="pre">LightkurveError</span></span><a class="reference internal" href="../_modules/lkdata/utils/exceptions.html#LightkurveError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.utils.exceptions.LightkurveError" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></a></p>
+<p>Class for Lightkurve exceptions.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="lkdata.utils.exceptions.LightkurveWarning">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">lkdata.utils.exceptions.</span></span><span class="sig-name descname"><span class="pre">LightkurveWarning</span></span><a class="reference internal" href="../_modules/lkdata/utils/exceptions.html#LightkurveWarning"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lkdata.utils.exceptions.LightkurveWarning" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Warning" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Warning</span></code></a></p>
+<p>Class for all Lightkurve warnings.</p>
+</dd></dl>
+
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="mixins.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Mixins</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="../development/index.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Developing for lkdata</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-lkdata.utils.bitset">BitSet</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.utils.bitset.BitSet"><code class="docutils literal notranslate"><span class="pre">BitSet</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.utils.bitset.BitSet.add"><code class="docutils literal notranslate"><span class="pre">BitSet.add()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.utils.bitset.BitSet.bin"><code class="docutils literal notranslate"><span class="pre">BitSet.bin()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.utils.bitset.BitSet.breakdown"><code class="docutils literal notranslate"><span class="pre">BitSet.breakdown()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.utils.bitset.BitSet.discard"><code class="docutils literal notranslate"><span class="pre">BitSet.discard()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.utils.bitset.BitSet.remove"><code class="docutils literal notranslate"><span class="pre">BitSet.remove()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.utils.bitset.BitSet.type"><code class="docutils literal notranslate"><span class="pre">BitSet.type</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#uncertainty">Uncertainty</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.utils.uncertainty.IncompatibleUncertaintiesException"><code class="docutils literal notranslate"><span class="pre">IncompatibleUncertaintiesException</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.utils.uncertainty.MissingDataAssociationException"><code class="docutils literal notranslate"><span class="pre">MissingDataAssociationException</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.utils.uncertainty.NDUncertainty"><code class="docutils literal notranslate"><span class="pre">NDUncertainty</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.utils.uncertainty.NDUncertainty.array"><code class="docutils literal notranslate"><span class="pre">NDUncertainty.array</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.utils.uncertainty.NDUncertainty.parent_nddata"><code class="docutils literal notranslate"><span class="pre">NDUncertainty.parent_nddata</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.utils.uncertainty.NDUncertainty.propagate"><code class="docutils literal notranslate"><span class="pre">NDUncertainty.propagate()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.utils.uncertainty.NDUncertainty.reshape"><code class="docutils literal notranslate"><span class="pre">NDUncertainty.reshape()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.utils.uncertainty.NDUncertainty.shape"><code class="docutils literal notranslate"><span class="pre">NDUncertainty.shape</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.utils.uncertainty.NDUncertainty.supports_correlated"><code class="docutils literal notranslate"><span class="pre">NDUncertainty.supports_correlated</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.utils.uncertainty.NDUncertainty.uncertainty_type"><code class="docutils literal notranslate"><span class="pre">NDUncertainty.uncertainty_type</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.utils.uncertainty.Uncertainty"><code class="docutils literal notranslate"><span class="pre">Uncertainty</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.utils.uncertainty.Uncertainty.supports_correlated"><code class="docutils literal notranslate"><span class="pre">Uncertainty.supports_correlated</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.utils.uncertainty.Uncertainty.uncertainty_type"><code class="docutils literal notranslate"><span class="pre">Uncertainty.uncertainty_type</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-lkdata.utils.exceptions">Exceptions</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.utils.exceptions.LightkurveDeprecationWarning"><code class="docutils literal notranslate"><span class="pre">LightkurveDeprecationWarning</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.utils.exceptions.LightkurveError"><code class="docutils literal notranslate"><span class="pre">LightkurveError</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lkdata.utils.exceptions.LightkurveWarning"><code class="docutils literal notranslate"><span class="pre">LightkurveWarning</span></code></a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/reference/utils.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=cb8930eaaf36d9849b67"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=cb8930eaaf36d9849b67"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, TESS Science Support Center.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.21.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>
