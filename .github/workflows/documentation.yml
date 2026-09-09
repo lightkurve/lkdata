@@ -16,8 +16,8 @@ jobs:
   docs:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/setup-python@v7
       - uses: actions/checkout@v7
-      - uses: actions/setup-python@v3
       - name: Install dependencies
         run: |
           pip install poetry
