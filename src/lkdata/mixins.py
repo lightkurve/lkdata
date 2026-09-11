@@ -711,6 +711,12 @@ class MathMixin(IndexProcessorMixin):
         return result
 
     def __truediv__(self, other):
+        if hasattr(other, "bases"):
+            # Handle astropy.units
+            copy = deepcopy(self)
+            copy.units = 1 / other
+            return copy
+
         result = self._prepare_then_do_arithmetic(np.true_divide, other)
         # Allow scalar division
         if isinstance(other, (float, int, np.ndarray)) and self.uncertainty:

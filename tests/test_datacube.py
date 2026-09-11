@@ -1,19 +1,21 @@
+from unittest.mock import Mock
+
 import numpy as np
 import pandas as pd
 import pytest
-
 from astropy.io import fits
 from pandas.io.formats.style import Styler
+
 from lkdata import (
     TESTDATA,
-    DataCube,
-    DataSeriesCollection,
-    DataSeries,
     BitwiseCube,
     BoolCube,
+    DataCube,
+    DataSeries,
+    DataSeriesCollection,
 )
-from lkdata.utils.uncertainty import Uncertainty
 from lkdata.mixins import STATS_METHOD_NAMES
+from lkdata.utils.uncertainty import Uncertainty
 
 # ─── Fixtures ───────────────────────────────────────────────────────────────
 
@@ -279,6 +281,10 @@ def test_math():
     assert all(df3 == 2)
     assert (df3.uncertainty.array == np.sqrt(5)).all()
 
+    mock = Mock(bases="mock", value="unit")
+    df3 = df * mock
+    assert df3.units.value == "unit"
+
     # division
     df2 = df / 2
     assert all(df2 == 1 / 2)
@@ -296,6 +302,11 @@ def test_math():
     df3 = df / df2
     assert all(df3 == 1 / 2)
     assert (df3.uncertainty.array == np.sqrt(5) / 4).all()
+
+    mock.__truediv__ = lambda _x, _y: "1/unit"
+    mock.__rtruediv__ = lambda _x, _y: "1/unit"
+    df3 = df / mock
+    assert df3.units == "1/unit"
 
 
 def test_downsample_order():
@@ -485,7 +496,7 @@ def test_bool_cube():
 
 def test_bit_cube():
     """Test BitwiseCube methods."""
-    from lkdata import BitwiseCube, BitwiseSeriesCollection, BitwiseSeries
+    from lkdata import BitwiseCube, BitwiseSeries, BitwiseSeriesCollection
 
     def strip(string):
         return string.replace(" ", "").replace("\n", "")
