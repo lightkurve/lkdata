@@ -657,11 +657,6 @@ class DataSet:
             if isinstance(data, DataCube)
         }
 
-        if len(new_data) > 0:
-            new_columns = list(new_data.values())[0].columns
-        else:
-            new_columns = pd.MultiIndex.from_arrays([[]], names=["series"])
-
         # Just slicing/selecting on time for Series and SeriesCollections
         new_data.update(
             {
@@ -671,21 +666,11 @@ class DataSet:
             }
         )
 
-        if len(new_data) > 0:
-            new_index = list(new_data.values())[0].index
-        else:
-            new_index = pd.MultiIndex.from_arrays([[]], names=["time_index"])
-
         new_bool = {
             data_key: data[key]
             for data_key, data in self.bool_products.items()
             if isinstance(data, BoolCube)
         }
-
-        if len(new_bool) > 0:
-            new_columns = list(new_bool.values())[0].columns
-        else:
-            new_columns = pd.MultiIndex.from_arrays([[]], names=["series"])
 
         # Just slicing/selecting on time for Series and SeriesCollections
         new_bool.update(
@@ -702,11 +687,6 @@ class DataSet:
             if isinstance(data, BitwiseCube)
         }
 
-        if len(new_bit) > 0:
-            new_columns = list(new_bit.values())[0].columns
-        else:
-            new_columns = pd.MultiIndex.from_arrays([[]], names=["series"])
-
         # Just slicing/selecting on time for Series and SeriesCollections
         new_bit.update(
             {
@@ -716,14 +696,7 @@ class DataSet:
             }
         )
 
-        if len(new_data) > 0:
-            new_index = list(new_data.values())[0].index
-        else:
-            new_index = pd.MultiIndex.from_arrays([[]], names=["time_index"])
-
         new_kwargs = self.kwargs.copy()
-        new_kwargs["index"] = new_index
-        new_kwargs["columns"] = new_columns
 
         return self._build_instance(
             new_data, newbools=new_bool, newbits=new_bit, **new_kwargs
