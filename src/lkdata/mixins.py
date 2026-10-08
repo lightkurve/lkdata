@@ -5,7 +5,7 @@ from copy import deepcopy
 from itertools import combinations
 from numpy.typing import ArrayLike
 from textwrap import dedent
-from typing import Iterable, Union, Tuple, Callable
+from typing import Iterable, Union, Tuple, Callable, Optional
 from warnings import warn
 from .utils.uncertainty import NDUncertainty, Uncertainty
 from .utils.bitset import BitSet
@@ -217,8 +217,8 @@ class IndexProcessorMixin:
 
     @staticmethod
     def parse_index(
-        index: pd.MultiIndex = None,
-        time_indices: dict = None,
+        index: Optional[pd.MultiIndex] = None,
+        time_indices: Optional[dict] = None,
         ntime: int = 0,
         default: bool = True,
     ):

@@ -5,7 +5,7 @@ from collections.abc import Iterable
 from copy import deepcopy
 from dataclasses import dataclass
 from functools import singledispatchmethod
-from typing import Dict, Union, Type
+from typing import Dict, Union, Type, Any, Optional
 from warnings import warn
 
 import numpy as np
@@ -177,7 +177,7 @@ class DataProcessorMixin(ABC):
             interpretable as a Cube, SeriesCollection, or Series.
             If giving multiple data products, provide input as a
             dictionary and use the `update` method.
-                             """
+            """
             ) from err
 
         kwargs = deepcopy(self.kwargs)
@@ -267,7 +267,7 @@ class ProductBundle(dict, DataProcessorMixin):
         data products, i.e. flux summation.
     """
 
-    _type: str = None
+    _type: Optional[str] = None
     _cube: Type[Cube] = Cube
     _seriescollection: Type[SeriesCollection] = SeriesCollection
     _series: Type[Series] = Series
@@ -278,11 +278,9 @@ class ProductBundle(dict, DataProcessorMixin):
     def __init__(
         self,
         input_data: Union[
-            Dict[str, Union[Iterable, LkDataTypes]],
-            Iterable,
-            LkTypes,
+            Dict[str, Union[Iterable, LkDataTypes]], Iterable, LkTypes, None
         ] = None,
-        index: pd.MultiIndex = None,
+        index: Optional[pd.MultiIndex] = None,
         **kwargs,
     ):
         ntime = kwargs.pop("ntime", 0)
@@ -440,9 +438,9 @@ class DataProducts(ProductBundle):
     def __init__(
         self,
         data: Union[
-            Dict[str, Union[Iterable, LkDataTypes]], LkDataTypes, Iterable
+            Dict[str, Union[Iterable, LkDataTypes]], LkDataTypes, Iterable, None
         ] = None,
-        index: pd.MultiIndex = None,
+        index: Optional[pd.MultiIndex] = None,
         **kwargs,
     ):
         self.kwargs = kwargs
@@ -458,9 +456,9 @@ class BoolProducts(ProductBundle):
     def __init__(
         self,
         bools: Union[
-            Dict[str, Union[Iterable, LkBoolTypes]], Iterable, LkBoolTypes
+            Dict[str, Union[Iterable, LkBoolTypes]], Iterable, LkBoolTypes, None
         ] = None,
-        index: pd.MultiIndex = None,
+        index: Optional[pd.MultiIndex] = None,
         **kwargs,
     ):
         self.kwargs = kwargs
@@ -476,9 +474,9 @@ class BitwiseProducts(ProductBundle):
     def __init__(
         self,
         bitwise: Union[
-            Dict[str, Union[Iterable, LkBitwiseTypes]], Iterable, LkBitwiseTypes
+            Dict[str, Union[Iterable, LkBitwiseTypes]], Iterable, LkBitwiseTypes, None
         ] = None,
-        index: pd.MultiIndex = None,
+        index: Optional[pd.MultiIndex] = None,
         **kwargs,
     ):
         self.kwargs = kwargs
@@ -513,8 +511,9 @@ class DataSet:
 
     """
 
-    _index = None
-    _ntime = 0
+    _meta: dict[str, Any]
+    _index: Optional[pd.MultiIndex] = None
+    _ntime: int = 0
     _data_products = None
     _bool_products = None
     _bitwise_products = None
@@ -865,7 +864,7 @@ class DataSet:
         return cubes
 
     @property
-    def data_products(self):
+    def data_products(self) -> Union[DataProducts, None]:
         return self._data_products
 
     @data_products.setter
@@ -873,7 +872,7 @@ class DataSet:
         self._data_products = val
 
     @property
-    def bool_products(self):
+    def bool_products(self) -> Union[BoolProducts, None]:
         return self._bool_products
 
     @bool_products.setter
@@ -881,7 +880,7 @@ class DataSet:
         self._bool_products = val
 
     @property
-    def bitwise_products(self):
+    def bitwise_products(self) -> Union[BitwiseProducts, None]:
         return self._bitwise_products
 
     @bitwise_products.setter
@@ -914,6 +913,14 @@ class DataSet:
         self._attr_override("index", val)
         self._index = val
         self._ntime = len(val)
+
+    @property
+    def meta(self) -> dict[str, Any]:
+        return self._meta
+
+    @meta.setter
+    def meta(self, value: dict[str, Any]):
+        self._meta = value
 
     @property
     def ntime(self) -> int:
