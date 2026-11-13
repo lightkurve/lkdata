@@ -13,8 +13,8 @@ pytest:
 	$(CMD) pytest $(PYMODULE) $(TESTS)
 
 lint:
-	$(CMD) ruff $(PYMODULE) --config .ruff.toml
-	$(CMD) ruff $(TESTS) --config .ruff.toml
+	$(CMD) ruff check $(PYMODULE) --config .ruff.toml
+	$(CMD) ruff check $(TESTS) --config .ruff.toml
 
 # Generate a unit test coverage report using `pytest-cov`
 coverage:

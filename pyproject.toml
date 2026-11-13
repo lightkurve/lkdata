@@ -6,32 +6,32 @@ authors = [
     { name = "TESS Science Support Center", email = "tesshelp@bigbang.gsfc.nasa.gov" }]
 license = "MIT"
 readme = "README.rst"
-requires-python = ">=3.9"
+requires-python = ">=3.11,<4.0"
 dependencies = [
-    "numpy>=1.26.3",
-    "pandas[plot, output-formatting]>=2.1.4", # for styling the dataframe
+    "numpy>=2.2.0",
+    "pandas[plot, output-formatting]>=2.3", # for styling the dataframe
 ]
 
 [project.optional-dependencies]
 dev = [
-    "astropy", # <6.1.3 for python<3.10
-    "bump2version >= 1.0.1",
-    "coverage[toml] >=7.4.0",
-    "ipykernel >= 6.29.5",
-    "IPython >= 8.18.1",
-    "jupyter >= 1.0.1",
-    "line-profiler >= 4.1.2",
-    "mypy >= 1.8.0",
-    "nbsphinx >= 0.9.3",
-    "pre-commit >= 3.6.0",
-    "pydata-sphinx-theme >= 0.15.1",
-    "pytest >= 7.4.4",
-    "ruff >= 0.1.13",
-    "sphinx >= 7.2.6",
-    "sphinx-astropy >= 1.9.1",
-    "sphinx-autobuild >= 2021.3.14",
-    "sphinx-autodoc-typehints >= 1.25.2",
-    "sphinx-copybutton >= 0.5.2",
+    "astropy>=6.1",
+    "bump2version>=1.0.1",
+    "coverage[toml]>=7.4.0",
+    "ipykernel>=6.29.5",
+    "IPython>=8.18.1",
+    "jupyter>=1.0.1",
+    "line-profiler>=4.1.2",
+    "mypy>=1.8.0",
+    "nbsphinx>=0.9.3",
+    "pre-commit>=3.6.0",
+    "pydata-sphinx-theme>=0.15.1",
+    "pytest>=8.3.0",
+    "ruff>=0.15",
+    "sphinx>=7.2.6",
+    "sphinx-astropy>=1.9.1",
+    "sphinx-autobuild>=2021.3.14",
+    "sphinx-autodoc-typehints>=1.25.2",
+    "sphinx-copybutton>=0.5.2",
 ]
 
 [tool.poetry.group.dev]
@@ -43,9 +43,9 @@ build-backend = "poetry.core.masonry.api"
 
 [dependency-groups]
 dev = [
-    "astropy",
-    "bump2version (>=1.0.1,<2.0.0)",
-    "coverage[toml] (>=7.10.7,<8.0.0)",
+    "astropy>=6.1",
+    "bump2version>=1.0.1",
+    "coverage[toml]>=7.4.0",
     "ipykernel>=6.29.5",
     "IPython>=8.18.1",
     "jupyter>=1.0.1",
@@ -54,8 +54,8 @@ dev = [
     "nbsphinx>=0.9.3",
     "pre-commit>=3.6.0",
     "pydata-sphinx-theme>=0.15.1",
-    "pytest (>=8.4.2,<9.0.0)",
-    "ruff (>=0.13.2,<0.14.0)",
+    "pytest>=8.3.0",
+    "ruff>=0.15",
     "sphinx-astropy>=1.9.1",
     "sphinx-autobuild>=2021.3.14",
     "sphinx-autodoc-typehints>=1.25.2",
